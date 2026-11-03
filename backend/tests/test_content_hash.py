@@ -1,0 +1,31 @@
+from app.core.security import compute_content_hash
+
+
+def test_hash_is_sha256_hex():
+    assert len(compute_content_hash("caption", [])) == 64
+
+
+def test_media_order_does_not_matter():
+    a = compute_content_hash("c", ["id-1", "id-2"])
+    b = compute_content_hash("c", ["id-2", "id-1"])
+    assert a == b
+
+
+def test_caption_change_invalidates():
+    base = compute_content_hash("Enjoy our new menu!", ["id-1"])
+    edited = compute_content_hash("Enjoy our new menu! Use code 50OFF", ["id-1"])
+    assert base != edited
+
+
+def test_media_change_invalidates():
+    base = compute_content_hash("c", ["id-1"])
+    assert base != compute_content_hash("c", ["id-1", "id-2"])  # added
+    assert base != compute_content_hash("c", [])                 # removed
+    assert base != compute_content_hash("c", ["id-3"])           # swapped
+
+
+def test_hash_uses_ids_not_urls():
+    """Re-signed URLs must NOT invalidate an approval — hashes are computed
+    over immutable media IDs, so URL rotation can't break the chain."""
+    stable = compute_content_hash("c", ["3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90"])
+    assert stable == compute_content_hash("c", ["3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90"])

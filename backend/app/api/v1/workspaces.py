@@ -1,0 +1,160 @@
+import re
+from datetime import datetime, timezone
+from typing import List
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.dependencies import client_ip, get_current_user, get_workspace_member, require_role
+from app.db.session import get_db
+from app.models import AuditAction, User, Workspace, WorkspaceMember, WorkspaceRole
+from app.schemas.schemas import (
+    AddMemberRequest, MemberResponse, MessageResponse,
+    WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate,
+)
+from app.services.audit import record_audit_event
+
+router = APIRouter(prefix="/workspaces", tags=["Workspaces"])
+
+
+def _generate_slug(name: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", name.lower()).strip("-") or "workspace"
+    return f"{slug}-{int(datetime.now(timezone.utc).timestamp())}"
+
+
+@router.get("", response_model=List[WorkspaceResponse])
+async def list_my_workspaces(db: AsyncSession = Depends(get_db),
+                             user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(Workspace)
+        .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+        .where(WorkspaceMember.user_id == user.id)
+        .order_by(Workspace.created_at.desc())
+    )
+    return [WorkspaceResponse.model_validate(w) for w in result.scalars().all()]
+
+
+@router.post("", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
+async def create_workspace(req: WorkspaceCreate, request: Request,
+                           db: AsyncSession = Depends(get_db),
+                           user: User = Depends(get_current_user)):
+    workspace = Workspace(name=req.name.strip(), slug=_generate_slug(req.name), owner_id=user.id)
+    db.add(workspace)
+    await db.flush()
+    db.add(WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role=WorkspaceRole.OWNER))
+    record_audit_event(
+        db, action=AuditAction.CREATE, entity_type="Workspace", entity_id=workspace.id,
+        workspace_id=workspace.id, user_id=user.id, user_email=user.email, user_name=user.full_name,
+        changes={"after": {"name": workspace.name}}, ip_address=client_ip(request),
+    )
+    await db.commit()
+    await db.refresh(workspace)
+    return WorkspaceResponse.model_validate(workspace)
+
+
+@router.get("/{workspace_id}", response_model=WorkspaceResponse)
+async def get_workspace(workspace_id: UUID, db: AsyncSession = Depends(get_db),
+                        user: User = Depends(get_current_user)):
+    await get_workspace_member(workspace_id, db, user)
+    workspace = await db.scalar(select(Workspace).where(Workspace.id == workspace_id))
+    if not workspace:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found.")
+    return WorkspaceResponse.model_validate(workspace)
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Request,
+                           db: AsyncSession = Depends(get_db),
+                           user: User = Depends(get_current_user)):
+    member = await get_workspace_member(workspace_id, db, user)
+    require_role(member, WorkspaceRole.OWNER, WorkspaceRole.ADMIN)
+
+    workspace = await db.scalar(select(Workspace).where(Workspace.id == workspace_id))
+    if not workspace:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found.")
+
+    if req.name:
+        before = workspace.name
+        workspace.name = req.name.strip()
+        record_audit_event(
+            db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,
+            workspace_id=workspace.id, user_id=user.id, user_email=user.email, user_name=user.full_name,
+            changes={"before": {"name": before}, "after": {"name": workspace.name}},
+            ip_address=client_ip(request),
+        )
+    await db.commit()
+    await db.refresh(workspace)
+    return WorkspaceResponse.model_validate(workspace)
+
+
+@router.get("/{workspace_id}/members", response_model=List[MemberResponse])
+async def list_members(workspace_id: UUID, db: AsyncSession = Depends(get_db),
+                       user: User = Depends(get_current_user)):
+    await get_workspace_member(workspace_id, db, user)
+    result = await db.execute(
+        select(WorkspaceMember)
+        .options(selectinload(WorkspaceMember.user))
+        .where(WorkspaceMember.workspace_id == workspace_id)
+        .order_by(WorkspaceMember.joined_at.asc())
+    )
+    return [
+        MemberResponse(
+            id=m.id, user_id=m.user_id, role=m.role.value, joined_at=m.joined_at,
+            email=m.user.email, full_name=m.user.full_name, avatar_url=m.user.avatar_url,
+        )
+        for m in result.scalars().all()
+    ]
+
+
+@router.post("/{workspace_id}/members", response_model=MessageResponse)
+async def add_member(workspace_id: UUID, req: AddMemberRequest, request: Request,
+                     db: AsyncSession = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    caller = await get_workspace_member(workspace_id, db, user)
+    require_role(caller, WorkspaceRole.OWNER, WorkspaceRole.ADMIN)
+
+    # ── Privilege escalation guards ────────────────────────────────────
+    # OWNER is never granted here: ownership transfer is its own flow.
+    if req.role == WorkspaceRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The owner role cannot be assigned here.",
+        )
+    # Only the owner can grant ADMIN; admins may add members only.
+    if req.role == WorkspaceRole.ADMIN and caller.role != WorkspaceRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the workspace owner can grant the admin role.",
+        )
+
+    target = await db.scalar(select(User).where(User.email == req.email.lower()))
+    if not target:
+        # Neutral wording — never confirm whether an email has an account.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user could not be added. Check the email address or ask them to sign up first.",
+        )
+
+    existing = await db.scalar(
+        select(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id == target.id,
+        )
+    )
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="User is already a member of this workspace.")
+
+    new_member = WorkspaceMember(workspace_id=workspace_id, user_id=target.id, role=req.role)
+    db.add(new_member)
+    record_audit_event(
+        db, action=AuditAction.INVITE, entity_type="WorkspaceMember", entity_id=target.id,
+        workspace_id=workspace_id, user_id=user.id, user_email=user.email, user_name=user.full_name,
+        changes={"after": {"member_email": target.email, "role": req.role.value}},
+        ip_address=client_ip(request),
+    )
+    await db.commit()
+    return MessageResponse(message=f"Added {target.full_name} to the workspace.")

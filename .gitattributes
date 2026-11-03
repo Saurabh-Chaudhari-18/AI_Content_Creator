@@ -1,0 +1,10 @@
+# Repo stores LF; Windows checkouts get CRLF via autocrlf.
+# Keeps diffs reviewable across machines.
+* text=auto
+*.py text
+*.md text
+*.json text
+*.yml text
+*.toml text
+*.ini text
+*.mako text
