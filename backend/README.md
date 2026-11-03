@@ -12,8 +12,7 @@ cp .env.example .env
 
 make up            # postgres + redis + minio (docker compose)
 make install       # pip install -r requirements.txt
-make makemigration m="initial schema"
-make migrate       # alembic upgrade head
+make migrate       # alembic upgrade head — the approved 13-table schema
 make seed          # demo user + Smart Templates
 make run-api       # http://localhost:8000/docs
 ```

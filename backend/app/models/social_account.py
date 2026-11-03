@@ -1,14 +1,14 @@
 import uuid
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, Integer,
+    Boolean, Column, DateTime, ForeignKey, Integer,
     String, Text, UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.enums import JobStatus, SocialPlatform
+from app.models.enums import JobStatus, SocialPlatform, pg_enum
 
 
 class SocialAccount(Base):
@@ -24,7 +24,7 @@ class SocialAccount(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
-    platform = Column(SAEnum(SocialPlatform, name="social_platform"), nullable=False)
+    platform = Column(pg_enum(SocialPlatform, "social_platform"), nullable=False)
     platform_account_id = Column(String(255), nullable=False)
     account_name = Column(String(255), nullable=False)
     account_type = Column(String(50), nullable=True)  # page | professional | company
@@ -54,7 +54,7 @@ class PublishJob(Base):
     post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True)
     social_account_id = Column(UUID(as_uuid=True), ForeignKey("social_accounts.id"), nullable=False, index=True)
     celery_task_id = Column(String(255), nullable=True)  # NULL = not yet dispatched by the Beat scan
-    status = Column(SAEnum(JobStatus, name="job_status"), nullable=False, default=JobStatus.QUEUED, index=True)
+    status = Column(pg_enum(JobStatus, "job_status"), nullable=False, default=JobStatus.QUEUED, index=True)
     result = Column(JSONB, nullable=True)  # filtered: platform_post_id, url, published_at
     error_message = Column(Text, nullable=True)
     attempt_number = Column(Integer, nullable=False, default=0)

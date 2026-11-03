@@ -1,5 +1,15 @@
 import enum
 
+from sqlalchemy import Enum as SAEnum
+
+
+def pg_enum(enum_cls, name: str) -> SAEnum:
+    """PostgreSQL enum that stores the member VALUES ('draft'), not the
+    Python names ('DRAFT'). SQLAlchemy's default is names — which would make
+    every CHECK constraint written against lowercase values silently
+    ineffective and raw SQL unreadable."""
+    return SAEnum(enum_cls, name=name, values_callable=lambda e: [m.value for m in e])
+
 
 class WorkspaceRole(str, enum.Enum):
     OWNER = "owner"

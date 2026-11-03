@@ -1,14 +1,14 @@
 import uuid
 
 from sqlalchemy import (
-    CheckConstraint, Column, DateTime, Enum as SAEnum, ForeignKey,
+    CheckConstraint, Column, DateTime, ForeignKey,
     Integer, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.enums import ApprovalAction, MediaType, PostStatus
+from app.models.enums import ApprovalAction, MediaType, PostStatus, pg_enum
 
 
 class Post(Base):
@@ -33,7 +33,7 @@ class Post(Base):
     caption = Column(Text, nullable=False, default="")
     hashtags = Column(JSONB, nullable=False, default=list)
     cta = Column(String(255), nullable=True)
-    status = Column(SAEnum(PostStatus, name="post_status"), nullable=False, default=PostStatus.DRAFT, index=True)
+    status = Column(pg_enum(PostStatus, "post_status"), nullable=False, default=PostStatus.DRAFT, index=True)
     # SHA-256 over caption + sorted media IDs. Media IDs are immutable, so the
     # hash never changes because a URL was re-signed or a CDN domain rotated.
     content_hash = Column(String(64), nullable=True)
@@ -68,7 +68,7 @@ class PostMedia(Base):
     # Storage KEY (e.g. "media/ab12….jpg"), not a signed URL. Public/presigned
     # URLs are resolved at read/publish time by the storage service.
     storage_key = Column(String(1000), nullable=False)
-    media_type = Column(SAEnum(MediaType, name="media_type"), nullable=False, default=MediaType.IMAGE)
+    media_type = Column(pg_enum(MediaType, "media_type"), nullable=False, default=MediaType.IMAGE)
     sort_order = Column(Integer, nullable=False, default=0)
     alt_text = Column(String(500), nullable=True)
     meta = Column("metadata", JSONB, nullable=False, default=dict)  # size, original name, dimensions
@@ -84,7 +84,7 @@ class ApprovalLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    action = Column(SAEnum(ApprovalAction, name="approval_action"), nullable=False)
+    action = Column(pg_enum(ApprovalAction, "approval_action"), nullable=False)
     content_hash_at_action = Column(String(64), nullable=True)
     rejection_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

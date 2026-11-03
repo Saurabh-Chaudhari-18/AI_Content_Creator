@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.enums import WorkspaceRole
+from app.models.enums import WorkspaceRole, pg_enum
 
 
 class Workspace(Base):
@@ -31,7 +31,7 @@ class WorkspaceMember(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    role = Column(SAEnum(WorkspaceRole, name="workspace_role"), nullable=False, default=WorkspaceRole.MEMBER)
+    role = Column(pg_enum(WorkspaceRole, "workspace_role"), nullable=False, default=WorkspaceRole.MEMBER)
     joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     workspace = relationship("Workspace", back_populates="members")

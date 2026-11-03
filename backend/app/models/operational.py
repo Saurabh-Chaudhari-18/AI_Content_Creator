@@ -1,10 +1,10 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.db.base import Base
-from app.models.enums import AuditAction, OperationType, TemplateCategory
+from app.models.enums import AuditAction, OperationType, TemplateCategory, pg_enum
 
 
 class UsageLog(Base):
@@ -14,7 +14,7 @@ class UsageLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # NULL for system events
-    operation = Column(SAEnum(OperationType, name="operation_type"), nullable=False)
+    operation = Column(pg_enum(OperationType, "operation_type"), nullable=False)
     meta = Column("metadata", JSONB, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -25,7 +25,7 @@ class CaptionTemplate(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     industry = Column(String(100), nullable=False, index=True)
-    category = Column(SAEnum(TemplateCategory, name="template_category"), nullable=False,
+    category = Column(pg_enum(TemplateCategory, "template_category"), nullable=False,
                       default=TemplateCategory.PROMOTIONAL, index=True)
     title = Column(String(255), nullable=False)
     template_text = Column(Text, nullable=False)  # body with {{placeholder}} tags
@@ -52,7 +52,7 @@ class AuditEvent(Base):
     user_name = Column(String(255), nullable=False)                         # snapshot at action time
     entity_type = Column(String(50), nullable=False, index=True)            # Post | Brand | Workspace | ...
     entity_id = Column(UUID(as_uuid=True), nullable=False, index=True)      # plain value — NO FK
-    action = Column(SAEnum(AuditAction, name="audit_action"), nullable=False, index=True)
+    action = Column(pg_enum(AuditAction, "audit_action"), nullable=False, index=True)
     changes = Column(JSONB, nullable=False, default=dict)                   # {"before": {...}, "after": {...}}
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
