@@ -7,7 +7,7 @@ import httpx
 
 from app.config import settings
 from app.core.constants import PLATFORM_CHAR_LIMITS
-from app.core.exceptions import PermanentPublishError, RetryablePublishError
+from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
 from app.services.meta_oauth import graph_url, meta_auth_params
 from app.services.publishing.base import SocialPublishAdapter
 
@@ -71,7 +71,11 @@ class FacebookAdapter(SocialPublishAdapter):
                     endpoint = graph_url(f"/{page_id}/feed")
                     payload = {"message": text, **meta_auth_params(access_token)}
 
-                resp = client.post(endpoint, data=payload)
+                try:
+                    resp = client.post(endpoint, data=payload)
+                except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                    # The request may have reached Facebook and been posted.
+                    raise UnknownOutcomePublishError(f"Facebook publish request dropped: {exc}") from exc
                 if resp.status_code == 200:
                     data = resp.json()
                     post_id = data.get("post_id") or data.get("id")
@@ -92,3 +96,5 @@ class FacebookAdapter(SocialPublishAdapter):
             raise RetryablePublishError(f"Facebook request timed out: {exc}") from exc
         except httpx.NetworkError as exc:
             raise RetryablePublishError(f"Facebook network error: {exc}") from exc
+        # NOTE: the final POST above raises UnknownOutcomePublishError itself and is
+        # not a subclass of either, so it passes through untouched.

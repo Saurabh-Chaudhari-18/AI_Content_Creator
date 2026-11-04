@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     # --- CORS: exact origins only, never "*" with credentials ---
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # --- Reverse proxy ---
+    # Only honour X-Forwarded-For when a proxy you control overwrites it
+    # (nginx, Caddy, an ALB). Off = the TCP peer address is used, which cannot
+    # be spoofed. TRUSTED_PROXY_COUNT = how many proxies sit in front.
+    TRUST_X_FORWARDED_FOR: bool = False
+    TRUSTED_PROXY_COUNT: int = 1
+
     # --- Rate limiting ---
     RATE_LIMIT_AUTH_ATTEMPTS: int = 5
     RATE_LIMIT_AUTH_WINDOW_SECONDS: int = 900  # 15 minutes per IP
@@ -86,6 +93,7 @@ class Settings(BaseSettings):
     S3_PRESIGN_EXPIRY_SECONDS: int = 1800  # publish-time GET URLs for Meta ingestion
     MAX_IMAGE_SIZE_MB: int = 25
     MAX_VIDEO_SIZE_MB: int = 100
+    MAX_MEDIA_PER_POST: int = 10
 
     @field_validator("DATABASE_URL")
     @classmethod

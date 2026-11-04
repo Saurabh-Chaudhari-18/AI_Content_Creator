@@ -11,7 +11,7 @@ Refresh is a different mechanism on every platform:
 import logging
 from datetime import datetime, timedelta, timezone
 
-from celery import shared_task
+from app.workers.celery_app import celery_app
 from sqlalchemy import select
 
 from app.db.session import worker_session
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 WARN_WINDOW_DAYS = 7
 
 
-@shared_task(name="app.workers.tasks.token_refresh.check_expiring_tokens")
+@celery_app.task(name="app.workers.tasks.token_refresh.check_expiring_tokens")
 def check_expiring_tokens():
     threshold = datetime.now(timezone.utc) + timedelta(days=WARN_WINDOW_DAYS)
     flagged = 0

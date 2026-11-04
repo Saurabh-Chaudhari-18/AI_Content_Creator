@@ -2,7 +2,40 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+# ── Shared limits (mirror the VARCHAR widths in the migration) ────────
+NAME_MAX = 255
+SHORT_MAX = 100
+URL_MAX = 500
+CAPTION_MAX = 63_206          # Facebook's limit, the largest of the three platforms
+HASHTAG_MAX_COUNT = 30        # Instagram's hard cap
+HASHTAG_MAX_LEN = 100
+
+
+def _reject_null(v, field: str):
+    """Optional-for-PATCH fields may be OMITTED but never sent as null —
+    the column is NOT NULL and a null would surface as a 500."""
+    if v is None:
+        raise ValueError(f"{field} cannot be null; omit the field to leave it unchanged")
+    return v
+
+
+def _clean_hashtags(v: list[str]) -> list[str]:
+    out = []
+    for tag in v:
+        tag = tag.strip().lstrip("#")
+        if not tag:
+            continue
+        if len(tag) > HASHTAG_MAX_LEN:
+            raise ValueError(f"Hashtag too long (max {HASHTAG_MAX_LEN} characters)")
+        if any(ch.isspace() for ch in tag):
+            raise ValueError(f"Hashtag '{tag}' must not contain spaces")
+        out.append(tag)
+    if len(out) > HASHTAG_MAX_COUNT:
+        raise ValueError(f"At most {HASHTAG_MAX_COUNT} hashtags are allowed")
+    return out
 
 from app.models.enums import WorkspaceRole
 
@@ -14,7 +47,7 @@ from app.models.enums import WorkspaceRole
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
-    full_name: str
+    full_name: str = Field(..., max_length=NAME_MAX)
 
     @field_validator("password")
     @classmethod
@@ -63,11 +96,24 @@ class AccessTokenResponse(BaseModel):
 
 # ── Workspaces ────────────────────────────────────────────────────────
 class WorkspaceCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=NAME_MAX)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Workspace name cannot be empty")
+        return v
 
 
 class WorkspaceUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=NAME_MAX)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def no_null(cls, v):
+        return _reject_null(v, "name")
 
 
 class WorkspaceResponse(BaseModel):
@@ -97,23 +143,36 @@ class AddMemberRequest(BaseModel):
 
 # ── Brands ────────────────────────────────────────────────────────────
 class BrandCreate(BaseModel):
-    name: str
-    industry: Optional[str] = None
-    target_audience: Optional[str] = None
-    tone_of_voice: Optional[str] = None
-    language: str = "en"
-    logo_url: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=NAME_MAX)
+    industry: Optional[str] = Field(None, max_length=SHORT_MAX)
+    target_audience: Optional[str] = Field(None, max_length=5_000)
+    tone_of_voice: Optional[str] = Field(None, max_length=SHORT_MAX)
+    language: str = Field("en", min_length=2, max_length=10)
+    logo_url: Optional[str] = Field(None, max_length=URL_MAX)
     brand_guidelines: Optional[dict] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Brand name cannot be empty")
+        return v
 
 
 class BrandUpdate(BaseModel):
-    name: Optional[str] = None
-    industry: Optional[str] = None
-    target_audience: Optional[str] = None
-    tone_of_voice: Optional[str] = None
-    language: Optional[str] = None
-    logo_url: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=NAME_MAX)
+    industry: Optional[str] = Field(None, max_length=SHORT_MAX)
+    target_audience: Optional[str] = Field(None, max_length=5_000)
+    tone_of_voice: Optional[str] = Field(None, max_length=SHORT_MAX)
+    language: Optional[str] = Field(None, min_length=2, max_length=10)
+    logo_url: Optional[str] = Field(None, max_length=URL_MAX)
     brand_guidelines: Optional[dict] = None
+
+    @field_validator("name", "language", "brand_guidelines", mode="before")
+    @classmethod
+    def no_null(cls, v, info):
+        return _reject_null(v, info.field_name)
 
 
 class BrandResponse(BaseModel):
@@ -143,19 +202,34 @@ class PostMediaResponse(BaseModel):
 
 
 class PostCreate(BaseModel):
-    title: Optional[str] = None
-    caption: str = ""
+    title: Optional[str] = Field(None, max_length=NAME_MAX)
+    caption: str = Field("", max_length=CAPTION_MAX)
     hashtags: list[str] = []
-    cta: Optional[str] = None
+    cta: Optional[str] = Field(None, max_length=NAME_MAX)
     platform_targets: Optional[dict] = None
+
+    @field_validator("hashtags")
+    @classmethod
+    def clean_hashtags(cls, v: list[str]) -> list[str]:
+        return _clean_hashtags(v)
 
 
 class PostUpdate(BaseModel):
-    title: Optional[str] = None
-    caption: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=NAME_MAX)
+    caption: Optional[str] = Field(None, max_length=CAPTION_MAX)
     hashtags: Optional[list[str]] = None
-    cta: Optional[str] = None
+    cta: Optional[str] = Field(None, max_length=NAME_MAX)
     platform_targets: Optional[dict] = None
+
+    @field_validator("caption", "hashtags", "platform_targets", mode="before")
+    @classmethod
+    def no_null(cls, v, info):
+        return _reject_null(v, info.field_name)
+
+    @field_validator("hashtags")
+    @classmethod
+    def clean_hashtags(cls, v):
+        return _clean_hashtags(v) if v is not None else v
 
 
 class PostResponse(BaseModel):
@@ -188,7 +262,7 @@ class PostListResponse(BaseModel):
 
 
 class RejectRequest(BaseModel):
-    reason: str
+    reason: str = Field(..., max_length=2_000)
 
     @field_validator("reason")
     @classmethod
@@ -214,8 +288,8 @@ class ApprovalLogResponse(BaseModel):
 # ── Scheduling ────────────────────────────────────────────────────────
 class ScheduleRequest(BaseModel):
     scheduled_at: datetime
-    timezone: str = "UTC"
-    social_account_ids: list[UUID]
+    timezone: str = Field("UTC", max_length=50)
+    social_account_ids: list[UUID] = Field(..., max_length=20)
 
     @field_validator("scheduled_at")
     @classmethod
@@ -233,7 +307,7 @@ class ScheduleRequest(BaseModel):
 
 
 class PublishNowRequest(BaseModel):
-    social_account_ids: list[UUID]
+    social_account_ids: list[UUID] = Field(..., max_length=20)
 
     @field_validator("social_account_ids")
     @classmethod

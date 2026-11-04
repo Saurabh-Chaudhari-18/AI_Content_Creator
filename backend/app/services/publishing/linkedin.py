@@ -7,7 +7,7 @@ import httpx
 
 from app.config import settings
 from app.core.constants import PLATFORM_CHAR_LIMITS
-from app.core.exceptions import PermanentPublishError, RetryablePublishError
+from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
 from app.services.publishing.base import SocialPublishAdapter
 
 logger = logging.getLogger(__name__)
@@ -48,45 +48,44 @@ class LinkedInAdapter(SocialPublishAdapter):
             f"urn:li:organization:{account_metadata.get('platform_account_id')}"
         )
 
+        payload = {
+            "author": author_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {"text": text},
+                    "shareMediaCategory": "NONE",
+                }
+            },
+            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
+        }
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "X-Restli-Protocol-Version": "2.0.0",
+            "Content-Type": "application/json",
+        }
+        # This single POST is the irreversible call: a timeout or dropped
+        # connection means the share may already exist -> unknown outcome,
+        # never an automatic retry.
         try:
             with httpx.Client(timeout=30.0) as client:
-                resp = client.post(
-                    f"{self.BASE_URL}/ugcPosts",
-                    headers={
-                        "Authorization": f"Bearer {access_token}",
-                        "X-Restli-Protocol-Version": "2.0.0",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "author": author_urn,
-                        "lifecycleState": "PUBLISHED",
-                        "specificContent": {
-                            "com.linkedin.ugc.ShareContent": {
-                                "shareCommentary": {"text": text},
-                                "shareMediaCategory": "NONE",
-                            }
-                        },
-                        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
-                    },
-                )
-                if resp.status_code in (200, 201):
-                    urn = resp.json().get("id")
-                    return {
-                        "platform_post_id": urn,
-                        "url": f"https://linkedin.com/feed/update/{urn}",
-                        "published_at": datetime.now(timezone.utc).isoformat(),
-                        "mode": "live_api",
-                        "media_skipped": bool(media_urls),
-                    }
-                if resp.status_code == 429:
-                    raise RetryablePublishError("LinkedIn rate limit (429); will retry.")
-                if resp.status_code in (401, 403):
-                    raise PermanentPublishError(f"LinkedIn auth/permission error: {resp.text}")
-                if resp.status_code >= 500:
-                    raise RetryablePublishError(f"LinkedIn server error: {resp.status_code}")
-                raise PermanentPublishError(f"LinkedIn publish failed: {resp.text}")
+                resp = client.post(f"{self.BASE_URL}/ugcPosts", headers=headers, json=payload)
+        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+            raise UnknownOutcomePublishError(f"LinkedIn publish request dropped: {exc}") from exc
 
-        except httpx.TimeoutException as exc:
-            raise RetryablePublishError(f"LinkedIn request timed out: {exc}") from exc
-        except httpx.NetworkError as exc:
-            raise RetryablePublishError(f"LinkedIn network error: {exc}") from exc
+        if resp.status_code in (200, 201):
+            urn = resp.json().get("id")
+            return {
+                "platform_post_id": urn,
+                "url": f"https://linkedin.com/feed/update/{urn}",
+                "published_at": datetime.now(timezone.utc).isoformat(),
+                "mode": "live_api",
+                "media_skipped": bool(media_urls),
+            }
+        if resp.status_code == 429:
+            raise RetryablePublishError("LinkedIn rate limit (429); will retry.")
+        if resp.status_code in (401, 403):
+            raise PermanentPublishError(f"LinkedIn auth/permission error: {resp.text[:300]}")
+        if resp.status_code >= 500:
+            raise RetryablePublishError(f"LinkedIn server error: {resp.status_code}")
+        raise PermanentPublishError(f"LinkedIn publish failed: {resp.text[:300]}")

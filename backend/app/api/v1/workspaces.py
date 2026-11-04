@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import client_ip, get_current_user, get_workspace_member, require_role
+from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
 from app.models import AuditAction, User, Workspace, WorkspaceMember, WorkspaceRole
 from app.schemas.schemas import (
@@ -17,7 +18,7 @@ from app.schemas.schemas import (
 )
 from app.services.audit import record_audit_event
 
-router = APIRouter(prefix="/workspaces", tags=["Workspaces"])
+router = APIRouter(prefix="/workspaces", tags=["Workspaces"], dependencies=[Depends(workspace_rate_limit)])
 
 
 def _generate_slug(name: str) -> str:

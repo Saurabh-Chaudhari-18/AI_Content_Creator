@@ -3,9 +3,11 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import DataError, IntegrityError
 
 from app.api.v1.router import api_v1_router
 from app.config import settings
@@ -49,6 +51,19 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/openapi.json" if not settings.is_production else None,
     )
+
+    # Safety net under the Pydantic validators: a value the schema missed
+    # (too long, wrong shape) must surface as a client error, never a 500
+    # with a stack trace. The DB message itself is NOT echoed to the client.
+    @app.exception_handler(DataError)
+    async def _data_error(request: Request, exc: DataError):
+        logger.warning("DataError on %s %s: %s", request.method, request.url.path, exc.orig)
+        return JSONResponse(status_code=422, content={"detail": "A field value is invalid or too long."})
+
+    @app.exception_handler(IntegrityError)
+    async def _integrity_error(request: Request, exc: IntegrityError):
+        logger.warning("IntegrityError on %s %s: %s", request.method, request.url.path, exc.orig)
+        return JSONResponse(status_code=409, content={"detail": "The request conflicts with existing data."})
 
     # Middleware added first runs innermost; CORS is added last = outermost.
     app.add_middleware(SecurityHeadersMiddleware)

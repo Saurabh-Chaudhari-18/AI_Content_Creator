@@ -29,3 +29,22 @@ def test_hash_uses_ids_not_urls():
     over immutable media IDs, so URL rotation can't break the chain."""
     stable = compute_content_hash("c", ["3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90"])
     assert stable == compute_content_hash("c", ["3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90"])
+
+
+def test_hashtags_are_part_of_the_hash():
+    """Hashtags are published text — changing them after approval must
+    invalidate the approval, exactly like editing the caption."""
+    base = compute_content_hash("c", ["id-1"], ["sale"], None)
+    assert base != compute_content_hash("c", ["id-1"], ["sale", "crypto"], None)
+    assert base != compute_content_hash("c", ["id-1"], [], None)
+
+
+def test_cta_is_part_of_the_hash():
+    base = compute_content_hash("c", ["id-1"], [], "Visit us")
+    assert base != compute_content_hash("c", ["id-1"], [], "Buy crypto now")
+    assert base != compute_content_hash("c", ["id-1"], [], None)
+
+
+def test_hash_fields_cannot_collide():
+    """A '|' inside a caption must not be confusable with a field separator."""
+    assert compute_content_hash("a|b", []) != compute_content_hash("a", ["b"])

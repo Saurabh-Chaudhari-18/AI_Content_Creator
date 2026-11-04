@@ -5,6 +5,9 @@ actual bytes are validated. Photos are re-encoded to drop EXIF (GPS, device
 serials) before anything can reference them. Adding or removing media
 changes the post's content, so the content hash is recomputed and any
 approval invalidated — the tamper chain stays truthful.
+
+post_id is REQUIRED: an upload always belongs to a post, so no orphan files
+accumulate in storage. The frontend creates the draft first, then uploads.
 """
 import io
 import logging
@@ -25,7 +28,7 @@ from app.core.constants import (
     ALLOWED_VIDEO_EXTENSIONS, ALLOWED_VIDEO_MIMES,
 )
 from app.core.dependencies import client_ip, get_current_user, get_post_access
-from app.core.security import compute_content_hash
+from app.core.security import post_content_hash
 from app.db.session import get_db
 from app.models import (
     ApprovalAction, ApprovalLog, Brand, MediaType, OperationType,
@@ -60,7 +63,7 @@ async def _invalidate_if_approved(post: Post, user: User, db: AsyncSession, reas
     from app.api.v1.posts import cancel_open_jobs  # local import avoids cycle at module load
 
     prev_status = post.status
-    new_hash = compute_content_hash(post.caption, [str(m.id) for m in post.media])
+    new_hash = post_content_hash(post)
     if new_hash == post.content_hash:
         return
     post.content_hash = new_hash
@@ -80,8 +83,8 @@ async def _invalidate_if_approved(post: Post, user: User, db: AsyncSession, reas
 async def upload_media(
     request: Request,
     file: UploadFile = File(...),
-    post_id: Optional[UUID] = Form(None),
-    alt_text: Optional[str] = Form(None),
+    post_id: UUID = Form(...),
+    alt_text: Optional[str] = Form(None, max_length=500),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -101,12 +104,12 @@ async def upload_media(
                             detail="Unsupported file format. Upload JPG, PNG, WEBP, GIF, MP4, MOV or WEBM.")
 
     # TENANT ISOLATION: the target post must be in the caller's workspace.
-    post = None
-    if post_id:
-        post = await get_post_access(post_id, db, user)
-        if post.status in (PostStatus.PUBLISHING, PostStatus.PUBLISHED, PostStatus.PARTIALLY_PUBLISHED):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail="Media cannot be added to a published or publishing post.")
+    from app.api.v1.posts import assert_editable  # local import avoids cycle at module load
+    post = await get_post_access(post_id, db, user)
+    assert_editable(post)
+    if len(post.media) >= settings.MAX_MEDIA_PER_POST:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"A post can have at most {settings.MAX_MEDIA_PER_POST} media files.")
 
     # Read with a hard size cap (chunked — never trust Content-Length).
     chunks: list[bytes] = []
@@ -136,22 +139,25 @@ async def upload_media(
     get_storage().save(storage_key, data)
 
     media_id = uuid_mod.uuid4()
-    if post:
-        db.add(PostMedia(
-            id=media_id, post_id=post.id, storage_key=storage_key,
-            media_type=media_type, alt_text=alt_text,
-            sort_order=len(post.media),
-            meta={"original_filename": filename, "file_size": len(data), "mime": kind.mime},
-        ))
-        await db.flush()
-        await db.refresh(post, ["media"])
-        await _invalidate_if_approved(post, user, db, "Media added after approval; reset to draft.")
+    db.add(PostMedia(
+        id=media_id, post_id=post.id, storage_key=storage_key,
+        media_type=media_type, alt_text=alt_text,
+        sort_order=len(post.media),
+        meta={"original_filename": filename, "file_size": len(data), "mime": kind.mime},
+    ))
+    await db.flush()
+    await db.refresh(post, ["media"])
+    await _invalidate_if_approved(post, user, db, "Media added after approval; reset to draft.")
 
-        brand = await db.scalar(select(Brand).where(Brand.id == post.brand_id))
-        db.add(UsageLog(workspace_id=brand.workspace_id, user_id=user.id,
-                        operation=OperationType.MEDIA_UPLOADED,
-                        meta={"post_id": str(post.id), "bytes": len(data)}))
+    brand = await db.scalar(select(Brand).where(Brand.id == post.brand_id))
+    db.add(UsageLog(workspace_id=brand.workspace_id, user_id=user.id,
+                    operation=OperationType.MEDIA_UPLOADED,
+                    meta={"post_id": str(post.id), "bytes": len(data)}))
+    try:
         await db.commit()
+    except Exception:
+        get_storage().delete(storage_key)  # don't leave the file behind if the row failed
+        raise
 
     return MediaUploadResponse(
         id=media_id,
@@ -175,10 +181,9 @@ async def delete_media(media_id: UUID, db: AsyncSession = Depends(get_db),
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found.")
 
+    from app.api.v1.posts import assert_editable  # local import avoids cycle at module load
     post = await get_post_access(item.post_id, db, user)
-    if post.status in (PostStatus.PUBLISHING, PostStatus.PUBLISHED, PostStatus.PARTIALLY_PUBLISHED):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Media cannot be removed from a published or publishing post.")
+    assert_editable(post)
 
     get_storage().delete(item.storage_key)
     await db.delete(item)

@@ -8,12 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import (
     client_ip, get_brand_access, get_current_user, get_workspace_member, require_role,
 )
+from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
 from app.models import AuditAction, Brand, User, WorkspaceRole
 from app.schemas.schemas import BrandCreate, BrandResponse, BrandUpdate, MessageResponse
 from app.services.audit import record_audit_event
 
-router = APIRouter(tags=["Brands"])
+router = APIRouter(tags=["Brands"], dependencies=[Depends(workspace_rate_limit)])
 
 
 @router.get("/workspaces/{workspace_id}/brands", response_model=List[BrandResponse])

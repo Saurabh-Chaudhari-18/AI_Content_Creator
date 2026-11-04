@@ -8,12 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import get_current_user, get_workspace_member
+from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
 from app.models import Brand, Post, User
 from app.schemas.schemas import CalendarPost
 from app.api.v1.posts import media_schema
 
-router = APIRouter(tags=["Calendar"])
+router = APIRouter(tags=["Calendar"], dependencies=[Depends(workspace_rate_limit)])
 
 
 @router.get("/workspaces/{workspace_id}/calendar", response_model=List[CalendarPost])

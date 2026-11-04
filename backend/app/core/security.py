@@ -85,12 +85,35 @@ def generate_csrf_token() -> str:
 
 
 # ── Content hashing (approval integrity) ──────────────────────────────
-def compute_content_hash(caption: str, media_ids: list[str]) -> str:
-    """SHA-256 over caption + sorted media IDs.
+def compute_content_hash(
+    caption: str,
+    media_ids: list[str],
+    hashtags: list[str] | None = None,
+    cta: str | None = None,
+) -> str:
+    """SHA-256 over EVERYTHING that reaches the platform: caption, sorted
+    media IDs, hashtags (in order) and the call-to-action.
 
     Media IDs (not URLs): IDs are immutable, so the hash never changes
     because a URL was re-signed or a CDN domain rotated — only a real
-    content change (new caption, media added/removed) invalidates approval.
+    content change invalidates approval. Hashtags and CTA are part of the
+    published text, so leaving them out would let approved content be
+    altered without re-review.
     """
-    content = (caption or "") + "|" + "|".join(sorted(str(m) for m in media_ids))
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+    parts = [
+        caption or "",
+        "|".join(sorted(str(m) for m in media_ids)),
+        "\x1f".join(str(h) for h in (hashtags or [])),
+        cta or "",
+    ]
+    return hashlib.sha256("\x1e".join(parts).encode("utf-8")).hexdigest()
+
+
+def post_content_hash(post) -> str:
+    """The content hash of a Post ORM instance (media must be loaded)."""
+    return compute_content_hash(
+        post.caption or "",
+        [str(m.id) for m in post.media],
+        post.hashtags or [],
+        post.cta,
+    )

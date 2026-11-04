@@ -66,7 +66,12 @@ async def consume_oauth_state(state: str) -> tuple[str, str] | None:
 
 # ── Facebook OAuth exchanges ──────────────────────────────────────────
 def facebook_authorization_url(state: str) -> str:
-    scopes = "pages_show_list,pages_manage_posts,pages_read_engagement,business_management"
+    # instagram_* scopes are what make the linked IG business account usable
+    # for publishing; without them Meta omits instagram_business_account.
+    scopes = ",".join([
+        "pages_show_list", "pages_manage_posts", "pages_read_engagement", "business_management",
+        "instagram_basic", "instagram_content_publish",
+    ])
     return (
         f"https://www.facebook.com/{settings.META_GRAPH_API_VERSION}/dialog/oauth"
         f"?client_id={settings.META_APP_ID}"
@@ -98,12 +103,23 @@ async def exchange_code_for_token(code: str) -> dict:
         return long.json()  # {access_token, token_type, expires_in?}
 
 
+async def fetch_user_id(user_token: str) -> str:
+    """The Facebook user ID behind the token. Stored on every connected
+    account so the deauthorize / data-deletion webhooks (which identify the
+    user, not the page) can find what to disable."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(graph_url("/me"), params={**meta_auth_params(user_token), "fields": "id"})
+        resp.raise_for_status()
+        return str(resp.json()["id"])
+
+
 async def fetch_user_pages(user_token: str) -> list[dict]:
     """Pages the user manages. Each page carries its OWN page access token."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(
             graph_url("/me/accounts"),
-            params={**meta_auth_params(user_token), "fields": "id,name,access_token,instagram_business_account"},
+            params={**meta_auth_params(user_token),
+                    "fields": "id,name,access_token,instagram_business_account{id,username}"},
         )
         resp.raise_for_status()
         return resp.json().get("data", [])

@@ -9,18 +9,26 @@ Design (see docs/architecture):
   last-write-wins each other on post.status.
 - COMMIT BARRIER: the job is committed PROCESSING before the platform API
   call. A redelivered task that finds PROCESSING has an UNKNOWN outcome and
-  stops (needs_review) instead of double-posting to a customer's page
-  (Facebook's feed API has no idempotency key).
+  stops instead of double-posting to a customer's page (Facebook's feed API
+  has no idempotency key). If started_at is recent the other delivery is
+  presumed still running and this one simply exits; if it is older than
+  IN_PROGRESS_GRACE the worker is presumed dead and the job is parked as
+  needs_review.
+- The job row is SELECT ... FOR UPDATE SKIP LOCKED'd at pickup, so two
+  concurrent deliveries can never both pass the guards.
+- Success is committed the instant the adapter returns. Bookkeeping after
+  that (usage log, audit row, post finalisation) can fail without ever
+  triggering a retry that would publish again.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from celery import shared_task
+from app.workers.celery_app import celery_app
 from sqlalchemy import select
 
-from app.core.exceptions import PermanentPublishError, RetryablePublishError
-from app.core.security import compute_content_hash
+from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
+from app.core.security import post_content_hash
 from app.db.session import worker_session
 from app.models import (
     ApprovalAction, ApprovalLog, AuditAction, JobStatus, OperationType,
@@ -34,9 +42,10 @@ from app.services.storage import get_storage
 logger = logging.getLogger(__name__)
 
 _TERMINAL = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.NEEDS_REVIEW}
+IN_PROGRESS_GRACE = timedelta(minutes=15)  # platform calls take seconds; 15 min = a dead worker
 
 
-@shared_task(name="app.workers.tasks.publish.dispatch_due_jobs")
+@celery_app.task(name="app.workers.tasks.publish.dispatch_due_jobs")
 def dispatch_due_jobs():
     """Beat task: dispatch every due, not-yet-dispatched job."""
     now = datetime.now(timezone.utc)
@@ -127,7 +136,7 @@ def _retry_or_fail(task, db, job: PublishJob, exc: Exception):
     raise task.retry(exc=exc)
 
 
-@shared_task(
+@celery_app.task(
     bind=True,
     name="app.workers.tasks.publish.publish_post_task",
     max_retries=3,
@@ -141,16 +150,27 @@ def _retry_or_fail(task, db, job: PublishJob, exc: Exception):
 def publish_post_task(self, job_id: str):
     j_uuid = UUID(job_id)
     with worker_session() as db:
-        job = db.get(PublishJob, j_uuid)
+        # Row lock. SKIP LOCKED: if another delivery holds this job right
+        # now, do nothing — it is handling it.
+        job = db.execute(
+            select(PublishJob).where(PublishJob.id == j_uuid).with_for_update(skip_locked=True)
+        ).scalar_one_or_none()
         if job is None:
-            logger.error(f"[Publish] job {job_id} not found — nothing to do")
-            return {"status": "aborted", "reason": "job_not_found"}
+            exists = db.get(PublishJob, j_uuid) is not None
+            if not exists:
+                logger.error(f"[Publish] job {job_id} not found — nothing to do")
+                return {"status": "aborted", "reason": "job_not_found"}
+            logger.warning(f"[Publish] job {job_id} is locked by another worker — skipping")
+            return {"status": "skipped", "reason": "locked"}
 
         # Guard 0a — DOUBLE-PUBLISH PROTECTION. PROCESSING on delivery means
-        # a previous attempt crashed around the platform call: outcome
-        # unknown; never blindly re-publish.
+        # another attempt already passed the commit barrier. Never re-publish.
         if job.status == JobStatus.PROCESSING:
-            logger.error(f"[Publish] job {job_id} delivered while PROCESSING — unknown outcome")
+            age = datetime.now(timezone.utc) - (job.started_at or datetime.now(timezone.utc))
+            if age < IN_PROGRESS_GRACE:
+                logger.warning(f"[Publish] job {job_id} already in progress ({age}); skipping duplicate delivery")
+                return {"status": "skipped", "reason": "in_progress"}
+            logger.error(f"[Publish] job {job_id} stuck PROCESSING for {age} — unknown outcome")
             _fail_job(db, job,
                       "Unknown outcome: a previous attempt crashed after dispatch. "
                       "Verify on the platform before retrying.",
@@ -176,7 +196,7 @@ def publish_post_task(self, job_id: str):
         # Guard 2 — tamper detection: recompute from ACTUAL content (caption
         # + media IDs) and compare to the approval record. Comparing two
         # stored columns would miss direct media mutations.
-        actual_hash = compute_content_hash(post.caption or "", [str(m.id) for m in post.media])
+        actual_hash = post_content_hash(post)
         latest_approval = db.execute(
             select(ApprovalLog)
             .where(ApprovalLog.post_id == post.id, ApprovalLog.action == ApprovalAction.APPROVED)
@@ -229,11 +249,29 @@ def publish_post_task(self, job_id: str):
                 hashtags=post.hashtags or [],
                 cta=post.cta,
             )
+        except UnknownOutcomePublishError as exc:
+            # The request left the building; the platform may have posted it.
+            logger.error(f"[Publish] UNKNOWN OUTCOME job {job.id}: {exc}")
+            _fail_job(db, job, f"Unknown outcome — verify on the platform before retrying: {exc}",
+                      status=JobStatus.NEEDS_REVIEW)
+            return {"status": "needs_review", "error": str(exc)}
+        except PermanentPublishError as exc:
+            logger.error(f"[Publish] permanent failure job {job.id}: {exc}")
+            _fail_job(db, job, str(exc))
+            return {"status": "failed", "error": str(exc)}
+        except RetryablePublishError as exc:
+            return _retry_or_fail(self, db, job, exc)
+        except Exception as exc:  # noqa: BLE001 — unknown ≠ permanent
+            return _retry_or_fail(self, db, job, exc)
 
-            job.status = JobStatus.COMPLETED
-            job.result = result  # already filtered by the adapter contract
-            job.processed_at = datetime.now(timezone.utc)
+        # ── The platform accepted the post. Persist that FIRST, on its own
+        # commit, so nothing below can cause a retry that publishes again.
+        job.status = JobStatus.COMPLETED
+        job.result = result  # already filtered by the adapter contract
+        job.processed_at = datetime.now(timezone.utc)
+        db.commit()
 
+        try:
             db.add(UsageLog(workspace_id=brand.workspace_id, user_id=None,
                             operation=OperationType.POST_PUBLISHED,
                             meta={"post_id": str(post.id), "platform": social_account.platform.value}))
@@ -245,14 +283,8 @@ def publish_post_task(self, job_id: str):
                                    "platform_post_id": result.get("platform_post_id")}},
             )
             _finalize_post(db, post.id)
-            logger.info(f"[Publish] job {job.id} → {social_account.platform.value} OK")
-            return {"status": "published", "platform_post_id": result.get("platform_post_id")}
-
-        except PermanentPublishError as exc:
-            logger.error(f"[Publish] permanent failure job {job.id}: {exc}")
-            _fail_job(db, job, str(exc))
-            return {"status": "failed", "error": str(exc)}
-        except RetryablePublishError as exc:
-            return _retry_or_fail(self, db, job, exc)
-        except Exception as exc:  # noqa: BLE001 — unknown ≠ permanent
-            return _retry_or_fail(self, db, job, exc)
+        except Exception:  # noqa: BLE001 — bookkeeping must never re-run the publish
+            logger.exception(f"[Publish] job {job.id} published but post-publish bookkeeping failed")
+            db.rollback()
+        logger.info(f"[Publish] job {job.id} → {social_account.platform.value} OK")
+        return {"status": "published", "platform_post_id": result.get("platform_post_id")}

@@ -9,7 +9,7 @@ measured from `started_at`, not created_at — a job created at 09:00 for a
 import logging
 from datetime import datetime, timedelta, timezone
 
-from celery import shared_task
+from app.workers.celery_app import celery_app
 from sqlalchemy import select
 
 from app.db.session import worker_session
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 STALE_AFTER = timedelta(hours=1)
 
 
-@shared_task(name="app.workers.tasks.cleanup.cleanup_stale_jobs")
+@celery_app.task(name="app.workers.tasks.cleanup.cleanup_stale_jobs")
 def cleanup_stale_jobs():
     cutoff = datetime.now(timezone.utc) - STALE_AFTER
     flagged = 0

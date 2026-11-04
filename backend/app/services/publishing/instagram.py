@@ -8,12 +8,21 @@ import httpx
 
 from app.config import settings
 from app.core.constants import PLATFORM_CHAR_LIMITS
-from app.core.exceptions import PermanentPublishError, RetryablePublishError
+from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
 from app.services.meta_oauth import graph_url, meta_auth_params
 from app.services.publishing.base import SocialPublishAdapter
 from app.services.publishing.facebook import _classify_meta_error
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_error(resp: httpx.Response) -> dict:
+    """Meta error body, or an empty dict for a non-JSON (HTML 502) response —
+    which _classify_meta_error then treats as transient on 5xx."""
+    try:
+        return resp.json().get("error", {}) or {}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 class InstagramAdapter(SocialPublishAdapter):
@@ -66,7 +75,7 @@ class InstagramAdapter(SocialPublishAdapter):
                     data={"image_url": image_url, "caption": text, **meta_auth_params(access_token)},
                 )
                 if c_resp.status_code != 200:
-                    _classify_meta_error(c_resp.status_code, c_resp.json().get("error", {}), "Instagram container")
+                    _classify_meta_error(c_resp.status_code, _safe_error(c_resp), "Instagram container")
                 creation_id = c_resp.json()["id"]
 
                 # Step 2: poll until Meta finishes ingesting the media.
@@ -89,13 +98,16 @@ class InstagramAdapter(SocialPublishAdapter):
                 if not ready:
                     raise RetryablePublishError("Instagram media container not ready in time; will retry.")
 
-                # Step 3: publish the container
-                p_resp = client.post(
-                    graph_url(f"/{ig_user_id}/media_publish"),
-                    data={"creation_id": creation_id, **meta_auth_params(access_token)},
-                )
+                # Step 3: publish the container — the irreversible call.
+                try:
+                    p_resp = client.post(
+                        graph_url(f"/{ig_user_id}/media_publish"),
+                        data={"creation_id": creation_id, **meta_auth_params(access_token)},
+                    )
+                except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                    raise UnknownOutcomePublishError(f"Instagram media_publish request dropped: {exc}") from exc
                 if p_resp.status_code != 200:
-                    _classify_meta_error(p_resp.status_code, p_resp.json().get("error", {}), "Instagram publish")
+                    _classify_meta_error(p_resp.status_code, _safe_error(p_resp), "Instagram publish")
 
                 media_id = p_resp.json().get("id")
                 return {

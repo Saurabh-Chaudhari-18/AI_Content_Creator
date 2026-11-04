@@ -5,8 +5,11 @@ Invariants enforced here (and re-verified in the worker):
 - Approval: pending-only, admin/owner role, approver != creator, and the
   submitted hash is VERIFIED — never recomputed-and-blessed.
 - Immutability: publishing/published posts cannot be edited.
+- Pending posts cannot be edited either: what the approver reads must be
+  what gets approved. Withdraw (or get a rejection) first.
 - Scheduling: target social accounts must belong to the post's workspace.
 """
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
@@ -20,7 +23,8 @@ from app.core.dependencies import (
     APPROVER_ROLES, client_ip, get_brand_access, get_current_user,
     get_post_access, get_post_membership,
 )
-from app.core.security import compute_content_hash
+from app.core.rate_limit import workspace_rate_limit
+from app.core.security import compute_content_hash, post_content_hash
 from app.db.session import get_db
 from app.models import (
     ApprovalAction, ApprovalLog, AuditAction, Brand, JobStatus, OperationType,
@@ -34,9 +38,29 @@ from app.schemas.schemas import (
 from app.services.audit import record_audit_event
 from app.services.storage import get_storage
 
-router = APIRouter(tags=["Posts"])
+logger = logging.getLogger(__name__)
+router = APIRouter(tags=["Posts"], dependencies=[Depends(workspace_rate_limit)])
 
 EDITABLE_BLOCKED = (PostStatus.PUBLISHING, PostStatus.PUBLISHED, PostStatus.PARTIALLY_PUBLISHED)
+
+
+def assert_editable(post: Post) -> None:
+    """Shared by PATCH and media add/remove."""
+    if post.status in EDITABLE_BLOCKED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Published or publishing posts cannot be edited. Duplicate the post instead.",
+        )
+    if post.status == PostStatus.PENDING_APPROVAL:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This post is awaiting approval and is locked. Withdraw it to edit.",
+        )
+
+
+def can_manage(post: Post, member) -> bool:
+    """Destructive actions: the author, or an admin/owner."""
+    return post.created_by == member.user_id or member.role in APPROVER_ROLES
 
 
 # ── Serialization (media display URLs resolved via storage service) ───
@@ -64,7 +88,7 @@ def post_schema(post: Post) -> PostResponse:
 
 
 def current_hash(post: Post) -> str:
-    return compute_content_hash(post.caption, [str(m.id) for m in post.media])
+    return post_content_hash(post)
 
 
 async def cancel_open_jobs(post: Post, db: AsyncSession, reason: str) -> None:
@@ -127,7 +151,7 @@ async def create_post(brand_id: UUID, req: PostCreate, request: Request,
         status=PostStatus.DRAFT,
         version_number=1,
     )
-    post.content_hash = compute_content_hash(post.caption, [])
+    post.content_hash = compute_content_hash(post.caption, [], post.hashtags, post.cta)
     db.add(post)
     await db.flush()
 
@@ -157,12 +181,7 @@ async def update_post(post_id: UUID, req: PostUpdate, request: Request,
                       db: AsyncSession = Depends(get_db),
                       user: User = Depends(get_current_user)):
     post = await get_post_access(post_id, db, user)
-
-    if post.status in EDITABLE_BLOCKED:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Published or publishing posts cannot be edited. Duplicate the post instead.",
-        )
+    assert_editable(post)
 
     prev_status = post.status
     changed = req.model_dump(exclude_unset=True)
@@ -205,6 +224,12 @@ async def delete_post(post_id: UUID, request: Request,
                       user: User = Depends(get_current_user)):
     post = await get_post_access(post_id, db, user)
     member = await get_post_membership(post, db, user)
+    if not can_manage(post, member):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only the author or a workspace admin can delete this post.")
+    if post.status == PostStatus.PUBLISHING:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="The post is being published right now. Wait for it to finish.")
 
     await cancel_open_jobs(post, db, "Cancelled: post deleted.")
     record_audit_event(
@@ -251,6 +276,36 @@ async def submit_for_approval(post_id: UUID, request: Request,
     return post_schema(post)
 
 
+@router.post("/posts/{post_id}/withdraw", response_model=PostResponse)
+async def withdraw_submission(post_id: UUID, request: Request,
+                              db: AsyncSession = Depends(get_db),
+                              user: User = Depends(get_current_user)):
+    """Pull a pending post back to draft so it can be edited. Author or admin."""
+    post = await get_post_access(post_id, db, user)
+    member = await get_post_membership(post, db, user)
+    if post.status != PostStatus.PENDING_APPROVAL:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Only pending posts can be withdrawn. Current status: {post.status.value}")
+    if not can_manage(post, member):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only the author or a workspace admin can withdraw this post.")
+
+    post.status = PostStatus.DRAFT
+    db.add(ApprovalLog(post_id=post.id, user_id=user.id,
+                       action=ApprovalAction.INVALIDATED,
+                       content_hash_at_action=post.content_hash,
+                       rejection_reason="Withdrawn by the author before review."))
+    record_audit_event(
+        db, action=AuditAction.UPDATE, entity_type="Post", entity_id=post.id,
+        workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
+        user_name=user.full_name, changes={"after": {"status": "draft", "reason": "withdrawn"}},
+        ip_address=client_ip(request),
+    )
+    await db.commit()
+    await db.refresh(post)
+    return post_schema(post)
+
+
 @router.post("/posts/{post_id}/approve", response_model=PostResponse)
 async def approve_post(post_id: UUID, request: Request,
                        db: AsyncSession = Depends(get_db),
@@ -275,7 +330,15 @@ async def approve_post(post_id: UUID, request: Request,
             detail="You cannot approve a post you created. Another admin or the owner must review it.",
         )
     # Guard 4: VERIFY the submitted content — never recompute-and-bless.
-    if current_hash(post) != post.content_hash:
+    # The reference is the hash recorded at SUBMIT time (an append-only
+    # row), not posts.content_hash, which any edit path could move.
+    submitted = await db.scalar(
+        select(ApprovalLog)
+        .where(ApprovalLog.post_id == post.id, ApprovalLog.action == ApprovalAction.SUBMITTED)
+        .order_by(ApprovalLog.created_at.desc()).limit(1)
+    )
+    live_hash = current_hash(post)
+    if submitted is None or submitted.content_hash_at_action != live_hash or live_hash != post.content_hash:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Post content changed since submission. It must be resubmitted for approval.",
@@ -452,15 +515,12 @@ async def publish_now(post_id: UUID, req: PublishNowRequest, request: Request,
     try:
         from app.workers.tasks.publish import publish_post_task
         for job in jobs:
-            task = publish_post_task.apply_async(kwargs={
-                "post_id": str(post.id),
-                "social_account_id": str(job.social_account_id),
-                "job_id": str(job.id),
-            })
+            task = publish_post_task.apply_async(kwargs={"job_id": str(job.id)})
             job.celery_task_id = task.id
         await db.commit()
     except Exception:  # noqa: BLE001 — Beat scan is the safety net
-        pass
+        logger.warning("publish-now: immediate dispatch failed for post %s; Beat will pick it up",
+                       post.id, exc_info=True)
 
     return ScheduleResponse(
         post_id=post.id, scheduled_at=now,
@@ -472,9 +532,13 @@ async def publish_now(post_id: UUID, req: PublishNowRequest, request: Request,
 async def cancel_schedule(post_id: UUID, db: AsyncSession = Depends(get_db),
                           user: User = Depends(get_current_user)):
     post = await get_post_access(post_id, db, user)
+    member = await get_post_membership(post, db, user)
     if post.status != PostStatus.SCHEDULED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Only scheduled posts can be unscheduled.")
+    if not can_manage(post, member):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only the author or a workspace admin can unschedule this post.")
 
     await cancel_open_jobs(post, db, "Cancelled by user.")
     post.status = PostStatus.APPROVED  # approval stays valid — content unchanged

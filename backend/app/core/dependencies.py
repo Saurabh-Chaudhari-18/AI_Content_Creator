@@ -3,6 +3,7 @@
 Every workspace-scoped route resolves access through get_workspace_member /
 get_post_access here, never through ad-hoc joins in route bodies.
 """
+import ipaddress
 from uuid import UUID
 
 import jwt as pyjwt
@@ -12,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models import Brand, Post, User, WorkspaceMember, WorkspaceRole
@@ -110,7 +112,24 @@ async def get_post_membership(post: Post, db: AsyncSession, user: User) -> Works
 
 
 def client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    """Best-effort client address for rate limiting and audit rows.
+
+    X-Forwarded-For is attacker-controlled unless the app sits behind a
+    proxy that overwrites it, so it is honoured ONLY when
+    TRUST_X_FORWARDED_FOR is set. The value is validated as an IP literal and
+    always fits the 45-char ip_address columns — a junk header must never
+    turn into a 500 on /login.
+    """
+    peer = request.client.host if request.client else "unknown"
+    if not settings.TRUST_X_FORWARDED_FOR:
+        return peer[:45]
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    # With N trusted proxies the real client is the Nth address from the right.
+    hops = [h.strip() for h in forwarded.split(",") if h.strip()]
+    if len(hops) >= settings.TRUSTED_PROXY_COUNT >= 1:
+        candidate = hops[-settings.TRUSTED_PROXY_COUNT]
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            pass
+    return peer[:45]

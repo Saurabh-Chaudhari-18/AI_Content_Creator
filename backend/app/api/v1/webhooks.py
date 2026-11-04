@@ -24,6 +24,11 @@ router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 
 def _parse_signed_request(signed_request: str) -> dict:
+    # An empty secret would make HMAC("") trivially forgeable — refuse to
+    # process anything rather than let anyone disconnect customer accounts.
+    if not settings.META_APP_SECRET:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Meta integration is not configured on this server.")
     try:
         encoded_sig, payload = signed_request.split(".", 1)
         sig = base64.urlsafe_b64decode(encoded_sig + "=" * (-len(encoded_sig) % 4))
