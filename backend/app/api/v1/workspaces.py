@@ -186,6 +186,12 @@ async def add_member(workspace_id: UUID, req: AddMemberRequest, request: Request
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="User is already a member of this workspace.")
 
+    # Locked so two concurrent invites can't both see "one member" and race.
+    workspace = await db.scalar(select(Workspace).where(Workspace.id == workspace_id).with_for_update())
+    members_before = await db.scalar(
+        select(func.count(WorkspaceMember.id)).where(WorkspaceMember.workspace_id == workspace_id)
+    )
+
     new_member = WorkspaceMember(workspace_id=workspace_id, user_id=target.id, role=req.role)
     db.add(new_member)
     record_audit_event(
@@ -194,5 +200,23 @@ async def add_member(workspace_id: UUID, req: AddMemberRequest, request: Request
         changes={"after": {"member_email": target.email, "role": req.role.value}},
         ip_address=client_ip(request),
     )
+
+    # Self-approval exists so a one-person business can finish the journey
+    # alone. The moment a second person joins there is someone else to
+    # approve, so author != approver is switched on — once, on the 1 -> 2
+    # transition only. If the owner later re-enables it deliberately, later
+    # invites leave that choice alone.
+    message = f"Added {target.full_name} to the workspace."
+    if members_before == 1 and workspace.allow_self_approval:
+        workspace.allow_self_approval = False
+        record_audit_event(
+            db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,
+            workspace_id=workspace.id, user_id=user.id, user_email=user.email, user_name=user.full_name,
+            changes={"before": {"allow_self_approval": True}, "after": {"allow_self_approval": False},
+                     "reason": "automatic: second member joined"},
+            ip_address=client_ip(request),
+        )
+        message += (" Posts now need approval from someone other than their author;"
+                    " the owner can change this in workspace settings.")
     await db.commit()
-    return MessageResponse(message=f"Added {target.full_name} to the workspace.")
+    return MessageResponse(message=message)

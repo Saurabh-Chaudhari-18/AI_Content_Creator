@@ -68,8 +68,8 @@ All gaps between the backend and the Phase 1 scope are closed. The frontend can 
 | Brand logo | `POST /brands/{id}/logo` (multipart `file`, images only) → `{logo_url}`; replaces the previous file | |
 | Usage tracking | `GET /workspaces/{id}/usage?days=30` → counts per operation, `media_bytes`, `ai_generations` (always 0 in Phase 1) | Usage screen |
 | Workspace-wide posts | `GET /workspaces/{id}/posts?status=&brand_id=&page=&limit=` | Dashboard, "needs approval" queue |
-| Self-approval (D1) | `workspaces.allow_self_approval` (default **true**); owner-only `PATCH /workspaces/{id}` `{allow_self_approval}`; returned on `WorkspaceResponse`. When false, author ≠ approver is enforced. | Toggle on workspace settings, owner only |
-| Demo seed | `python -m seeds.seed` → Demo Agency: owner `demo@example.com` + admin `reviewer@example.com` (password `DemoPassword123!`), 2 brands, 2 mock accounts, 7 posts covering every state, 16 templates. Refuses to run in production. | |
+| Self-approval (D1) | `workspaces.allow_self_approval`: **true** for a new (one-person) workspace; switched **off automatically when the second member joins** (1 → 2 transition only, audited). Owner can change it any time via `PATCH /workspaces/{id}` `{allow_self_approval}`; a deliberate re-enable is not undone by later invites. Returned on `WorkspaceResponse`. When false, author ≠ approver is enforced. | Toggle on workspace settings, owner only; show the add-member response message, which explains the switch |
+| Demo seed | `python -m seeds.seed` → Demo Agency: owner `demo@example.com` + admin `reviewer@example.com` (password `DemoPassword123!`), 2 brands, 2 mock accounts, 7 posts covering every state, 16 templates. Two members, so self-approval is off (reviewer approves). For the single-user journey, register a fresh account. Refuses to run in production. | |
 
 Everything else in the research report's Wave 2/3 (WhatsApp alerts, compliance-lite, importers, white-label, AI provenance) stays out of Phase 1.
 

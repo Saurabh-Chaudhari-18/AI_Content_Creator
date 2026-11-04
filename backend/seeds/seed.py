@@ -150,7 +150,9 @@ async def seed() -> None:
 
         workspace = await db.scalar(select(Workspace).where(Workspace.slug == "demo-agency"))
         if not workspace:
-            workspace = Workspace(name="Demo Agency", slug="demo-agency", owner_id=owner.id)
+            # Two members -> author != approver, as add_member would set it.
+            workspace = Workspace(name="Demo Agency", slug="demo-agency", owner_id=owner.id,
+                                  allow_self_approval=False)
             db.add(workspace)
             await db.flush()
             print("  + workspace 'Demo Agency'")
