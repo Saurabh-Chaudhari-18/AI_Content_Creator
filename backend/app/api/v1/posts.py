@@ -21,22 +21,25 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import (
     APPROVER_ROLES, client_ip, get_brand_access, get_current_user,
-    get_post_access, get_post_membership,
+    get_post_access, get_post_membership, get_workspace_member,
 )
 from app.core.rate_limit import workspace_rate_limit
-from app.core.security import compute_content_hash, post_content_hash
+from app.core.security import compute_content_hash, post_content_hash, resolve_platform_content
 from app.db.session import get_db
 from app.models import (
     ApprovalAction, ApprovalLog, AuditAction, Brand, JobStatus, OperationType,
-    Post, PostStatus, PublishJob, SocialAccount, UsageLog, User,
+    Post, PostStatus, PublishJob, SocialAccount, UsageLog, User, Workspace,
 )
 from app.schemas.schemas import (
-    ApprovalLogResponse, JobResponse, MessageResponse, PostCreate,
+    AccountValidation, ApprovalLogResponse, JobResponse, MessageResponse, PostCreate,
     PostListResponse, PostMediaResponse, PostResponse, PostUpdate,
     PublishNowRequest, RejectRequest, ScheduleRequest, ScheduleResponse,
+    ValidateRequest, ValidateResponse,
 )
 from app.services.audit import record_audit_event
+from app.services.publishing.factory import get_adapter
 from app.services.storage import get_storage
+from app.core.constants import PLATFORM_CHAR_LIMITS
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Posts"], dependencies=[Depends(workspace_rate_limit)])
@@ -133,6 +136,38 @@ async def list_posts(
     )
 
 
+@router.get("/workspaces/{workspace_id}/posts", response_model=PostListResponse)
+async def list_workspace_posts(
+    workspace_id: UUID,
+    status_filter: Optional[PostStatus] = Query(None, alias="status"),
+    brand_id: Optional[UUID] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """All posts across the workspace's brands — the dashboard and the
+    "needs approval" queue. Tenancy: membership in the PATH workspace."""
+    await get_workspace_member(workspace_id, db, user)
+
+    base = select(Post).join(Brand, Brand.id == Post.brand_id).where(Brand.workspace_id == workspace_id)
+    count_q = select(func.count(Post.id)).join(Brand, Brand.id == Post.brand_id).where(Brand.workspace_id == workspace_id)
+    if status_filter:
+        base = base.where(Post.status == status_filter)
+        count_q = count_q.where(Post.status == status_filter)
+    if brand_id:
+        base = base.where(Post.brand_id == brand_id)
+        count_q = count_q.where(Post.brand_id == brand_id)
+
+    total = (await db.execute(count_q)).scalar() or 0
+    result = await db.execute(
+        base.options(selectinload(Post.media)).order_by(Post.updated_at.desc())
+        .offset((page - 1) * limit).limit(limit)
+    )
+    return PostListResponse(items=[post_schema(p) for p in result.scalars().all()],
+                            total=total, page=page, limit=limit)
+
+
 @router.post("/brands/{brand_id}/posts", response_model=PostResponse,
              status_code=status.HTTP_201_CREATED)
 async def create_post(brand_id: UUID, req: PostCreate, request: Request,
@@ -151,7 +186,7 @@ async def create_post(brand_id: UUID, req: PostCreate, request: Request,
         status=PostStatus.DRAFT,
         version_number=1,
     )
-    post.content_hash = compute_content_hash(post.caption, [], post.hashtags, post.cta)
+    post.content_hash = compute_content_hash(post.caption, [], post.hashtags, post.cta, post.platform_targets)
     db.add(post)
     await db.flush()
 
@@ -323,12 +358,15 @@ async def approve_post(post_id: UUID, request: Request,
     if member.role not in APPROVER_ROLES:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Only workspace owners and admins can approve posts.")
-    # Guard 3: separation of duties
+    # Guard 3: separation of duties — per-workspace. A one-person business
+    # approves its own work; an agency switches this off.
     if post.created_by == user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You cannot approve a post you created. Another admin or the owner must review it.",
-        )
+        workspace = await db.get(Workspace, member.workspace_id)
+        if workspace is None or not workspace.allow_self_approval:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You cannot approve a post you created. Another admin or the owner must review it.",
+            )
     # Guard 4: VERIFY the submitted content — never recompute-and-bless.
     # The reference is the hash recorded at SUBMIT time (an append-only
     # row), not posts.content_hash, which any edit path could move.
@@ -402,18 +440,19 @@ async def approval_history(post_id: UUID, db: AsyncSession = Depends(get_db),
 
 
 # ── Scheduling & publishing ───────────────────────────────────────────
-async def _validated_accounts(post: Post, account_ids: list[UUID], db: AsyncSession) -> list[SocialAccount]:
+async def _validated_accounts(post: Post, account_ids: list[UUID], db: AsyncSession,
+                              require_active: bool = True) -> list[SocialAccount]:
     """TENANT ISOLATION: every target account must belong to the post's
-    workspace and be active. Without this, a caller could publish through
-    another tenant's connected pages."""
+    workspace (and be active, unless this is a validation dry run). Without
+    this, a caller could publish through another tenant's connected pages."""
     brand = await db.scalar(select(Brand).where(Brand.id == post.brand_id))
-    result = await db.execute(
-        select(SocialAccount).where(
-            SocialAccount.id.in_(set(account_ids)),
-            SocialAccount.workspace_id == brand.workspace_id,
-            SocialAccount.is_active == True,  # noqa: E712
-        )
+    stmt = select(SocialAccount).where(
+        SocialAccount.id.in_(set(account_ids)),
+        SocialAccount.workspace_id == brand.workspace_id,
     )
+    if require_active:
+        stmt = stmt.where(SocialAccount.is_active == True)  # noqa: E712
+    result = await db.execute(stmt)
     accounts = result.scalars().all()
     if len(accounts) != len(set(account_ids)):
         raise HTTPException(
@@ -440,6 +479,43 @@ def _make_jobs(post: Post, accounts: list[SocialAccount], when: datetime, db: As
     # dispatch on Redis is re-delivered (visibility_timeout) and lost on
     # restarts — and a down broker can't produce a "scheduled" post with no
     # task behind it.
+
+
+@router.post("/posts/{post_id}/validate", response_model=ValidateResponse)
+async def validate_for_accounts(post_id: UUID, req: ValidateRequest,
+                                db: AsyncSession = Depends(get_db),
+                                user: User = Depends(get_current_user)):
+    """Dry run: what each platform would receive and whether it would be
+    accepted — character limits, media requirements, account health. Read
+    only; call it before schedule / publish-now so the user fixes problems
+    instead of discovering them in a failed job."""
+    post = await get_post_access(post_id, db, user)
+    accounts = await _validated_accounts(post, req.social_account_ids, db, require_active=False)
+
+    results = []
+    # Adapters only need the media COUNT for validation; no URLs are signed.
+    media_placeholders = [f"media:{m.id}" for m in post.media]
+    for account in accounts:
+        adapter = get_adapter(account.platform)
+        caption, hashtags, cta = resolve_platform_content(post, account.platform.value)
+        text = adapter.render_text(caption, hashtags, cta)
+        errors = adapter.validate_text(text) + adapter.validate_media(media_placeholders)
+        warnings = []
+        if not account.is_active:
+            errors.append(f"'{account.account_name}' is disconnected. Reconnect it first.")
+        elif account.needs_reauth:
+            warnings.append(f"'{account.account_name}' token expires soon; reconnect to avoid a failed publish.")
+        if account.platform.value == "linkedin" and post.media:
+            warnings.append("LinkedIn publishes text only in this release; media will be skipped.")
+        if post.status != PostStatus.APPROVED:
+            warnings.append(f"Post is '{post.status.value}'; it must be approved before scheduling.")
+        results.append(AccountValidation(
+            social_account_id=account.id, platform=account.platform.value,
+            account_name=account.account_name, ok=not errors, errors=errors, warnings=warnings,
+            rendered_text=text, character_count=len(text),
+            character_limit=PLATFORM_CHAR_LIMITS.get(account.platform.value, 0),
+        ))
+    return ValidateResponse(post_id=post.id, ok=all(r.ok for r in results), results=results)
 
 
 @router.post("/posts/{post_id}/schedule", response_model=ScheduleResponse)

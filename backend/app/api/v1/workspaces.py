@@ -1,19 +1,19 @@
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import client_ip, get_current_user, get_workspace_member, require_role
 from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
-from app.models import AuditAction, User, Workspace, WorkspaceMember, WorkspaceRole
+from app.models import AuditAction, OperationType, UsageLog, User, Workspace, WorkspaceMember, WorkspaceRole
 from app.schemas.schemas import (
-    AddMemberRequest, MemberResponse, MessageResponse,
+    AddMemberRequest, MemberResponse, MessageResponse, UsageSummaryResponse,
     WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate,
 )
 from app.services.audit import record_audit_event
@@ -77,18 +77,55 @@ async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Re
     if not workspace:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found.")
 
+    before: dict = {}
+    after: dict = {}
     if req.name:
-        before = workspace.name
-        workspace.name = req.name.strip()
+        before["name"], workspace.name = workspace.name, req.name.strip()
+        after["name"] = workspace.name
+    if req.allow_self_approval is not None:
+        # Governance switch — owner only (an admin must not relax the rule for themselves).
+        require_role(member, WorkspaceRole.OWNER)
+        before["allow_self_approval"] = workspace.allow_self_approval
+        workspace.allow_self_approval = req.allow_self_approval
+        after["allow_self_approval"] = workspace.allow_self_approval
+    if after:
         record_audit_event(
             db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,
             workspace_id=workspace.id, user_id=user.id, user_email=user.email, user_name=user.full_name,
-            changes={"before": {"name": before}, "after": {"name": workspace.name}},
-            ip_address=client_ip(request),
+            changes={"before": before, "after": after}, ip_address=client_ip(request),
         )
     await db.commit()
     await db.refresh(workspace)
     return WorkspaceResponse.model_validate(workspace)
+
+
+@router.get("/{workspace_id}/usage", response_model=UsageSummaryResponse)
+async def usage_summary(workspace_id: UUID, days: int = Query(30, ge=1, le=365),
+                        db: AsyncSession = Depends(get_db),
+                        user: User = Depends(get_current_user)):
+    """Operation counts for the last N days — the seed of the Phase 3 credit
+    system. ai_generation is reserved and always 0 in Phase 1."""
+    await get_workspace_member(workspace_id, db, user)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    rows = await db.execute(
+        select(UsageLog.operation, func.count(UsageLog.id))
+        .where(UsageLog.workspace_id == workspace_id, UsageLog.created_at >= since)
+        .group_by(UsageLog.operation)
+    )
+    counts = {op.value: 0 for op in OperationType}
+    for operation, n in rows.all():
+        counts[operation.value] = n
+
+    media_bytes = await db.scalar(
+        select(func.coalesce(func.sum((UsageLog.meta["bytes"]).as_integer()), 0))
+        .where(UsageLog.workspace_id == workspace_id, UsageLog.created_at >= since,
+               UsageLog.operation == OperationType.MEDIA_UPLOADED)
+    )
+    return UsageSummaryResponse(
+        workspace_id=workspace_id, days=days, counts=counts,
+        media_bytes=int(media_bytes or 0), ai_generations=counts[OperationType.AI_GENERATION.value],
+    )
 
 
 @router.get("/{workspace_id}/members", response_model=List[MemberResponse])

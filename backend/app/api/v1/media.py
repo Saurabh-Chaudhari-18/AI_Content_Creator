@@ -34,7 +34,7 @@ from app.models import (
     ApprovalAction, ApprovalLog, Brand, MediaType, OperationType,
     Post, PostMedia, PostStatus, UsageLog, User, WorkspaceMember,
 )
-from app.schemas.schemas import MediaUploadResponse, MessageResponse
+from app.schemas.schemas import MediaReorderRequest, MediaUploadResponse, MessageResponse
 from app.services.storage import get_storage
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,41 @@ def _strip_exif(data: bytes, ext: str) -> bytes:
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"[Media] EXIF strip failed: {exc}")
         return data
+
+
+async def read_validated_upload(file: UploadFile, *, images_only: bool = False) -> tuple[bytes, str, str, MediaType]:
+    """Shared by post media and brand logos: extension allow-list, chunked
+    size cap, magic-byte check, EXIF strip. Returns (bytes, ext, mime, type)."""
+    filename = file.filename or "media"
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in ALLOWED_IMAGE_EXTENSIONS:
+        media_type, max_bytes, allowed = MediaType.IMAGE, settings.MAX_IMAGE_SIZE_MB * 1024 * 1024, ALLOWED_IMAGE_MIMES
+    elif ext in ALLOWED_VIDEO_EXTENSIONS and not images_only:
+        media_type, max_bytes, allowed = MediaType.VIDEO, settings.MAX_VIDEO_SIZE_MB * 1024 * 1024, ALLOWED_VIDEO_MIMES
+    else:
+        allowed_list = "JPG, PNG, WEBP, GIF" + ("" if images_only else ", MP4, MOV or WEBM")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Unsupported file format. Upload {allowed_list}.")
+
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                                detail=f"File exceeds the {max_bytes // (1024 * 1024)}MB limit.")
+        chunks.append(chunk)
+    data = b"".join(chunks)
+    if not data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+
+    kind = filetype.guess(data[:8192])
+    if kind is None or kind.mime not in allowed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="File content does not match an allowed media type.")
+    if media_type == MediaType.IMAGE:
+        data = _strip_exif(data, ext)
+    return data, ext, kind.mime, media_type
 
 
 async def _invalidate_if_approved(post: Post, user: User, db: AsyncSession, reason: str) -> None:
@@ -89,19 +124,6 @@ async def upload_media(
     user: User = Depends(get_current_user),
 ):
     filename = file.filename or "media"
-    ext = os.path.splitext(filename)[1].lower()
-
-    if ext in ALLOWED_IMAGE_EXTENSIONS:
-        media_type = MediaType.IMAGE
-        max_bytes = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024
-        allowed_mimes = ALLOWED_IMAGE_MIMES
-    elif ext in ALLOWED_VIDEO_EXTENSIONS:
-        media_type = MediaType.VIDEO
-        max_bytes = settings.MAX_VIDEO_SIZE_MB * 1024 * 1024
-        allowed_mimes = ALLOWED_VIDEO_MIMES
-    else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Unsupported file format. Upload JPG, PNG, WEBP, GIF, MP4, MOV or WEBM.")
 
     # TENANT ISOLATION: the target post must be in the caller's workspace.
     from app.api.v1.posts import assert_editable  # local import avoids cycle at module load
@@ -111,29 +133,7 @@ async def upload_media(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"A post can have at most {settings.MAX_MEDIA_PER_POST} media files.")
 
-    # Read with a hard size cap (chunked — never trust Content-Length).
-    chunks: list[bytes] = []
-    total = 0
-    while chunk := await file.read(1024 * 1024):
-        total += len(chunk)
-        if total > max_bytes:
-            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                                detail=f"File exceeds the {max_bytes // (1024 * 1024)}MB limit.")
-        chunks.append(chunk)
-    data = b"".join(chunks)
-    if not data:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
-
-    # Magic-byte validation: actual bytes, not the extension.
-    kind = filetype.guess(data[:8192])
-    if kind is None or kind.mime not in allowed_mimes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File content does not match an allowed media type.",
-        )
-
-    if media_type == MediaType.IMAGE:
-        data = _strip_exif(data, ext)
+    data, ext, mime, media_type = await read_validated_upload(file)
 
     storage_key = f"media/{uuid_mod.uuid4().hex}{ext}"
     get_storage().save(storage_key, data)
@@ -143,7 +143,7 @@ async def upload_media(
         id=media_id, post_id=post.id, storage_key=storage_key,
         media_type=media_type, alt_text=alt_text,
         sort_order=len(post.media),
-        meta={"original_filename": filename, "file_size": len(data), "mime": kind.mime},
+        meta={"original_filename": filename, "file_size": len(data), "mime": mime},
     ))
     await db.flush()
     await db.refresh(post, ["media"])
@@ -163,8 +163,29 @@ async def upload_media(
         id=media_id,
         media_url=get_storage().display_url(storage_key),
         media_type=media_type.value,
-        metadata={"original_filename": filename, "file_size": len(data), "mime": kind.mime},
+        metadata={"original_filename": filename, "file_size": len(data), "mime": mime},
     )
+
+
+@router.patch("/reorder", response_model=MessageResponse)
+async def reorder_media(req: MediaReorderRequest, db: AsyncSession = Depends(get_db),
+                        user: User = Depends(get_current_user)):
+    """Set carousel order. The list must contain exactly the post's media
+    IDs — no additions, omissions or foreign IDs. Order is not part of the
+    content hash (media IDs are hashed as a set), so reordering does not
+    invalidate an approval."""
+    from app.api.v1.posts import assert_editable  # local import avoids cycle at module load
+    post = await get_post_access(req.post_id, db, user)
+    assert_editable(post)
+
+    current = {m.id: m for m in post.media}
+    if set(req.media_ids) != set(current) or len(req.media_ids) != len(current):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="media_ids must list every media item of this post exactly once.")
+    for position, media_id in enumerate(req.media_ids):
+        current[media_id].sort_order = position
+    await db.commit()
+    return MessageResponse(message="Media order updated.")
 
 
 @router.delete("/{media_id}", response_model=MessageResponse)

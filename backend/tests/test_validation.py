@@ -75,3 +75,21 @@ def test_garbage_xff_never_exceeds_column(monkeypatch):
     monkeypatch.setattr(settings, "TRUST_X_FORWARDED_FOR", True)
     assert len(client_ip(_Req(xff="a" * 300))) <= 45
     assert client_ip(_Req(xff="a" * 300)) == "10.0.0.9"
+
+
+def test_platform_targets_keys_validated():
+    with pytest.raises(ValidationError):
+        PostCreate.model_validate({"platform_targets": {"tiktok": {"caption": "x"}}})
+    p = PostCreate.model_validate({"platform_targets": {"instagram": {"hashtags": ["#A", "b"]}, "facebook": {}}})
+    assert p.platform_targets == {"instagram": {"hashtags": ["A", "b"]}}  # empty override dropped
+
+
+def test_platform_override_length_capped():
+    with pytest.raises(ValidationError):
+        PostCreate.model_validate({"platform_targets": {"linkedin": {"cta": "x" * 300}}})
+
+
+def test_platform_override_explicit_null_is_kept():
+    """null = clear for this platform; omitted = inherit. They must differ."""
+    p = PostCreate.model_validate({"platform_targets": {"linkedin": {"caption": "x", "cta": None}}})
+    assert p.platform_targets == {"linkedin": {"caption": "x", "cta": None}}

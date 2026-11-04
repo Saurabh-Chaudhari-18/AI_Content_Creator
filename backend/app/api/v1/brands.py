@@ -1,7 +1,9 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, status
+import uuid as uuid_mod
+
+from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,8 +13,9 @@ from app.core.dependencies import (
 from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
 from app.models import AuditAction, Brand, User, WorkspaceRole
-from app.schemas.schemas import BrandCreate, BrandResponse, BrandUpdate, MessageResponse
+from app.schemas.schemas import BrandCreate, BrandLogoResponse, BrandResponse, BrandUpdate, MessageResponse
 from app.services.audit import record_audit_event
+from app.services.storage import get_storage
 
 router = APIRouter(tags=["Brands"], dependencies=[Depends(workspace_rate_limit)])
 
@@ -87,6 +90,35 @@ async def update_brand(brand_id: UUID, req: BrandUpdate, request: Request,
     await db.commit()
     await db.refresh(brand)
     return BrandResponse.model_validate(brand)
+
+
+@router.post("/brands/{brand_id}/logo", response_model=BrandLogoResponse)
+async def upload_brand_logo(brand_id: UUID, request: Request, file: UploadFile = File(...),
+                            db: AsyncSession = Depends(get_db),
+                            user: User = Depends(get_current_user)):
+    """Images only, same validation pipeline as post media. Replaces the
+    previous logo file."""
+    from app.api.v1.media import read_validated_upload  # local import avoids cycle at module load
+    brand = await get_brand_access(brand_id, db, user)
+
+    data, ext, _mime, _type = await read_validated_upload(file, images_only=True)
+    storage_key = f"brands/{brand.id}/logo-{uuid_mod.uuid4().hex}{ext}"
+    storage = get_storage()
+    storage.save(storage_key, data)
+
+    old_key = (brand.brand_guidelines or {}).get("_logo_storage_key")
+    brand.logo_url = storage.display_url(storage_key)
+    brand.brand_guidelines = {**(brand.brand_guidelines or {}), "_logo_storage_key": storage_key}
+    record_audit_event(
+        db, action=AuditAction.UPDATE, entity_type="Brand", entity_id=brand.id,
+        workspace_id=brand.workspace_id, user_id=user.id, user_email=user.email,
+        user_name=user.full_name, changes={"after": {"logo_url": brand.logo_url}},
+        ip_address=client_ip(request),
+    )
+    await db.commit()
+    if old_key:
+        storage.delete(old_key)
+    return BrandLogoResponse(brand_id=brand.id, logo_url=brand.logo_url)
 
 
 @router.delete("/brands/{brand_id}", response_model=MessageResponse)

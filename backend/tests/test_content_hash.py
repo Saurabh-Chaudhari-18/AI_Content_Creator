@@ -48,3 +48,24 @@ def test_cta_is_part_of_the_hash():
 def test_hash_fields_cannot_collide():
     """A '|' inside a caption must not be confusable with a field separator."""
     assert compute_content_hash("a|b", []) != compute_content_hash("a", ["b"])
+
+
+def test_platform_overrides_are_part_of_the_hash():
+    """An Instagram-only caption override is published text — it must be
+    bound to the approval like everything else."""
+    base = compute_content_hash("c", [], [], None, {})
+    assert base != compute_content_hash("c", [], [], None, {"instagram": {"caption": "different"}})
+    # key order must not matter (canonical JSON)
+    a = compute_content_hash("c", [], [], None, {"facebook": {"cta": "x"}, "instagram": {"cta": "y"}})
+    b = compute_content_hash("c", [], [], None, {"instagram": {"cta": "y"}, "facebook": {"cta": "x"}})
+    assert a == b
+
+
+def test_resolve_platform_content_overrides_only_given_fields():
+    from types import SimpleNamespace
+    from app.core.security import resolve_platform_content
+
+    post = SimpleNamespace(caption="base", hashtags=["a"], cta="Go",
+                           platform_targets={"instagram": {"hashtags": ["ig"], "cta": None}})
+    assert resolve_platform_content(post, "facebook") == ("base", ["a"], "Go")
+    assert resolve_platform_content(post, "instagram") == ("base", ["ig"], None)  # cta explicitly cleared

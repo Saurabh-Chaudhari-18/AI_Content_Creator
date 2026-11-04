@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from app.core.constants import PLATFORM_CHAR_LIMITS
 from app.core.exceptions import PermanentPublishError, RetryablePublishError  # noqa: F401 (re-export)
 
 
@@ -33,6 +34,20 @@ class SocialPublishAdapter(ABC):
     def validate_media(self, media_urls: list[str]) -> list[str]:
         """Platform constraint check. Returns error strings (empty = valid)."""
         ...
+
+    platform: str = ""        # set by each adapter; keys PLATFORM_CHAR_LIMITS
+    cta_emoji: str = "👉"
+
+    def render_text(self, caption: str, hashtags: list[str] | None, cta: str | None) -> str:
+        return self.compose_text(caption, hashtags, cta, emoji=self.cta_emoji)
+
+    def validate_text(self, text: str) -> list[str]:
+        limit = PLATFORM_CHAR_LIMITS.get(self.platform)
+        if limit and len(text) > limit:
+            return [f"Text is {len(text):,} characters; the {self.platform} limit is {limit:,}."]
+        if not text.strip():
+            return ["Post text is empty."]
+        return []
 
     @staticmethod
     def compose_text(caption: str, hashtags: list[str] | None, cta: str | None, emoji: str = "👉") -> str:

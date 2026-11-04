@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -16,6 +16,9 @@ class Workspace(Base):
     name = Column(String(255), nullable=False)
     slug = Column(String(100), unique=True, nullable=False, index=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # True: a post's author may approve it (one-person business, demo).
+    # False: author != approver is enforced (agency / compliance).
+    allow_self_approval = Column(Boolean, nullable=False, server_default="true")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

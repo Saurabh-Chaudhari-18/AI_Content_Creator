@@ -22,6 +22,40 @@ def _reject_null(v, field: str):
     return v
 
 
+class PlatformOverride(BaseModel):
+    """Per-platform variant. Any field left out inherits from the post."""
+    caption: Optional[str] = Field(None, max_length=CAPTION_MAX)
+    hashtags: Optional[list[str]] = None
+    cta: Optional[str] = Field(None, max_length=NAME_MAX)
+
+    @field_validator("hashtags")
+    @classmethod
+    def clean(cls, v):
+        return _clean_hashtags(v) if v is not None else v
+
+
+def _clean_targets(v):
+    """platform_targets: {"instagram": {caption?, hashtags?, cta?}, ...}.
+    Keys must be known platforms; empty overrides are dropped."""
+    if v is None:
+        return None
+    if not isinstance(v, dict):
+        raise ValueError("platform_targets must be an object keyed by platform")
+    out = {}
+    valid = {p.value for p in SocialPlatform}
+    for key, val in v.items():
+        if key not in valid:
+            raise ValueError(f"Unknown platform '{key}'. Use one of: {', '.join(sorted(valid))}")
+        if val is None:
+            continue
+        # exclude_UNSET, not exclude_none: an explicit null means "clear this
+        # field for this platform" and must survive; an omitted field inherits.
+        cleaned = PlatformOverride.model_validate(val).model_dump(exclude_unset=True)
+        if cleaned:
+            out[key] = cleaned
+    return out
+
+
 def _clean_hashtags(v: list[str]) -> list[str]:
     out = []
     for tag in v:
@@ -37,7 +71,7 @@ def _clean_hashtags(v: list[str]) -> list[str]:
         raise ValueError(f"At most {HASHTAG_MAX_COUNT} hashtags are allowed")
     return out
 
-from app.models.enums import WorkspaceRole
+from app.models.enums import OperationType, SocialPlatform, WorkspaceRole
 
 
 # ── Auth ──────────────────────────────────────────────────────────────
@@ -109,6 +143,9 @@ class WorkspaceCreate(BaseModel):
 
 class WorkspaceUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=NAME_MAX)
+    # Owner-only. True lets a post's author approve it (one-person business);
+    # false enforces author != approver (agency / compliance).
+    allow_self_approval: Optional[bool] = None
 
     @field_validator("name", mode="before")
     @classmethod
@@ -121,6 +158,7 @@ class WorkspaceResponse(BaseModel):
     name: str
     slug: str
     owner_id: UUID
+    allow_self_approval: bool = True
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -175,6 +213,11 @@ class BrandUpdate(BaseModel):
         return _reject_null(v, info.field_name)
 
 
+class BrandLogoResponse(BaseModel):
+    brand_id: UUID
+    logo_url: str
+
+
 class BrandResponse(BaseModel):
     id: UUID
     workspace_id: UUID
@@ -213,6 +256,11 @@ class PostCreate(BaseModel):
     def clean_hashtags(cls, v: list[str]) -> list[str]:
         return _clean_hashtags(v)
 
+    @field_validator("platform_targets")
+    @classmethod
+    def clean_targets(cls, v):
+        return _clean_targets(v)
+
 
 class PostUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=NAME_MAX)
@@ -230,6 +278,11 @@ class PostUpdate(BaseModel):
     @classmethod
     def clean_hashtags(cls, v):
         return _clean_hashtags(v) if v is not None else v
+
+    @field_validator("platform_targets")
+    @classmethod
+    def clean_targets(cls, v):
+        return _clean_targets(v)
 
 
 class PostResponse(BaseModel):
@@ -355,7 +408,44 @@ class ConnectStartResponse(BaseModel):
     authorization_url: str
 
 
+# ── Pre-publish validation ────────────────────────────────────────────
+class ValidateRequest(BaseModel):
+    social_account_ids: list[UUID] = Field(..., min_length=1, max_length=20)
+
+
+class AccountValidation(BaseModel):
+    social_account_id: UUID
+    platform: str
+    account_name: str
+    ok: bool
+    errors: list[str] = []
+    warnings: list[str] = []
+    rendered_text: str  # exactly what the adapter would send
+    character_count: int
+    character_limit: int
+
+
+class ValidateResponse(BaseModel):
+    post_id: UUID
+    ok: bool
+    results: list[AccountValidation]
+
+
+# ── Usage ─────────────────────────────────────────────────────────────
+class UsageSummaryResponse(BaseModel):
+    workspace_id: UUID
+    days: int
+    counts: dict[str, int]          # operation -> count (every OperationType present, 0 if none)
+    media_bytes: int                # sum of uploaded bytes in the window
+    ai_generations: int             # reserved for Phase 2 credits; always 0 in Phase 1
+
+
 # ── Media ─────────────────────────────────────────────────────────────
+class MediaReorderRequest(BaseModel):
+    post_id: UUID
+    media_ids: list[UUID] = Field(..., min_length=1, max_length=50)
+
+
 class MediaUploadResponse(BaseModel):
     id: UUID
     media_url: str

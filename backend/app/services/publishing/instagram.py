@@ -26,6 +26,7 @@ def _safe_error(resp: httpx.Response) -> dict:
 
 
 class InstagramAdapter(SocialPublishAdapter):
+    platform = "instagram"
     CONTAINER_POLL_ATTEMPTS = 10
     CONTAINER_POLL_INTERVAL_SECONDS = 3.0
 

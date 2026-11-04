@@ -29,6 +29,8 @@ def _classify_meta_error(status_code: int, err: dict, context: str):
 
 
 class FacebookAdapter(SocialPublishAdapter):
+    platform = "facebook"
+
     def validate_media(self, media_urls: list[str]) -> list[str]:
         errors = []
         if len(media_urls) > 1:

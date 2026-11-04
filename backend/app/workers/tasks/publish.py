@@ -28,7 +28,7 @@ from app.workers.celery_app import celery_app
 from sqlalchemy import select
 
 from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
-from app.core.security import post_content_hash
+from app.core.security import post_content_hash, resolve_platform_content
 from app.db.session import worker_session
 from app.models import (
     ApprovalAction, ApprovalLog, AuditAction, JobStatus, OperationType,
@@ -241,13 +241,14 @@ def publish_post_task(self, job_id: str):
             else:
                 media_urls = [get_storage().publish_url(m.storage_key) for m in post.media]
 
+            caption, hashtags, cta = resolve_platform_content(post, social_account.platform.value)
             result = adapter.publish(
-                caption=post.caption,
+                caption=caption,
                 media_urls=media_urls,
                 access_token=access_token,
                 account_metadata=social_account.platform_metadata or {},
-                hashtags=post.hashtags or [],
-                cta=post.cta,
+                hashtags=hashtags,
+                cta=cta,
             )
         except UnknownOutcomePublishError as exc:
             # The request left the building; the platform may have posted it.

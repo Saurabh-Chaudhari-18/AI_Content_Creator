@@ -21,6 +21,8 @@ class LinkedInAdapter(SocialPublishAdapter):
     a visible flag until that flow lands in Phase 2.
     """
     BASE_URL = "https://api.linkedin.com/v2"
+    platform = "linkedin"
+    cta_emoji = "🔗"
 
     def validate_media(self, media_urls: list[str]) -> list[str]:
         return []  # media is skipped, not rejected — the text still publishes

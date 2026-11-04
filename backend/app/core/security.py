@@ -4,6 +4,7 @@ PyJWT (not python-jose: CVE-2024-33663/64) and bcrypt directly
 (not passlib: unmaintained, breaks with bcrypt >= 4.1).
 """
 import hashlib
+import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -90,9 +91,11 @@ def compute_content_hash(
     media_ids: list[str],
     hashtags: list[str] | None = None,
     cta: str | None = None,
+    platform_targets: dict | None = None,
 ) -> str:
     """SHA-256 over EVERYTHING that reaches the platform: caption, sorted
-    media IDs, hashtags (in order) and the call-to-action.
+    media IDs, hashtags (in order), the call-to-action and any per-platform
+    overrides (canonical JSON, sorted keys).
 
     Media IDs (not URLs): IDs are immutable, so the hash never changes
     because a URL was re-signed or a CDN domain rotated — only a real
@@ -105,6 +108,7 @@ def compute_content_hash(
         "|".join(sorted(str(m) for m in media_ids)),
         "\x1f".join(str(h) for h in (hashtags or [])),
         cta or "",
+        json.dumps(platform_targets or {}, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
     ]
     return hashlib.sha256("\x1e".join(parts).encode("utf-8")).hexdigest()
 
@@ -116,4 +120,15 @@ def post_content_hash(post) -> str:
         [str(m.id) for m in post.media],
         post.hashtags or [],
         post.cta,
+        post.platform_targets or {},
     )
+
+
+def resolve_platform_content(post, platform: str) -> tuple[str, list[str], str | None]:
+    """What actually goes out for one platform: the post's caption/hashtags/
+    CTA unless platform_targets[platform] overrides a field."""
+    override = (post.platform_targets or {}).get(platform) or {}
+    caption = override.get("caption") if override.get("caption") is not None else (post.caption or "")
+    hashtags = override.get("hashtags") if override.get("hashtags") is not None else (post.hashtags or [])
+    cta = override.get("cta") if "cta" in override else post.cta
+    return caption, list(hashtags), cta
