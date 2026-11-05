@@ -466,6 +466,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/posts/{post_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Post
+         * @description Send failed jobs again, now.
+         *
+         *     Safety rules (the "never double-post" promise):
+         *     - Only FAILED jobs retry freely: the platform rejected them, nothing was posted.
+         *     - NEEDS_REVIEW jobs (outcome unknown) retry only with confirm_not_posted.
+         *     - COMPLETED jobs are never resent.
+         *     - Content must still be exactly what was approved.
+         *     The same job rows are re-queued, so the post's aggregate status is derived
+         *     correctly when they finish; the previous error is kept in the audit trail.
+         */
+        post: operations["retry_post_api_v1_posts__post_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/posts/{post_id}/jobs": {
         parameters: {
             query?: never;
@@ -1262,6 +1290,23 @@ export interface components {
         RejectRequest: {
             /** Reason */
             reason: string;
+        };
+        /**
+         * RetryRequest
+         * @description Retry a failed (or partly published) post.
+         *
+         *     job_ids: which failed jobs to retry; omitted = every failed job.
+         *     confirm_not_posted: required when any chosen job is needs_review — the
+         *     platform may already have published it, so a human must have checked.
+         */
+        RetryRequest: {
+            /** Job Ids */
+            job_ids?: string[] | null;
+            /**
+             * Confirm Not Posted
+             * @default false
+             */
+            confirm_not_posted: boolean;
         };
         /** ScheduleRequest */
         ScheduleRequest: {
@@ -2507,6 +2552,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PublishNowRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_post_api_v1_posts__post_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryRequest"];
             };
         };
         responses: {

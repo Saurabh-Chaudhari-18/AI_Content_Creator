@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["integration: needs PostgreSQL + Redis (docker compose up -d postgres redis); skipped otherwise"]
 
 [tool.ruff]
 line-length = 110

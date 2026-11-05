@@ -51,7 +51,7 @@ Rules we follow (from the Impeccable review): one primary action per screen; a r
 | `/login`, `/register` | Sign in / Register | Session in memory, silent refresh on reload |
 | `/` | Home | Live counts, “Needs your attention” (failures first), account health |
 | `/posts` | Posts | All posts, status tabs, brand filter, paging, “New post” (asks which brand) |
-| `/posts/new?brand=…[&template=…]`, `/posts/:id` | Post Studio | Write; Smart Templates with fill-in blanks; per-platform text; hashtags; photos (upload, reorder, remove); send / approve / request changes / withdraw; pre-publish check per account; schedule or post now; live job status; approval evidence and history |
+| `/posts/new?brand=…[&template=…]`, `/posts/:id` | Post Studio | Write; Smart Templates with fill-in blanks; per-platform text; hashtags; photos (upload, reorder, remove); send / approve / request changes / withdraw; pre-publish check per account; schedule or post now; live job status; **Try again** for failed posts (unknown outcomes need a “I checked” confirmation); approval evidence and history |
 | `/calendar` | Calendar | Month grid of scheduled / published / failed posts; posts not yet scheduled |
 | `/templates` | Smart Templates | Filter by industry, type, search; “Use this template” opens Post Studio |
 | `/accounts` (`/social-accounts`) | Accounts | Health and expiry per account, connect Facebook (needs Meta app), add test account (dev), disconnect, recent failures |
@@ -62,7 +62,6 @@ Buttons follow the user’s role (owner / admin / member) and the workspace’s 
 
 ### Known gaps (backend endpoints not built yet)
 
-- Retry a failed post (today: edit it or create a new one).
 - Remove a member / change a role; password reset; profile edit.
 - Approval certificate PDF download.
 - Alt text can only be set at upload time (no edit endpoint).

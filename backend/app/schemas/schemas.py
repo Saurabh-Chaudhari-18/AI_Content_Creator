@@ -359,6 +359,17 @@ class ScheduleRequest(BaseModel):
         return v
 
 
+class RetryRequest(BaseModel):
+    """Retry a failed (or partly published) post.
+
+    job_ids: which failed jobs to retry; omitted = every failed job.
+    confirm_not_posted: required when any chosen job is needs_review — the
+    platform may already have published it, so a human must have checked.
+    """
+    job_ids: Optional[list[UUID]] = Field(None, max_length=20)
+    confirm_not_posted: bool = False
+
+
 class PublishNowRequest(BaseModel):
     social_account_ids: list[UUID] = Field(..., max_length=20)
 

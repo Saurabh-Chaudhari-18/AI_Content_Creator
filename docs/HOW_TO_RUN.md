@@ -296,7 +296,8 @@ docker compose stop
 
 | What | Where | Command |
 |---|---|---|
-| Run backend tests | `backend` | `python -m pytest` |
+| Run backend tests (unit + database integration; integration needs B2 running, else they are skipped) | `backend` | `python -m pytest` |
+| Only the fast unit tests | `backend` | `python -m pytest -m "not integration"` |
 | Build the web app (checks for errors) | `frontend` | `npm run build` |
 | Type-check the web app only | `frontend` | `npm run typecheck` |
 | Lint the web app | `frontend` | `npm run lint` |

@@ -13,4 +13,4 @@ Phase 2), coordinates approvals, and publishes to connected social channels.
 
 **[docs/HOW_TO_RUN.md](docs/HOW_TO_RUN.md)** — start, check and stop the database, API, worker, scheduler and web app, step by step.
 
-More detail: [`backend/README.md`](backend/README.md) (architecture, production checklist) · [`frontend/README.md`](frontend/README.md) · [`docs/database_guide.pdf`](docs/database_guide.pdf).
+More detail: [`docs/backend_guide.md`](docs/backend_guide.md) (how the backend works and why — start here) · [`docs/database_guide.pdf`](docs/database_guide.pdf) · [`backend/README.md`](backend/README.md) (production checklist) · [`frontend/README.md`](frontend/README.md).

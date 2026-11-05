@@ -8,7 +8,6 @@ CSRF: double-submit cookie protects the cookie-authenticated endpoints
 (/refresh, /logout).
 """
 import hmac as hmac_mod
-import re
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -16,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.api.v1.workspaces import generate_slug
 from app.core.dependencies import client_ip, get_current_user
 from app.core.rate_limit import auth_rate_limit
 from app.core.security import (
@@ -35,10 +35,6 @@ from app.schemas.schemas import (
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-
-def _generate_slug(name: str) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9]+", "-", name.lower()).strip("-") or "workspace"
-    return f"{slug}-{int(datetime.now(timezone.utc).timestamp())}"
 
 
 def _set_auth_cookies(response: Response, refresh_token: str) -> None:
@@ -108,7 +104,7 @@ async def register(req: RegisterRequest, request: Request, response: Response,
 
     workspace = Workspace(
         name=f"{req.full_name.strip()}'s Workspace",
-        slug=_generate_slug(req.full_name),
+        slug=generate_slug(req.full_name),
         owner_id=user.id,
     )
     db.add(workspace)

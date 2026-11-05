@@ -45,7 +45,8 @@ type Form = {
 
 const EMPTY: Form = { title: "", caption: "", hashtags: [], cta: "", targets: {} };
 const LOCKED: Post["status"][] = ["pending_approval", "publishing", "published", "partially_published"];
-const NEEDS_REAPPROVAL: Post["status"][] = ["approved", "scheduled"];
+// Editing these sends the post back to draft (the backend resets them).
+const NEEDS_REAPPROVAL: Post["status"][] = ["approved", "scheduled", "failed"];
 
 function formFromPost(p: Post): Form {
   return {
@@ -470,7 +471,11 @@ export function PostStudioPage() {
           )}
 
           {editable && NEEDS_REAPPROVAL.includes(status) && (
-            <p className="m-0 text-[13px] text-muted-foreground">This post is approved. If you change anything, it goes back for approval.</p>
+            <p className="m-0 text-[13px] text-muted-foreground">
+              {status === "failed"
+                ? "To post it unchanged, use “Try again”. If you edit it, it goes back for approval."
+                : "This post is approved. If you change anything, it goes back for approval."}
+            </p>
           )}
         </Tile>
 
@@ -523,8 +528,11 @@ export function PostStudioPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Save and send back for approval?</AlertDialogTitle>
             <AlertDialogDescription>
-              This post is {status === "scheduled" ? "scheduled" : "approved"}. Saving a change moves it back to draft
-              {status === "scheduled" ? " and cancels the schedule" : ""}. Someone will need to approve it again.
+              {status === "failed"
+                ? "Saving a change moves this post back to draft. Someone will need to approve the new version before it can be posted."
+                : `This post is ${status === "scheduled" ? "scheduled" : "approved"}. Saving a change moves it back to draft${
+                    status === "scheduled" ? " and cancels the schedule" : ""
+                  }. Someone will need to approve it again.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

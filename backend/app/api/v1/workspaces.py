@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import UUID
@@ -21,10 +22,14 @@ from app.services.audit import record_audit_event
 router = APIRouter(prefix="/workspaces", tags=["Workspaces"], dependencies=[Depends(workspace_rate_limit)])
 
 
-def _generate_slug(name: str) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9]+", "-", name.lower()).strip("-") or "workspace"
-    return f"{slug}-{int(datetime.now(timezone.utc).timestamp())}"
+def generate_slug(name: str) -> str:
+    """URL-safe, unique workspace slug: "aura-coffee-3f9c1a".
 
+    A random suffix (not a timestamp): two people with the same name signing
+    up in the same second used to collide on the unique index and get a 409.
+    """
+    base = re.sub(r"[^a-zA-Z0-9]+", "-", name.lower()).strip("-")[:80] or "workspace"
+    return f"{base}-{secrets.token_hex(3)}"
 
 @router.get("", response_model=List[WorkspaceResponse])
 async def list_my_workspaces(db: AsyncSession = Depends(get_db),
@@ -42,7 +47,7 @@ async def list_my_workspaces(db: AsyncSession = Depends(get_db),
 async def create_workspace(req: WorkspaceCreate, request: Request,
                            db: AsyncSession = Depends(get_db),
                            user: User = Depends(get_current_user)):
-    workspace = Workspace(name=req.name.strip(), slug=_generate_slug(req.name), owner_id=user.id)
+    workspace = Workspace(name=req.name.strip(), slug=generate_slug(req.name), owner_id=user.id)
     db.add(workspace)
     await db.flush()
     db.add(WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role=WorkspaceRole.OWNER))

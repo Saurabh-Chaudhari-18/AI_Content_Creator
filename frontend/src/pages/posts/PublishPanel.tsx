@@ -6,6 +6,16 @@ import { toast } from "sonner";
 
 import { JobBadge, TileTitle } from "@/components/common";
 import { Tile } from "@/components/Tile";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -177,11 +187,29 @@ export function JobsPanel({ post }: { post: Post }) {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn’t cancel."),
   });
 
+  const retry = useMutation({
+    mutationFn: (body: Schemas["RetryRequest"]) =>
+      api<Schemas["ScheduleResponse"]>(`/posts/${post.id}/retry`, { method: "POST", body }),
+    onSuccess: () => {
+      toast.success("Sending again. Results appear here in a few seconds.");
+      setConfirmOpen(false);
+      qc.invalidateQueries({ queryKey: keys.post(post.id) });
+      qc.invalidateQueries({ queryKey: keys.jobs(post.id) });
+      qc.invalidateQueries({ queryKey: ["ws-posts"] });
+      qc.invalidateQueries({ queryKey: ["calendar"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn’t retry."),
+  });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const accountName = (id: string) => {
     const a = accounts.data?.find((x) => x.id === id);
     return a ? `${platformName(a.platform)} · ${a.account_name}` : "Disconnected account";
   };
   const list = jobs.data ?? [];
+  const canRetry = post.status === "failed" || post.status === "partially_published";
+  const failedJobs = list.filter((j) => j.status === "failed");
+  const unknownJobs = list.filter((j) => j.status === "needs_review");
 
   return (
     <Tile aria-labelledby="jobs-h">
@@ -223,6 +251,46 @@ export function JobsPanel({ post }: { post: Post }) {
           Cancel schedule
         </Button>
       )}
+
+      {/* Retry: definite failures in one click; unknown outcomes only after the user checked. */}
+      {canRetry && failedJobs.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <Button
+            onClick={() => retry.mutate({ job_ids: failedJobs.map((j) => j.id), confirm_not_posted: false })}
+            disabled={retry.isPending}
+          >
+            {retry.isPending ? "Sending…" : failedJobs.length === 1 ? "Try again" : `Try again (${failedJobs.length})`}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Only the failed {failedJobs.length === 1 ? "account is" : "accounts are"} sent again. Accounts that already posted are never sent twice.
+          </span>
+        </div>
+      )}
+      {canRetry && unknownJobs.length > 0 && (
+        <Button variant="outline" onClick={() => setConfirmOpen(true)} disabled={retry.isPending}>
+          I checked — it isn’t on the page
+        </Button>
+      )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send it again?</AlertDialogTitle>
+            <AlertDialogDescription>
+              We couldn’t confirm whether this went out on {unknownJobs.map((j) => accountName(j.social_account_id)).join(", ")}.
+              Only continue if you opened the page and the post is <strong>not</strong> there — otherwise it will appear twice.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not yet</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => retry.mutate({ job_ids: unknownJobs.map((j) => j.id), confirm_not_posted: true })}
+            >
+              It’s not there — send again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Tile>
   );
 }

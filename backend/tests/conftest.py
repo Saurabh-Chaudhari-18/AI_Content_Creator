@@ -12,6 +12,8 @@ os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@lo
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ.setdefault("META_APP_ID", "test-app-id")
 os.environ.setdefault("META_APP_SECRET", "test-app-secret")
+# Integration tests register many users from one client IP.
+os.environ.setdefault("RATE_LIMIT_AUTH_ATTEMPTS", "10000")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

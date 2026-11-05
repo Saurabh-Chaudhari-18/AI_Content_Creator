@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { EmptyState, PageHeader, StatusBadge } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
@@ -67,8 +67,17 @@ export function NewPostButton({ size = "default" }: { size?: "default" | "lg" })
 }
 
 export function PostsPage() {
-  const { brandName, brands } = useWorkspace();
-  const [filter, setFilter] = useState<Post["status"] | "all">("all");
+  const { brandName, brands, setBrandId } = useWorkspace();
+  const [params] = useSearchParams();
+  const initial = params.get("status") as Post["status"] | null;
+  const [filter, setFilter] = useState<Post["status"] | "all">(
+    initial && FILTERS.some((f) => f.value === initial) ? initial : "all",
+  );
+  // Home's count tiles link here with ?status=…&brand=… so the list opens already filtered.
+  const brandParam = params.get("brand");
+  useEffect(() => {
+    if (brandParam) setBrandId(brandParam);
+  }, [brandParam, setBrandId]);
   const [page, setPage] = useState(1);
   const posts = useWorkspacePosts({ status: filter === "all" ? undefined : filter, limit: PAGE_SIZE, page });
 

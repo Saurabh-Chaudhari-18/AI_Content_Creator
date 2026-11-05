@@ -33,7 +33,7 @@ from app.models import (
 from app.schemas.schemas import (
     AccountValidation, ApprovalLogResponse, JobResponse, MessageResponse, PostCreate,
     PostListResponse, PostMediaResponse, PostResponse, PostUpdate,
-    PublishNowRequest, RejectRequest, ScheduleRequest, ScheduleResponse,
+    PublishNowRequest, RejectRequest, RetryRequest, ScheduleRequest, ScheduleResponse,
     ValidateRequest, ValidateResponse,
 )
 from app.services.audit import record_audit_event
@@ -228,8 +228,10 @@ async def update_post(post_id: UUID, req: PostUpdate, request: Request,
         post.content_hash = new_hash
         post.version_number += 1
 
-        # Editing approved/scheduled content INVALIDATES the approval.
-        if prev_status in (PostStatus.APPROVED, PostStatus.SCHEDULED):
+        # Editing approved/scheduled content INVALIDATES the approval. A
+        # failed post goes back to draft too — otherwise it stays "failed"
+        # with content nobody approved and no way to resubmit it.
+        if prev_status in (PostStatus.APPROVED, PostStatus.SCHEDULED, PostStatus.FAILED):
             post.status = PostStatus.DRAFT
             db.add(ApprovalLog(
                 post_id=post.id, user_id=user.id,
@@ -586,8 +588,16 @@ async def publish_now(post_id: UUID, req: PublishNowRequest, request: Request,
     )
     await db.commit()
 
-    # Best-effort immediate dispatch (no ETA — safe). If the broker is down,
-    # the Beat scan picks these jobs up within a minute.
+    await _dispatch_now(jobs, db, post.id)
+    return ScheduleResponse(
+        post_id=post.id, scheduled_at=now,
+        jobs=[JobResponse.model_validate(j) for j in jobs],
+    )
+
+
+async def _dispatch_now(jobs: list[PublishJob], db: AsyncSession, post_id: UUID) -> None:
+    """Best-effort immediate dispatch (no ETA — safe). If the broker is down,
+    the Beat scan picks these jobs up within a minute."""
     try:
         from app.workers.tasks.publish import publish_post_task
         for job in jobs:
@@ -595,12 +605,108 @@ async def publish_now(post_id: UUID, req: PublishNowRequest, request: Request,
             job.celery_task_id = task.id
         await db.commit()
     except Exception:  # noqa: BLE001 — Beat scan is the safety net
-        logger.warning("publish-now: immediate dispatch failed for post %s; Beat will pick it up",
-                       post.id, exc_info=True)
+        logger.warning("immediate dispatch failed for post %s; Beat will pick it up", post_id, exc_info=True)
 
+
+RETRYABLE_POST_STATUSES = (PostStatus.FAILED, PostStatus.PARTIALLY_PUBLISHED)
+
+
+@router.post("/posts/{post_id}/retry", response_model=ScheduleResponse)
+async def retry_post(post_id: UUID, req: RetryRequest, request: Request,
+                     db: AsyncSession = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    """Send failed jobs again, now.
+
+    Safety rules (the "never double-post" promise):
+    - Only FAILED jobs retry freely: the platform rejected them, nothing was posted.
+    - NEEDS_REVIEW jobs (outcome unknown) retry only with confirm_not_posted.
+    - COMPLETED jobs are never resent.
+    - Content must still be exactly what was approved.
+    The same job rows are re-queued, so the post's aggregate status is derived
+    correctly when they finish; the previous error is kept in the audit trail.
+    """
+    post = await get_post_access(post_id, db, user)
+    member = await get_post_membership(post, db, user)
+
+    if post.status not in RETRYABLE_POST_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Only posts that failed or partly published can be retried. Current status: {post.status.value}",
+        )
+
+    # Approval integrity: the content must still be what was approved.
+    latest_approval = await db.scalar(
+        select(ApprovalLog)
+        .where(ApprovalLog.post_id == post.id, ApprovalLog.action == ApprovalAction.APPROVED)
+        .order_by(ApprovalLog.created_at.desc()).limit(1)
+    )
+    if latest_approval is None or latest_approval.content_hash_at_action != current_hash(post):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This post changed after it was approved. Send it for approval again before posting.",
+        )
+
+    result = await db.execute(select(PublishJob).where(PublishJob.post_id == post.id).with_for_update())
+    all_jobs = result.scalars().all()
+    candidates = [j for j in all_jobs if j.status in (JobStatus.FAILED, JobStatus.NEEDS_REVIEW)]
+    if req.job_ids is not None:
+        wanted = set(req.job_ids)
+        if wanted - {j.id for j in all_jobs}:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found for this post.")
+        if any(j.id in wanted and j not in candidates for j in all_jobs):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only failed jobs can be retried. Posts that already went out are never sent twice.",
+            )
+        candidates = [j for j in candidates if j.id in wanted]
+    if not candidates:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="There is nothing to retry.")
+
+    if any(j.status == JobStatus.NEEDS_REVIEW for j in candidates) and not req.confirm_not_posted:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="We couldn't confirm whether this was posted. Check the page first, then confirm it "
+                   "wasn't posted to try again.",
+        )
+
+    account_ids = {j.social_account_id for j in candidates}
+    accounts = (await db.execute(select(SocialAccount).where(SocialAccount.id.in_(account_ids)))).scalars().all()
+    inactive = [a.account_name for a in accounts if not a.is_active]
+    if inactive or len(accounts) != len(account_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Reconnect {', '.join(inactive) or 'the account'} first, then try again.",
+        )
+
+    now = datetime.now(timezone.utc)
+    previous = []
+    for job in candidates:
+        previous.append({"job_id": str(job.id), "status": job.status.value, "error": (job.error_message or "")[:300]})
+        job.status = JobStatus.QUEUED
+        job.celery_task_id = None
+        job.error_message = None
+        job.result = None
+        job.started_at = None
+        job.processed_at = None
+        job.scheduled_for = now
+
+    post.status = PostStatus.SCHEDULED  # worker moves it to publishing, then finalises
+    post.scheduled_at = now
+    post.retry_count += 1
+    record_audit_event(
+        db, action=AuditAction.SCHEDULE, entity_type="Post", entity_id=post.id,
+        workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
+        user_name=user.full_name,
+        changes={"after": {"mode": "retry", "confirmed_not_posted": req.confirm_not_posted,
+                           "previous": previous}},
+        ip_address=client_ip(request),
+    )
+    await db.commit()
+
+    await _dispatch_now(candidates, db, post.id)
     return ScheduleResponse(
         post_id=post.id, scheduled_at=now,
-        jobs=[JobResponse.model_validate(j) for j in jobs],
+        jobs=[JobResponse.model_validate(j) for j in candidates],
     )
 
 
