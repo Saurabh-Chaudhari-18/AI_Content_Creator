@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+
+/* ─────────────────────────────────────────────────────────────────────
+   THEME — the "Chosen direction" from the design canvas:
+   Bento layout · calm colours · plain words.
+   Light values come from the Final-* artboards, dark from Dark-*.
+   To switch the whole app to another direction (e.g. Watermelon +
+   Impeccable), change ONLY the variables in :root and .dark below.
+   ───────────────────────────────────────────────────────────────────── */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-tile: var(--radius-tile);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Status tiles (approval, warnings, failures) — soft background + text */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-border: var(--info-border);
+}
+
+:root {
+  --radius: 0.625rem;        /* 10px: inputs, buttons */
+  --radius-tile: 1.25rem;    /* 20px: bento tiles */
+
+  --background: #f4f5f7;     /* page */
+  --foreground: #101828;
+  --card: #ffffff;           /* tiles */
+  --card-foreground: #101828;
+  --popover: #ffffff;
+  --popover-foreground: #101828;
+  --primary: #4f46e5;        /* indigo accent: the one primary action */
+  --primary-foreground: #ffffff;
+  --secondary: #f2f4f7;
+  --secondary-foreground: #344054;
+  --muted: #f2f4f7;
+  --muted-foreground: #475467;
+  --accent: #eef2ff;
+  --accent-foreground: #3730a3;
+  --destructive: #d92d20;
+  --border: #e4e7ec;
+  --input: #d0d5dd;
+  --ring: #4f46e5;
+
+  --success: #067647;
+  --success-soft: #ecfdf3;
+  --success-border: #abefc6;
+  --warning: #93370d;
+  --warning-soft: #fffaeb;
+  --warning-border: #fedf89;
+  --danger: #912018;
+  --danger-soft: #fef3f2;
+  --danger-border: #fecdca;
+  --info: #3730a3;
+  --info-soft: #eef2ff;
+  --info-border: #c7d2fe;
+}
+
+.dark {
+  --background: #0c111d;
+  --foreground: #f5f5f6;
+  --card: #161b26;
+  --card-foreground: #f5f5f6;
+  --popover: #161b26;
+  --popover-foreground: #f5f5f6;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #222733;
+  --secondary-foreground: #cecfd2;
+  --muted: #222733;
+  --muted-foreground: #a4a7ae;
+  --accent: #1e1b4b;
+  --accent-foreground: #c7d2fe;
+  --destructive: #f04438;
+  --border: #2a2f3b;
+  --input: #3a3f4b;
+  --ring: #6366f1;
+
+  --success: #75e0a7;
+  --success-soft: #053321;
+  --success-border: #085d3a;
+  --warning: #fec84b;
+  --warning-soft: #2e1a05;
+  --warning-border: #7a4a0a;
+  --danger: #fda29b;
+  --danger-soft: #3b0f0c;
+  --danger-border: #7a271a;
+  --info: #c7d2fe;
+  --info-soft: #1e1b4b;
+  --info-border: #3730a3;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}

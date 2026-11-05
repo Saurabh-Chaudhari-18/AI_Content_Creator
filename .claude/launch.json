@@ -1,0 +1,36 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import os, sys; os.chdir('backend'); sys.path.insert(0, '.'); import uvicorn; uvicorn.run('app.main:app', host='127.0.0.1', port=8000)"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "worker",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import os, sys; os.chdir('backend'); sys.path.insert(0, '.'); from app.workers.celery_app import celery_app; celery_app.worker_main(['worker', '--loglevel=info', '--pool=solo'])"
+      ]
+    },
+    {
+      "name": "beat",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import os, sys; os.chdir('backend'); sys.path.insert(0, '.'); from app.workers.celery_app import celery_app; celery_app.start(['beat', '--loglevel=info'])"
+      ]
+    }
+  ]
+}

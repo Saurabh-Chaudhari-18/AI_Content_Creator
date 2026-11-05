@@ -7,6 +7,10 @@ Phase 2), coordinates approvals, and publishes to connected social channels.
 | Part | Stack | Status |
 |---|---|---|
 | [`backend/`](backend/) | FastAPI · PostgreSQL 16 · Celery/Redis · S3 | MVP in progress |
-| `frontend/` | React + Vite + TypeScript | planned |
+| [`frontend/`](frontend/) | React · TypeScript · Vite · Tailwind · shadcn/ui | MVP in progress |
 
-See `backend/README.md` for setup, architecture and the production checklist.
+## ▶ How to run the project
+
+**[docs/HOW_TO_RUN.md](docs/HOW_TO_RUN.md)** — start, check and stop the database, API, worker, scheduler and web app, step by step.
+
+More detail: [`backend/README.md`](backend/README.md) (architecture, production checklist) · [`frontend/README.md`](frontend/README.md) · [`docs/database_guide.pdf`](docs/database_guide.pdf).
