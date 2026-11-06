@@ -8,6 +8,7 @@
 | 4 Nov 2026 | Security and correctness review; fixes for approval integrity, worker safety (no double-posting) and input validation |
 | 4 Nov 2026 | Closed every remaining Phase 1 backend gap: per-platform content overrides, pre-publish validation, carousel reorder, brand logo upload, usage summary, workspace-wide post list, self-approval setting, demo seed data |
 | 5 Nov 2026 | Integration tests for the full publishing journey and every retry safety rule; backend architecture documentation. Frontend screens for posts and publishing under way |
+| 6 Nov 2026 | Per-user light / dark theme preference, saved to the account and restored at every sign-in |
 
 ### Phase 1 scope — backend status
 
@@ -26,7 +27,7 @@
 
 ### How it is tested
 
-**59 automated tests**:
+**66 automated tests** (54 unit, 12 database integration):
 
 - **Unit tests** — password and token handling, content fingerprint, request validation, platform rules (character limits, media requirements), worker safety guards.
 - **Integration tests** — run the real API and the real publishing worker against a dedicated test database built from the real migrations. They cover the full create → approve → schedule → publish journey and every retry rule (no resending successful jobs, confirmation required for *needs review*, content must still match the approval).

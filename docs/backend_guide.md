@@ -266,7 +266,7 @@ Never change `FERNET_KEY` once social accounts exist — their stored tokens bec
 ## 12. Tests
 
 ```
-python -m pytest                       # everything (59 tests)
+python -m pytest                       # everything (66 tests; on Windows run the two groups below separately)
 python -m pytest -m "not integration"  # fast unit tests only
 ```
 
