@@ -8,6 +8,7 @@ from app.models.enums import (
     PostStatus,
     SocialPlatform,
     TemplateCategory,
+    ThemePreference,
     WorkspaceRole,
 )
 from app.models.user import RefreshToken, User
@@ -19,7 +20,7 @@ from app.models.operational import AuditEvent, CaptionTemplate, UsageLog
 
 __all__ = [
     "ApprovalAction", "AuditAction", "JobStatus", "MediaType", "OperationType",
-    "PostStatus", "SocialPlatform", "TemplateCategory", "WorkspaceRole",
+    "PostStatus", "SocialPlatform", "TemplateCategory", "ThemePreference", "WorkspaceRole",
     "User", "RefreshToken", "Workspace", "WorkspaceMember", "Brand",
     "Post", "PostMedia", "ApprovalLog", "SocialAccount", "PublishJob",
     "UsageLog", "CaptionTemplate", "AuditEvent",

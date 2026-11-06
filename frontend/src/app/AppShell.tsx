@@ -38,8 +38,8 @@ function initials(name: string): string {
 }
 
 export function AppShell() {
-  const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { user, logout, setThemePreference } = useAuth();
+  const { theme } = useTheme();
   const { workspace, workspaces, setWorkspaceId, brands, brandId, setBrandId } = useWorkspace();
 
   return (
@@ -128,7 +128,7 @@ export function AppShell() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Appearance</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as Theme)}>
+              <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setThemePreference(v as Theme)}>
                 <DropdownMenuRadioItem value="light">
                   <Sun aria-hidden="true" /> Light
                 </DropdownMenuRadioItem>

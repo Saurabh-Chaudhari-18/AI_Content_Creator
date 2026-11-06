@@ -17,6 +17,13 @@ class WorkspaceRole(str, enum.Enum):
     MEMBER = "member"
 
 
+class ThemePreference(str, enum.Enum):
+    """Per-user UI colour scheme. SYSTEM follows the device setting."""
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"
+
+
 class PostStatus(str, enum.Enum):
     DRAFT = "draft"
     PENDING_APPROVAL = "pending_approval"

@@ -126,7 +126,12 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update My Preferences
+         * @description Update the caller's own preferences (theme). Only ever touches the
+         *     authenticated user's row — there is no user id in the path to tamper with.
+         */
+        patch: operations["update_my_preferences_api_v1_auth_me_patch"];
         trace?: never;
     };
     "/api/v1/workspaces": {
@@ -1377,6 +1382,12 @@ export interface components {
          * @enum {string}
          */
         TemplateCategory: "promotional" | "educational" | "engagement" | "seasonal";
+        /**
+         * ThemePreference
+         * @description Per-user UI colour scheme. SYSTEM follows the device setting.
+         * @enum {string}
+         */
+        ThemePreference: "light" | "dark" | "system";
         /** UsageSummaryResponse */
         UsageSummaryResponse: {
             /**
@@ -1395,6 +1406,13 @@ export interface components {
             /** Ai Generations */
             ai_generations: number;
         };
+        /**
+         * UserPreferencesUpdate
+         * @description PATCH /auth/me — the caller's own UI preferences. Omit a field to keep it.
+         */
+        UserPreferencesUpdate: {
+            theme_preference?: components["schemas"]["ThemePreference"] | null;
+        };
         /** UserResponse */
         UserResponse: {
             /**
@@ -1410,6 +1428,7 @@ export interface components {
             avatar_url?: string | null;
             /** Is Active */
             is_active: boolean;
+            theme_preference: components["schemas"]["ThemePreference"];
             /**
              * Created At
              * Format: date-time
@@ -1657,6 +1676,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    update_my_preferences_api_v1_auth_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserPreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

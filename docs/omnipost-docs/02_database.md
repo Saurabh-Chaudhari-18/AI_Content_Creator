@@ -4,6 +4,7 @@ PostgreSQL 16, **13 tables**, managed with Alembic migrations:
 
 - `0001_initial_schema` — creates every table, enum type and constraint
 - `0002_workspace_self_approval` — adds the `allow_self_approval` setting to workspaces
+- `0003_user_theme_preference` — adds each user's light / dark / system theme choice
 
 All primary keys are UUIDs. All timestamps are stored with time zone (UTC).
 
@@ -30,7 +31,7 @@ The **workspace** is the boundary between customers. Every brand, post, media fi
 
 | Table | What it stores | Notes |
 |---|---|---|
-| `users` | Email, full name, avatar, password hash | Passwords are bcrypt-hashed (cost 12); never stored in plain text. Users are deactivated, not deleted (`is_active`). |
+| `users` | Email, full name, avatar, password hash, theme preference (`light`, `dark` or `system`; default `light`) | Passwords are bcrypt-hashed (cost 12); never stored in plain text. Users are deactivated, not deleted (`is_active`). |
 | `refresh_tokens` | Login sessions | Only the **SHA-256 hash** of the token is stored, so a database leak cannot be used to log in. Rotated on every refresh; revocable. Records IP and user agent. |
 | `workspaces` | Team / company account: name, unique slug, owner, `allow_self_approval` | The root of all customer data. |
 | `workspace_members` | Which user belongs to which workspace, with role `owner`, `admin` or `member` | One membership per user per workspace (unique constraint). |

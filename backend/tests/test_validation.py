@@ -93,3 +93,19 @@ def test_platform_override_explicit_null_is_kept():
     """null = clear for this platform; omitted = inherit. They must differ."""
     p = PostCreate.model_validate({"platform_targets": {"linkedin": {"caption": "x", "cta": None}}})
     assert p.platform_targets == {"linkedin": {"caption": "x", "cta": None}}
+
+
+def test_theme_preference_accepts_known_values():
+    from app.models.enums import ThemePreference
+    from app.schemas.schemas import UserPreferencesUpdate
+
+    for v in ("light", "dark", "system"):
+        assert UserPreferencesUpdate.model_validate({"theme_preference": v}).theme_preference == ThemePreference(v)
+
+
+def test_theme_preference_rejects_unknown_null_and_extra_fields():
+    from app.schemas.schemas import UserPreferencesUpdate
+
+    for bad in ({"theme_preference": "blue"}, {"theme_preference": None}, {"email": "x@example.com"}):
+        with pytest.raises(ValidationError):
+            UserPreferencesUpdate.model_validate(bad)

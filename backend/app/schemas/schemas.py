@@ -71,7 +71,7 @@ def _clean_hashtags(v: list[str]) -> list[str]:
         raise ValueError(f"At most {HASHTAG_MAX_COUNT} hashtags are allowed")
     return out
 
-from app.models.enums import OperationType, SocialPlatform, WorkspaceRole
+from app.models.enums import OperationType, SocialPlatform, ThemePreference, WorkspaceRole
 
 
 # ── Auth ──────────────────────────────────────────────────────────────
@@ -112,9 +112,22 @@ class UserResponse(BaseModel):
     full_name: str
     avatar_url: Optional[str] = None
     is_active: bool
+    theme_preference: ThemePreference
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UserPreferencesUpdate(BaseModel):
+    """PATCH /auth/me — the caller's own UI preferences. Omit a field to keep it."""
+    theme_preference: Optional[ThemePreference] = None
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("theme_preference", mode="before")
+    @classmethod
+    def no_null(cls, v):
+        return _reject_null(v, "theme_preference")
 
 
 class AuthResponse(BaseModel):

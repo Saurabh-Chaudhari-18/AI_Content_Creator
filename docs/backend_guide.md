@@ -34,7 +34,7 @@ backend/
 │   ├── main.py              builds the FastAPI app: middleware, routers, error handlers
 │   ├── config.py            all settings, read from .env; refuses to start if secrets are missing
 │   ├── api/v1/              one file per feature area = the HTTP endpoints
-│   │   ├── auth.py          register, login, refresh, logout, me
+│   │   ├── auth.py          register, login, refresh, logout, me (+ PATCH me: theme preference)
 │   │   ├── workspaces.py    workspace settings, members, usage
 │   │   ├── brands.py        brands + logo upload
 │   │   ├── posts.py         the big one: CRUD, approval, scheduling, publishing, retry
@@ -60,7 +60,7 @@ backend/
 │   └── workers/
 │       ├── celery_app.py    Celery config + the Beat schedule
 │       └── tasks/           publish.py, token_refresh.py, cleanup.py
-├── alembic/versions/        database migrations (0001 creates everything, 0002 adds one column)
+├── alembic/versions/        database migrations (0001 creates everything; 0002 and 0003 each add one column)
 ├── seeds/                   demo data + the 16 Smart Templates
 └── tests/                   unit tests + database-backed integration tests
 ```

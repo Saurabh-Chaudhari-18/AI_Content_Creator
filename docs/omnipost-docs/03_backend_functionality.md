@@ -11,11 +11,13 @@ Everything below is built, working and covered by tests. All endpoints live unde
 | Refresh the session silently | `POST /auth/refresh` |
 | Log out | `POST /auth/logout` |
 | Current user | `GET /auth/me` |
+| Save my preferences (light / dark / system theme) | `PATCH /auth/me` |
 
 - Short-lived access token (30 minutes) kept in browser memory; long-lived refresh token (14 days) in an **HttpOnly cookie** that JavaScript cannot read.
 - The refresh token is **rotated** on every use, so a stolen copy stops working as soon as the real user refreshes.
 - Cookie-based calls are protected against cross-site request forgery (CSRF header check).
 - Login and registration are **rate-limited** (5 attempts per 15 minutes per IP).
+- **Theme preference** is saved on the user's account and returned at sign-in, so the same light or dark mode comes back on every login and every device.
 
 ## 3.2 Workspaces and team
 

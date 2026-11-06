@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.models.enums import ThemePreference, pg_enum
 
 
 class User(Base):
@@ -16,6 +17,11 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     avatar_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, nullable=False, server_default="true")
+    # UI preference, restored on every login on any device.
+    theme_preference = Column(
+        pg_enum(ThemePreference, "theme_preference"), nullable=False,
+        default=ThemePreference.LIGHT, server_default=ThemePreference.LIGHT.value,
+    )
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

@@ -172,4 +172,5 @@ export const authApi = {
     }),
   logout: () => api<Schemas["MessageResponse"]>("/auth/logout", { method: "POST", csrf: true, noRefresh: true }),
   me: () => api<User>("/auth/me"),
+  updateMe: (body: Schemas["UserPreferencesUpdate"]) => api<User>("/auth/me", { method: "PATCH", body }),
 };

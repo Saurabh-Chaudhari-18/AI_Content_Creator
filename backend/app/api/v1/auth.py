@@ -27,11 +27,12 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
-from app.models import RefreshToken, User, Workspace, WorkspaceMember, WorkspaceRole
+from app.models import AuditAction, RefreshToken, User, Workspace, WorkspaceMember, WorkspaceRole
 from app.schemas.schemas import (
     AccessTokenResponse, AuthResponse, LoginRequest, MessageResponse,
-    RegisterRequest, UserResponse,
+    RegisterRequest, UserPreferencesUpdate, UserResponse,
 )
+from app.services.audit import record_audit_event
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -202,4 +203,30 @@ async def logout(request: Request, response: Response, db: AsyncSession = Depend
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
+    return UserResponse.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_my_preferences(
+    data: UserPreferencesUpdate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the caller's own preferences (theme). Only ever touches the
+    authenticated user's row — there is no user id in the path to tamper with."""
+    changes = data.model_dump(exclude_unset=True)
+    before = {k: getattr(current_user, k).value for k in changes}
+    for field, value in changes.items():
+        setattr(current_user, field, value)
+    after = {k: v.value for k, v in changes.items()}
+    if before != after:
+        record_audit_event(
+            db, action=AuditAction.UPDATE, entity_type="User", entity_id=current_user.id,
+            workspace_id=None, user_id=current_user.id, user_email=current_user.email,
+            user_name=current_user.full_name, changes={"before": before, "after": after},
+            ip_address=client_ip(request), user_agent=request.headers.get("user-agent"),
+        )
+    await db.commit()
+    await db.refresh(current_user)
     return UserResponse.model_validate(current_user)
