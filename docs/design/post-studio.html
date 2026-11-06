@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniPost · Post Studio</title>
+  <!--
+    Post Studio, design v2 for OmniPost.
+    Built on the owner's v1 palette (obsidian, surface steps, indigo brand, amber pending, emerald valid).
+    Design pass guided by "unslop" by Damir Sokolovsky (@heydamir), CC BY 4.0,
+    and "UI/UX Pro Max" by Next Level Builder (MIT).
+  -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+            serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+          },
+          colors: {
+            obsidian: '#0B0F17',
+            surface: { DEFAULT: '#151D2A', subtle: '#111722', hover: '#1B2536', active: '#212E44' },
+            line: '#232E42',
+            ink: { 1: '#E8ECF4', 2: '#A3AEC2', 3: '#7F8BA3' },
+            brand: { 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
+          },
+          transitionTimingFunction: { out: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-feature-settings: "ss01", "cv11"; }
+    .num { font-variant-numeric: tabular-nums; }
+    .icon { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .raise { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+    .btn-primary { background-image: linear-gradient(180deg, #6d70f4, #4f46e5); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.4); }
+    .btn-primary:hover { background-image: linear-gradient(180deg, #7b7ef6, #5b52ec); }
+
+    /* Platform brand tiles: the platforms' own colors, small, as identity */
+    .ig-tile { background: linear-gradient(45deg, #f58529 0%, #dd2a7b 45%, #8134af 75%, #515bd4 100%); }
+    .fb-tile { background: #1877f2; }
+    .li-tile { background: #0a66c2; }
+
+    /* Moment 1: the post's own photo lights the preview stage */
+    .ambient { -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%); mask-image: radial-gradient(closest-side, #000 62%, transparent 100%); transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+    /* Moment 2: the approval seal */
+    .seal { transform: rotate(-8deg); filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.5)); }
+    .seal.stamp-in { animation: stamp 480ms cubic-bezier(0.22, 1, 0.36, 1); }
+    @keyframes stamp { 0% { opacity: 0; transform: rotate(-14deg) scale(1.35); } 60% { opacity: 1; } 100% { opacity: 1; transform: rotate(-8deg) scale(1); } }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #232E42; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+    ::-webkit-scrollbar-thumb:hover { background: #33415a; background-clip: content-box; border: 2px solid transparent; }
+
+    /* Tooltips: shown on hover and on keyboard focus */
+    .tip { opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 160ms cubic-bezier(0.22,1,0.36,1), transform 160ms cubic-bezier(0.22,1,0.36,1); }
+    .has-tip:hover .tip, .has-tip:focus-within .tip { opacity: 1; transform: translateY(0); }
+    .tip-right { transform: translateX(-4px); }
+    .has-tip:hover .tip-right, .has-tip:focus-within .tip-right { transform: translateX(0); }
+
+    /* One entrance on load */
+    .enter { opacity: 0; transform: translateY(8px); animation: enter 400ms cubic-bezier(0.22,1,0.36,1) forwards; }
+    @keyframes enter { to { opacity: 1; transform: none; } }
+
+    /* Post state: draft · pending · approved (design review switch at the bottom) */
+    body [data-only] { display: none; } /* beats Tailwind's .flex, which loads after this sheet */
+    body[data-state="draft"] [data-only~="draft"],
+    body[data-state="pending"] [data-only~="pending"],
+    body[data-state="approved"] [data-only~="approved"] { display: revert; }
+    body[data-state="draft"] [data-only~="draft"].flex,
+    body[data-state="pending"] [data-only~="pending"].flex,
+    body[data-state="approved"] [data-only~="approved"].flex { display: flex; }
+    body[data-state="pending"] .lockable { opacity: 0.55; pointer-events: none; }
+
+    /* Brand color: set per brand, used only on brand-owned things */
+    :root { --brand: #D4A15F; --brand-deep: #3a2716; --brand-ink: #f2d3a5; }
+    .brand-tile, .brand-avatar { background: var(--brand-deep); color: var(--brand-ink); transition: background-color 300ms, color 300ms; }
+    .brand-tile { border: 1px solid color-mix(in srgb, var(--brand) 45%, transparent); }
+    .brand-tile:hover { border-color: var(--brand); }
+
+    /* Limit rings on channel cards */
+    .ring { width: 18px; height: 18px; transform: rotate(-90deg); flex: none; }
+    .ring circle { fill: none; stroke-width: 2.5; }
+    .ring-track { stroke: #232E42; }
+    .ring-fill { stroke: var(--ring, #818cf8); stroke-linecap: round; stroke-dasharray: 50.27; stroke-dashoffset: 50.27;
+      transition: stroke-dashoffset 300ms cubic-bezier(0.22,1,0.36,1), stroke 180ms; }
+
+    /* Toast */
+    #toast { transition: opacity 180ms cubic-bezier(0.22,1,0.36,1), transform 180ms cubic-bezier(0.22,1,0.36,1); }
+    #toast[data-show="false"] { opacity: 0; transform: translate(-50%, -6px); pointer-events: none; }
+
+    /* Approval certificate: a paper document, the one light object on the screen */
+    #cert { border: 0; padding: 0; background: transparent; max-width: 760px; width: calc(100% - 32px); color: #1a2030; }
+    #cert::backdrop { background: rgba(5, 8, 14, 0.72); }
+    #cert[open] { animation: enter 300ms cubic-bezier(0.22,1,0.36,1); }
+    .cert-paper { background: #fbfaf6; border-radius: 16px; box-shadow: 0 32px 64px -24px rgba(0,0,0,0.7); }
+
+    @media print {
+      @page { size: A4; margin: 14mm; }
+      html, body { background: #fff !important; height: auto !important; overflow: visible !important; display: block !important; }
+      body > *:not(#cert):not(.sprite) { display: none !important; }
+      #cert { position: static !important; display: block !important; max-width: none; width: 100%; margin: 0; }
+      #cert::backdrop { display: none; }
+      .cert-paper { box-shadow: none; border: 1px solid #e5e2da; }
+      .no-print { display: none !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+      .enter { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+
+<body data-state="pending" class="bg-obsidian text-ink-1 font-sans antialiased lg:h-screen lg:overflow-hidden flex">
+
+  <!-- ===================== Icon sprite (lucide, 1.5 stroke) ===================== -->
+  <svg width="0" height="0" class="sprite absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-posts" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+      <symbol id="i-templates" viewBox="0 0 24 24"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+      <symbol id="i-brands" viewBox="0 0 24 24"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+      <symbol id="i-hash" viewBox="0 0 24 24"><path d="M4 9h16"/><path d="M4 15h16"/><path d="M10 3 8 21"/><path d="M16 3l-2 18"/></symbol>
+      <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></symbol>
+      <symbol id="i-bold" viewBox="0 0 24 24"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/></symbol>
+      <symbol id="i-cta" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><path d="M8 12h8"/></symbol>
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></symbol>
+      <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-3-3c-1.69 0-3 1-3 3s1 2 1 3.5V13"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+      <symbol id="i-file-check" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+      <symbol id="i-ig" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></symbol>
+      <symbol id="i-fb" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></symbol>
+      <symbol id="i-li" viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+      <symbol id="i-comment" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+      <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+      <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+      <symbol id="i-like" viewBox="0 0 24 24"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></symbol>
+      <symbol id="i-repost" viewBox="0 0 24 24"><path d="m2 9 3-3 3 3"/><path d="M13 18H7a2 2 0 0 1-2-2V6"/><path d="m22 15-3 3-3-3"/><path d="M11 6h6a2 2 0 0 1 2 2v10"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- ===================== Left rail ===================== -->
+  <aside class="w-16 flex-none bg-surface-subtle border-r border-line flex flex-col items-center justify-between py-4 z-30 lg:h-screen sticky top-0 h-screen" aria-label="Main">
+    <div class="flex flex-col items-center gap-4 w-full">
+      <a href="#" class="w-9 h-9 rounded-[10px] overflow-hidden bg-brand-600 grid place-items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400" aria-label="OmniPost home">
+        <img src="https://lh3.googleusercontent.com/aida/AEtjO1XCNPnJlpVllu2vspxG3_heoAqv_-hhie4nNqDFSLIh7647LEaIFUp1YpBddO_FE4gY91iI8k8_vP1exyv52vOzcHfLHUNU_-pgitqSu05YVTanTTlSPCRcrPEV1oywOIQXhUJRg0aNlpu3q4HO9N3CCLcdx-i9e3BKNoq2OifX7bitraA4VVuME5sYF0IfQwP3IEWLQNJGn1dUxoKA7f5N7on6XR2LZJ37ywzmz4iX-VhnN8uLCUMVGUw" alt="" class="w-full h-full object-cover" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'text-sm font-semibold text-white',textContent:'O'}))">
+      </a>
+
+      <!-- Brand switcher -->
+      <div class="relative">
+        <button id="brand-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="brand-menu" class="brand-tile w-10 h-10 rounded-[10px] text-xs font-medium grid place-items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400" aria-label="Switch brand">
+          <span data-b="initials">AC</span>
+        </button>
+        <div id="brand-menu" role="menu" aria-label="Brands" hidden class="absolute left-[52px] top-0 z-50 w-72 rounded-xl border border-line bg-surface p-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]">
+          <p class="px-3 pt-2 pb-2 text-xs text-ink-3">Brands in this workspace</p>
+          <div id="brand-items" class="flex flex-col gap-1"></div>
+        </div>
+      </div>
+
+      <div class="w-8 h-px bg-line" role="presentation"></div>
+
+      <nav class="flex flex-col items-center gap-1 w-full" aria-label="Sections">
+        <a href="#" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Home">
+          <svg class="icon icon-20"><use href="#i-home"/></svg>
+          <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Home</span>
+        </a>
+        <a href="#" aria-current="page" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-1 bg-surface-active raise focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Posts">
+          <span class="absolute -left-3 top-3 bottom-3 w-[3px] rounded-r bg-brand-500" aria-hidden="true"></span>
+          <svg class="icon icon-20"><use href="#i-posts"/></svg>
+          <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Posts</span>
+        </a>
+        <a href="#" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Calendar">
+          <svg class="icon icon-20"><use href="#i-calendar"/></svg>
+          <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Calendar</span>
+        </a>
+        <a href="#" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Templates">
+          <svg class="icon icon-20"><use href="#i-templates"/></svg>
+          <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Templates</span>
+        </a>
+        <a href="#" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Connected accounts">
+          <svg class="icon icon-20"><use href="#i-link"/></svg>
+          <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Connected accounts</span>
+        </a>
+        <a href="#" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Brands">
+          <svg class="icon icon-20"><use href="#i-brands"/></svg>
+          <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Brands</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="flex flex-col items-center gap-3 w-full">
+      <a href="#" class="has-tip relative w-10 h-10 rounded-[10px] grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Settings">
+        <svg class="icon icon-20"><use href="#i-settings"/></svg>
+        <span class="tip tip-right absolute left-[52px] z-50 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink-1">Settings</span>
+      </a>
+      <button class="w-9 h-9 rounded-full bg-brand-600 text-white text-xs font-medium grid place-items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400" aria-label="Account: Alex Rivera">AR</button>
+    </div>
+  </aside>
+
+  <!-- ===================== Main ===================== -->
+  <div class="flex-1 min-w-0 flex flex-col lg:h-screen">
+
+    <!-- Header -->
+    <header class="flex-none min-h-16 border-b border-line bg-surface-subtle px-6 py-3 flex flex-wrap items-center gap-x-6 gap-y-3 z-20">
+      <div class="flex items-center gap-4 min-w-0 flex-1">
+        <nav class="flex items-center gap-2 text-sm text-ink-3 min-w-0" aria-label="Breadcrumb">
+          <a href="#" class="hover:text-ink-1 transition-colors duration-150 truncate" data-b="short">Aura Coffee</a>
+          <span aria-hidden="true">/</span>
+          <a href="#" class="hover:text-ink-1 transition-colors duration-150">Posts</a>
+          <span aria-hidden="true">/</span>
+          <span class="text-ink-1 truncate" aria-current="page">Cold brew launch</span>
+        </nav>
+
+        <!-- Signature: the approval seal -->
+        <div class="has-tip relative hidden md:flex items-center gap-2 h-7 rounded-md border border-line bg-obsidian px-2 font-mono text-xs text-ink-2" tabindex="0" aria-describedby="seal-tip">
+          <svg class="icon text-brand-400" style="width:14px;height:14px"><use href="#i-stamp"/></svg>
+          <span class="text-ink-1" data-ver>v2</span>
+          <span class="text-ink-3" aria-hidden="true">·</span>
+          <span class="num" data-only="pending approved" data-hash-short>e82f…91a</span>
+          <span data-only="draft">not sealed</span>
+          <span id="seal-tip" role="tooltip" class="tip absolute left-0 top-9 z-50 w-64 rounded-lg border border-line bg-surface p-3 font-sans text-xs leading-5 text-ink-2">
+            The seal is a fingerprint of the caption, hashtags, call to action and media. Approval is tied to it, and publishing checks it again.
+          </span>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div role="status" aria-live="polite">
+        <span data-only="pending" class="flex items-center gap-2 h-7 rounded-full border border-amber-400/25 bg-amber-400/10 px-3 text-xs font-medium text-amber-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>Pending approval
+        </span>
+        <span data-only="draft" class="flex items-center gap-2 h-7 rounded-full border border-line bg-surface px-3 text-xs font-medium text-ink-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-ink-3" aria-hidden="true"></span>Draft
+        </span>
+        <span data-only="approved" class="flex items-center gap-2 h-7 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 text-xs font-medium text-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>Approved
+        </span>
+      </div>
+
+      <!-- Actions: one secondary, one primary -->
+      <div class="flex items-center gap-2">
+        <!-- draft -->
+        <button data-only="draft" data-action="save" class="flex items-center gap-2 h-9 rounded-lg px-3 text-sm text-ink-2 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+          <svg class="icon"><use href="#i-save"/></svg>Save draft
+        </button>
+        <button data-only="draft" data-action="submit" class="btn-primary flex items-center gap-2 h-9 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-500 active:scale-[0.98] transition-[background-color,transform] duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">
+          <svg class="icon"><use href="#i-file-check"/></svg>Submit for approval
+        </button>
+
+        <!-- pending -->
+        <button data-only="pending" data-action="withdraw" class="flex items-center gap-2 h-9 rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 raise hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+          <svg class="icon text-ink-3"><use href="#i-undo"/></svg>Withdraw to edit
+        </button>
+        <div data-only="pending" class="has-tip relative">
+          <button aria-disabled="true" aria-describedby="sched-tip" class="flex items-center gap-2 h-9 rounded-lg border border-brand-500/25 bg-brand-600/20 px-4 text-sm font-medium text-brand-300 cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+            <svg class="icon"><use href="#i-lock"/></svg>Schedule
+          </button>
+          <span id="sched-tip" role="tooltip" class="tip absolute right-0 top-11 z-50 whitespace-nowrap rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-2">Scheduling opens once <span data-ver>v2</span> is approved</span>
+        </div>
+
+        <!-- approved -->
+        <button data-only="approved" data-action="edit" class="flex items-center gap-2 h-9 rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 raise hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+          <svg class="icon text-ink-3"><use href="#i-pen"/></svg>Edit
+        </button>
+        <button data-only="approved" data-action="schedule" class="btn-primary flex items-center gap-2 h-9 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-500 active:scale-[0.98] transition-[background-color,transform] duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">
+          <svg class="icon"><use href="#i-clock"/></svg>Schedule
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 min-h-0 flex flex-col lg:flex-row">
+
+      <!-- ===================== Composer ===================== -->
+      <section class="lg:w-[55%] min-h-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r border-line" aria-labelledby="composer-title">
+        <div class="mx-auto w-full max-w-3xl px-6 pt-8 pb-24 flex flex-col gap-8">
+
+          <!-- Title + brand context -->
+          <div class="enter flex flex-col gap-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h1 id="composer-title" class="text-2xl font-medium leading-8 text-ink-1">Cold brew launch</h1>
+                <p class="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-ink-3"><span class="w-2 h-2 rounded-full" style="background:var(--brand)" aria-hidden="true"></span><span data-b="name">Aura Coffee Roasters</span><span aria-hidden="true">·</span><span data-b="meta">English · Cafés and office managers</span></p>
+              </div>
+              <span class="flex-none flex items-center gap-2 h-8 rounded-lg border border-line bg-surface px-3 text-xs text-ink-2">
+                <span class="text-ink-3">Tone</span><span data-b="tone">Warm and knowledgeable</span>
+              </span>
+            </div>
+
+            <!-- Lock / approval banner -->
+            <div data-only="pending" class="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3">
+              <svg class="icon mt-0.5 text-amber-300"><use href="#i-lock"/></svg>
+              <p class="text-sm leading-5 text-ink-2"><span class="text-ink-1"><span data-ver>v2</span> is locked while Sarah Lin reviews it.</span> Withdraw it to make changes, then submit again.</p>
+            </div>
+            <div data-only="approved" class="flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3">
+              <svg class="icon mt-0.5 text-emerald-300"><use href="#i-shield"/></svg>
+              <p class="flex-1 text-sm leading-5 text-ink-2"><span class="text-ink-1"><span data-ver>v2</span> approved by Sarah Lin.</span> Any edit sends it back for approval.</p>
+              <button data-open-cert class="flex-none -my-1 flex items-center gap-2 h-8 rounded-lg border border-emerald-400/25 px-3 text-xs text-emerald-200 hover:bg-emerald-400/10 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400"><svg class="icon" style="width:14px;height:14px"><use href="#i-stamp"/></svg>Certificate</button>
+            </div>
+          </div>
+
+          <!-- Channels -->
+          <fieldset class="enter flex flex-col gap-3" style="animation-delay:60ms">
+            <div class="flex items-baseline justify-between">
+              <legend class="text-sm font-medium text-ink-1">Channels</legend>
+              <span class="text-xs text-ink-3">3 accounts selected</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 lockable">
+              <button aria-pressed="true" class="text-left rounded-xl border border-brand-500/40 bg-brand-500/[0.07] p-3 flex flex-col gap-3 hover:border-brand-400/60 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="flex items-center justify-between">
+                  <span class="flex items-center gap-2 text-sm text-ink-1"><span class="ig-tile w-5 h-5 rounded-md grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:12px;height:12px;stroke-width:2"><use href="#i-ig"/></svg></span>Instagram</span>
+                  <span class="w-4 h-4 rounded-[4px] bg-brand-500 grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:12px;height:12px;stroke-width:2.5"><use href="#i-check"/></svg></span>
+                </span>
+                <span class="flex items-center justify-between font-mono text-xs">
+                  <span class="flex items-center gap-2 num text-ink-2"><svg class="ring" viewBox="0 0 20 20" data-ring="ig" aria-hidden="true"><circle cx="10" cy="10" r="8" class="ring-track"/><circle cx="10" cy="10" r="8" class="ring-fill"/></svg><span><span data-count="ig">0</span> / 2,200</span></span>
+                  <span class="text-emerald-300" data-status="ig">Ready</span>
+                </span>
+              </button>
+              <button aria-pressed="true" class="text-left rounded-xl border border-brand-500/40 bg-brand-500/[0.07] p-3 flex flex-col gap-3 hover:border-brand-400/60 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="flex items-center justify-between">
+                  <span class="flex items-center gap-2 text-sm text-ink-1"><span class="fb-tile w-5 h-5 rounded-md grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:12px;height:12px;stroke-width:2"><use href="#i-fb"/></svg></span>Facebook Page</span>
+                  <span class="w-4 h-4 rounded-[4px] bg-brand-500 grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:12px;height:12px;stroke-width:2.5"><use href="#i-check"/></svg></span>
+                </span>
+                <span class="flex items-center justify-between font-mono text-xs">
+                  <span class="flex items-center gap-2 num text-ink-2"><svg class="ring" viewBox="0 0 20 20" data-ring="fb" aria-hidden="true"><circle cx="10" cy="10" r="8" class="ring-track"/><circle cx="10" cy="10" r="8" class="ring-fill"/></svg><span><span data-count="fb">0</span> / 63,206</span></span>
+                  <span class="text-emerald-300" data-status="fb">Ready</span>
+                </span>
+              </button>
+              <button aria-pressed="true" class="text-left rounded-xl border border-brand-500/40 bg-brand-500/[0.07] p-3 flex flex-col gap-3 hover:border-brand-400/60 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="flex items-center justify-between">
+                  <span class="flex items-center gap-2 text-sm text-ink-1"><span class="li-tile w-5 h-5 rounded-md grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:12px;height:12px;stroke-width:2"><use href="#i-li"/></svg></span>LinkedIn Page</span>
+                  <span class="w-4 h-4 rounded-[4px] bg-brand-500 grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:12px;height:12px;stroke-width:2.5"><use href="#i-check"/></svg></span>
+                </span>
+                <span class="flex items-center justify-between font-mono text-xs">
+                  <span class="flex items-center gap-2 num text-ink-2"><svg class="ring" viewBox="0 0 20 20" data-ring="li" aria-hidden="true"><circle cx="10" cy="10" r="8" class="ring-track"/><circle cx="10" cy="10" r="8" class="ring-fill"/></svg><span><span data-count="li">0</span> / 3,000</span></span>
+                  <span class="text-ink-2" data-status="li">Own caption</span>
+                </span>
+              </button>
+            </div>
+          </fieldset>
+
+          <!-- Caption editor -->
+          <div class="enter flex flex-col gap-3" style="animation-delay:120ms">
+            <div class="flex items-baseline justify-between">
+              <label for="caption" class="text-sm font-medium text-ink-1">Caption</label>
+              <span class="text-xs text-ink-3">Shared by Instagram and Facebook</span>
+            </div>
+            <div class="rounded-xl border border-line bg-surface focus-within:border-brand-500/60 transition-colors duration-150">
+              <div class="flex items-center justify-between gap-2 border-b border-line px-2 h-11">
+                <div class="flex items-center gap-1 lockable" role="toolbar" aria-label="Formatting">
+                  <button class="w-8 h-8 rounded-md grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150" aria-label="Bold"><svg class="icon"><use href="#i-bold"/></svg></button>
+                  <button class="w-8 h-8 rounded-md grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150" aria-label="Bulleted list"><svg class="icon"><use href="#i-list"/></svg></button>
+                  <span class="w-px h-4 bg-line mx-1" aria-hidden="true"></span>
+                  <button class="w-8 h-8 rounded-md grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150" aria-label="Insert emoji"><svg class="icon"><use href="#i-smile"/></svg></button>
+                  <button class="w-8 h-8 rounded-md grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150" aria-label="Insert hashtag"><svg class="icon"><use href="#i-hash"/></svg></button>
+                  <button class="flex items-center gap-2 h-8 rounded-md px-2 text-xs text-ink-2 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150"><svg class="icon"><use href="#i-cta"/></svg>Call to action</button>
+                </div>
+                <div class="has-tip relative">
+                  <button aria-disabled="true" aria-describedby="ai-tip" class="flex items-center gap-2 h-8 rounded-md px-2 text-xs text-ink-3 cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                    <svg class="icon"><use href="#i-pen"/></svg>Rewrite with AI
+                  </button>
+                  <span id="ai-tip" role="tooltip" class="tip absolute right-0 top-10 z-50 whitespace-nowrap rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-2">Arrives in Phase 2</span>
+                </div>
+              </div>
+              <textarea id="caption" rows="4" class="block w-full resize-none bg-transparent px-4 py-3 text-[15px] leading-6 text-ink-1 placeholder:text-ink-3 focus:outline-none">☕ Introducing our cold brew single-origin roast! Smooth, chocolaty, and brewed for 18 hours. Ready to elevate your morning routine?</textarea>
+              <div class="flex items-center justify-between border-t border-line px-4 h-9 font-mono text-xs text-ink-3">
+                <span><span class="num" data-words>0</span> words</span>
+                <span><span class="num text-ink-2" data-chars>0</span> characters with hashtags</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hashtags -->
+          <div class="enter flex flex-col gap-3" style="animation-delay:180ms">
+            <div class="flex items-baseline justify-between">
+              <h2 class="text-sm font-medium text-ink-1">Hashtags</h2>
+              <span class="text-xs text-ink-3 num"><span data-tag-count>3</span> of 30</span>
+            </div>
+            <div id="tag-list" class="flex flex-wrap items-center gap-2 lockable"></div>
+          </div>
+
+          <!-- Media -->
+          <div class="enter flex flex-col gap-3" style="animation-delay:240ms">
+            <div class="flex items-baseline justify-between">
+              <h2 class="text-sm font-medium text-ink-1">Media</h2>
+              <span class="text-xs text-ink-3 num">1 of 10</span>
+            </div>
+            <div class="rounded-xl border border-line bg-surface p-3 flex items-center gap-4">
+              <div class="relative w-20 h-20 flex-none overflow-hidden rounded-lg bg-obsidian">
+                <img data-photo alt="Cold brew in a glass on a café counter" class="w-full h-full object-cover">
+              </div>
+              <div class="min-w-0 flex-1 flex flex-col gap-2">
+                <p class="truncate text-sm text-ink-1">cold-brew-signature.jpg</p>
+                <p class="font-mono text-xs text-ink-3 num">1080 × 1080 · 1.8 MB · JPG</p>
+                <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <li class="flex items-center gap-1 text-emerald-300"><svg class="icon" style="width:14px;height:14px"><use href="#i-check"/></svg>Fits Instagram and Facebook</li>
+                  <li class="flex items-center gap-1 text-emerald-300"><svg class="icon" style="width:14px;height:14px"><use href="#i-check"/></svg>Location data removed</li>
+                  <li class="flex items-center gap-1 text-amber-200"><svg class="icon" style="width:14px;height:14px"><use href="#i-alert"/></svg>LinkedIn posts text only for now</li>
+                </ul>
+              </div>
+              <div class="flex flex-col gap-1 lockable">
+                <button class="w-8 h-8 rounded-md grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150" aria-label="Replace image"><svg class="icon"><use href="#i-refresh"/></svg></button>
+                <button class="w-8 h-8 rounded-md grid place-items-center text-ink-3 hover:text-red-300 hover:bg-red-500/10 transition-colors duration-150" aria-label="Remove image"><svg class="icon"><use href="#i-trash"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Smart Templates -->
+          <div class="enter flex flex-col gap-3" style="animation-delay:300ms">
+            <div class="flex items-baseline justify-between">
+              <h2 class="text-sm font-medium text-ink-1">Start from a template</h2>
+              <a href="#" class="text-xs text-brand-300 hover:text-brand-400 transition-colors duration-150">Browse all 16</a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 lockable">
+              <button class="text-left rounded-lg border border-line bg-surface px-3 py-2 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="block text-sm text-ink-1">Product launch</span><span class="block text-xs text-ink-3">Promotional</span>
+              </button>
+              <button class="text-left rounded-lg border border-line bg-surface px-3 py-2 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="block text-sm text-ink-1">How we brew it</span><span class="block text-xs text-ink-3">Educational</span>
+              </button>
+              <button class="text-left rounded-lg border border-line bg-surface px-3 py-2 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="block text-sm text-ink-1">Ask your regulars</span><span class="block text-xs text-ink-3">Engagement</span>
+              </button>
+              <button class="text-left rounded-lg border border-line bg-surface px-3 py-2 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+                <span class="block text-sm text-ink-1">Summer menu</span><span class="block text-xs text-ink-3">Seasonal</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== Preview + approval record ===================== -->
+      <section class="lg:w-[45%] min-h-0 lg:overflow-y-auto bg-surface-subtle" aria-label="Preview and approval record">
+        <div class="mx-auto w-full max-w-xl px-6 pt-8 pb-24 flex flex-col gap-8">
+
+          <!-- Tabs -->
+          <div class="enter flex items-center justify-between gap-4" style="animation-delay:80ms">
+            <div role="tablist" aria-label="Preview channel" class="flex items-center gap-1 rounded-xl border border-line bg-obsidian p-1">
+              <button role="tab" id="tab-ig" aria-controls="pv-ig" aria-selected="true" class="tab flex items-center gap-2 h-8 rounded-lg px-3 text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400"><span class="ig-tile w-4 h-4 rounded-[4px] grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:10px;height:10px;stroke-width:2"><use href="#i-ig"/></svg></span>Instagram</button>
+              <button role="tab" id="tab-fb" aria-controls="pv-fb" aria-selected="false" tabindex="-1" class="tab flex items-center gap-2 h-8 rounded-lg px-3 text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400"><span class="fb-tile w-4 h-4 rounded-[4px] grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:10px;height:10px;stroke-width:2"><use href="#i-fb"/></svg></span>Facebook</button>
+              <button role="tab" id="tab-li" aria-controls="pv-li" aria-selected="false" tabindex="-1" class="tab flex items-center gap-2 h-8 rounded-lg px-3 text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400"><span class="li-tile w-4 h-4 rounded-[4px] grid place-items-center" aria-hidden="true"><svg class="icon text-white" style="width:10px;height:10px;stroke-width:2"><use href="#i-li"/></svg></span>LinkedIn</button>
+            </div>
+            <span class="font-mono text-xs text-ink-3">Not published yet</span>
+          </div>
+
+          <!-- The moment: the post as followers will see it -->
+          <div class="enter relative isolate py-4" style="animation-delay:140ms">
+            <div id="ambient" class="ambient pointer-events-none absolute -inset-x-16 -inset-y-12 -z-10" aria-hidden="true">
+              <img data-photo alt="" class="w-full h-full object-cover opacity-90" style="filter: blur(56px) saturate(1.8) brightness(1.45)">
+              <div class="absolute inset-[18%] rounded-full opacity-40" style="background: var(--brand); filter: blur(48px)"></div>
+            </div>
+            <!-- Instagram -->
+            <article role="tabpanel" id="pv-ig" aria-labelledby="tab-ig" class="relative mx-auto max-w-[400px] overflow-hidden rounded-2xl border border-white/[0.08] bg-black text-white shadow-[0_24px_48px_-16px_rgba(0,0,0,0.6)]">
+              <header class="flex items-center justify-between px-3 h-14">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 h-8 rounded-full brand-avatar text-[11px] font-medium grid place-items-center" data-b="initials">AC</span>
+                  <div class="leading-tight">
+                    <p class="text-[13px] font-semibold" data-b="handle">auracoffeeco</p>
+                    <p class="text-[11px] text-white/60" data-b="name">Aura Coffee Roasters</p>
+                  </div>
+                </div>
+                <svg class="icon icon-20 text-white/80"><use href="#i-dots"/></svg>
+              </header>
+              <div class="aspect-square bg-zinc-950"><img data-photo alt="" class="w-full h-full object-cover"></div>
+              <div class="flex items-center justify-between px-3 h-12 text-white">
+                <div class="flex items-center gap-4"><svg class="icon icon-20"><use href="#i-heart"/></svg><svg class="icon icon-20"><use href="#i-comment"/></svg><svg class="icon icon-20"><use href="#i-send"/></svg></div>
+                <svg class="icon icon-20"><use href="#i-bookmark"/></svg>
+              </div>
+              <div class="px-3 pb-4 text-[13px] leading-[18px]">
+                <p><span class="font-semibold mr-1" data-b="handle">auracoffeeco</span><span data-caption></span></p>
+                <p class="mt-1 text-[#e0f1ff]" data-tags></p>
+              </div>
+            </article>
+
+            <!-- Facebook -->
+            <article role="tabpanel" id="pv-fb" aria-labelledby="tab-fb" hidden class="relative mx-auto max-w-[440px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[#242526] text-[#e4e6eb] shadow-[0_24px_48px_-16px_rgba(0,0,0,0.6)]">
+              <header class="flex items-center gap-3 px-4 pt-4 pb-3">
+                <span class="w-10 h-10 rounded-full brand-avatar text-xs font-medium grid place-items-center" data-b="initials">AC</span>
+                <div class="leading-tight">
+                  <p class="text-[15px] font-semibold" data-b="name">Aura Coffee Roasters</p>
+                  <p class="flex items-center gap-1 text-[13px] text-[#b0b3b8]">Scheduled post · <svg class="icon" style="width:12px;height:12px"><use href="#i-globe"/></svg></p>
+                </div>
+              </header>
+              <div class="px-4 pb-3 text-[15px] leading-5"><span data-caption></span> <span class="text-[#4599ff]" data-tags></span></div>
+              <div class="aspect-square bg-zinc-950"><img data-photo alt="" class="w-full h-full object-cover"></div>
+              <div class="mx-4 flex items-center justify-around border-t border-white/10 h-11 text-[15px] text-[#b0b3b8]">
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-like"/></svg>Like</span>
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-comment"/></svg>Comment</span>
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-share"/></svg>Share</span>
+              </div>
+            </article>
+
+            <!-- LinkedIn -->
+            <article role="tabpanel" id="pv-li" aria-labelledby="tab-li" hidden class="relative mx-auto max-w-[480px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[#1b1f23] text-[#e9e9e9] shadow-[0_24px_48px_-16px_rgba(0,0,0,0.6)]">
+              <header class="flex items-center gap-3 px-4 pt-4 pb-3">
+                <span class="w-12 h-12 rounded-md brand-avatar text-xs font-medium grid place-items-center" data-b="initials">AC</span>
+                <div class="leading-tight">
+                  <p class="text-sm font-semibold" data-b="name">Aura Coffee Roasters</p>
+                  <p class="text-xs text-white/60">Company page</p>
+                  <p class="flex items-center gap-1 text-xs text-white/60">Scheduled · <svg class="icon" style="width:12px;height:12px"><use href="#i-globe"/></svg></p>
+                </div>
+              </header>
+              <div class="px-4 pb-4 text-sm leading-5"><span data-li-caption></span> <span class="text-[#71b7fb]" data-tags></span></div>
+              <div class="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70">
+                <svg class="icon mt-px" style="width:14px;height:14px"><use href="#i-image"/></svg>The image is not attached on LinkedIn yet. It posts the text only.
+              </div>
+              <div class="mx-4 flex items-center justify-around border-t border-white/10 h-11 text-sm text-white/70">
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-like"/></svg>Like</span>
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-comment"/></svg>Comment</span>
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-repost"/></svg>Repost</span>
+                <span class="flex items-center gap-2"><svg class="icon icon-18"><use href="#i-send"/></svg>Send</span>
+              </div>
+            </article>
+          </div>
+
+          <!-- Approval record -->
+          <section class="enter relative rounded-2xl border border-line bg-surface" style="animation-delay:200ms" aria-labelledby="record-title">
+            <div class="flex flex-col justify-center gap-1 pl-5 pr-32 h-16 border-b border-line">
+              <h2 id="record-title" class="text-sm font-medium text-ink-1">Approval record</h2>
+              <p class="text-xs text-ink-3">Every step is kept, with the seal of what was reviewed</p>
+            </div>
+
+            <!-- Approved: the seal, pressed onto the record -->
+            <svg data-only="approved" id="seal-approved" class="seal absolute -top-7 right-4 w-[104px] h-[104px]" viewBox="0 0 120 120" role="img" aria-label="Approval seal for v2, fingerprint e82f…91a">
+              <defs>
+                <radialGradient id="seal-wax" cx="34%" cy="28%" r="78%">
+                  <stop offset="0" stop-color="#a5abff"/>
+                  <stop offset="0.45" stop-color="#6366f1"/>
+                  <stop offset="1" stop-color="#312e81"/>
+                </radialGradient>
+                <path id="seal-path" d="M60,60 m-41,0 a41,41 0 1,1 82,0 a41,41 0 1,1 -82,0"/>
+              </defs>
+              <circle cx="60" cy="60" r="57" fill="url(#seal-wax)"/>
+              <circle cx="60" cy="60" r="57" fill="none" stroke="#c7cbff" stroke-opacity="0.35"/>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-dasharray="1.5 3"/>
+              <circle cx="60" cy="60" r="31" fill="#4338ca" fill-opacity="0.45" stroke="#ffffff" stroke-opacity="0.3"/>
+              <text fill="#eef0ff" font-family="JetBrains Mono, monospace" font-size="8.6" font-weight="500" letter-spacing="1.9">
+                <textPath href="#seal-path" id="seal-text">APPROVED · V2 · E82F…91A · OMNIPOST ·</textPath>
+              </text>
+              <use href="#i-stamp" x="48" y="44" width="24" height="24" stroke="#ffffff" stroke-width="1.6" fill="none"/>
+              <text x="60" y="80" text-anchor="middle" fill="#e0e3ff" font-family="JetBrains Mono, monospace" font-size="7" letter-spacing="1">SEALED</text>
+            </svg>
+
+            <!-- Pending: the empty seal, waiting -->
+            <svg data-only="pending" class="seal absolute -top-7 right-4 w-[104px] h-[104px]" style="filter:none" viewBox="0 0 120 120" role="img" aria-label="Seal waiting for approval">
+              <defs><path id="seal-path-2" d="M60,60 m-41,0 a41,41 0 1,1 82,0 a41,41 0 1,1 -82,0"/></defs>
+              <circle cx="60" cy="60" r="57" fill="#111722"/>
+              <circle cx="60" cy="60" r="57" fill="none" stroke="#fbbf24" stroke-opacity="0.45" stroke-dasharray="3 4"/>
+              <circle cx="60" cy="60" r="31" fill="none" stroke="#232E42"/>
+              <text fill="#fcd34d" fill-opacity="0.85" font-family="JetBrains Mono, monospace" font-size="8.6" letter-spacing="1.9">
+                <textPath href="#seal-path-2" id="seal-text-2">AWAITING APPROVAL · V2 · E82F…91A ·</textPath>
+              </text>
+              <use href="#i-stamp" x="48" y="48" width="24" height="24" stroke="#7F8BA3" stroke-width="1.6" fill="none"/>
+            </svg>
+            <ol class="relative px-5 py-5 flex flex-col gap-5">
+              <span class="absolute left-[33px] top-8 bottom-8 w-px bg-line" aria-hidden="true"></span>
+
+              <li class="relative flex gap-4">
+                <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-line bg-surface-subtle grid place-items-center text-ink-3"><svg class="icon" style="width:12px;height:12px"><use href="#i-file-check"/></svg></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <p class="text-sm text-ink-1">Alex Rivera submitted v1</p>
+                    <time class="flex-none font-mono text-xs text-ink-3">Yesterday 14:20</time>
+                  </div>
+                  <p class="mt-1 flex items-center gap-1 font-mono text-xs text-ink-3"><svg class="icon" style="width:12px;height:12px"><use href="#i-stamp"/></svg><span class="num">a41c…07d</span></p>
+                </div>
+              </li>
+
+              <li class="relative flex gap-4">
+                <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-amber-400/30 bg-[#2a2215] grid place-items-center text-amber-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-undo"/></svg></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <p class="text-sm text-ink-1">Sarah Lin returned it with changes</p>
+                    <time class="flex-none font-mono text-xs text-ink-3">Today 09:15</time>
+                  </div>
+                  <blockquote class="mt-2 border-l-2 border-amber-400/40 pl-3 text-sm leading-5 text-ink-2">Lead with the 18-hour brew and use the glass shot. It does better on Instagram.</blockquote>
+                </div>
+              </li>
+
+              <li class="relative flex gap-4">
+                <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-brand-500/40 bg-[#1c1f3a] grid place-items-center text-brand-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-file-check"/></svg></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <p class="text-sm text-ink-1">Alex Rivera submitted v2</p>
+                    <time class="flex-none font-mono text-xs text-ink-3">12 min ago</time>
+                  </div>
+                  <p class="mt-1 flex items-center gap-1 font-mono text-xs text-brand-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-stamp"/></svg><span class="num" data-hash-short>e82f…91a</span></p>
+                  <p class="mt-1 text-xs text-ink-3">New glass shot, caption rewritten</p>
+                </div>
+              </li>
+
+              <li data-only="pending" id="rec-pending" class="relative flex gap-4">
+                <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-dashed border-line bg-surface grid place-items-center" aria-hidden="true"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span></span>
+                <p class="text-sm text-ink-3">Waiting for an admin to approve</p>
+              </li>
+
+              <li data-only="approved" class="relative flex gap-4">
+                <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-emerald-400/30 bg-[#13261e] grid place-items-center text-emerald-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-shield"/></svg></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <p class="text-sm text-ink-1">Sarah Lin approved <span data-ver>v2</span></p>
+                    <time class="flex-none font-mono text-xs text-ink-3">Just now</time>
+                  </div>
+                  <p class="mt-1 flex items-center gap-1 font-mono text-xs text-emerald-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-stamp"/></svg><span class="num" data-hash-short>e82f…91a</span><span class="font-sans text-ink-3">· matches the submitted version</span></p>
+                  <button data-open-cert class="mt-3 flex items-center gap-2 h-8 rounded-lg border border-line bg-surface-subtle px-3 text-xs text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400"><svg class="icon" style="width:14px;height:14px"><use href="#i-stamp"/></svg>View approval certificate</button>
+                </div>
+              </li>
+
+              <li data-only="draft" class="relative flex gap-4">
+                <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-dashed border-line bg-surface" aria-hidden="true"></span>
+                <p class="text-sm text-ink-3">Withdrawn by Alex Rivera to edit · resubmit to seal a new version</p>
+              </li>
+            </ol>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===================== Design review switch (not part of the product) ===================== -->
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-xl border border-dashed border-line bg-obsidian/95 p-1 pl-3 font-mono text-xs text-ink-3" role="group" aria-label="Design review: post state">
+    <span>Post state</span>
+    <button data-set="draft" class="state h-7 rounded-lg px-2 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">Draft</button>
+    <button data-set="pending" class="state h-7 rounded-lg px-2 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">Pending</button>
+    <button data-set="approved" class="state h-7 rounded-lg px-2 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">Approved</button>
+  </div>
+
+
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="polite" data-show="false" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-lg border border-line bg-surface px-4 h-10 text-sm text-ink-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]">
+    <svg class="icon text-brand-300"><use href="#i-stamp"/></svg><span id="toast-text"></span>
+  </div>
+
+  <!-- Approval certificate -->
+  <dialog id="cert" aria-labelledby="cert-title">
+    <article class="cert-paper overflow-hidden">
+      <header class="flex items-start justify-between gap-6 px-10 pt-10">
+        <div>
+          <p class="flex items-center gap-2 text-sm font-medium text-[#3730a3]"><span class="w-6 h-6 rounded-md bg-[#4f46e5] text-white text-xs grid place-items-center">O</span>OmniPost</p>
+          <h2 id="cert-title" class="mt-6 font-serif text-[44px] leading-[1.05] tracking-[-0.02em] text-[#141a29]">Approval certificate</h2>
+          <p class="mt-2 text-sm text-[#4b5565]">Proof of exactly what was approved, by whom, and when</p>
+        </div>
+        <svg class="seal flex-none w-[136px] h-[136px] -mt-2" viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <radialGradient id="seal-wax-c" cx="34%" cy="28%" r="78%">
+              <stop offset="0" stop-color="#a5abff"/><stop offset="0.45" stop-color="#6366f1"/><stop offset="1" stop-color="#312e81"/>
+            </radialGradient>
+            <path id="seal-path-c" d="M60,60 m-41,0 a41,41 0 1,1 82,0 a41,41 0 1,1 -82,0"/>
+          </defs>
+          <circle cx="60" cy="60" r="57" fill="url(#seal-wax-c)"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-dasharray="1.5 3"/>
+          <circle cx="60" cy="60" r="31" fill="#4338ca" fill-opacity="0.45" stroke="#ffffff" stroke-opacity="0.3"/>
+          <text fill="#eef0ff" font-family="JetBrains Mono, monospace" font-size="8.6" font-weight="500" letter-spacing="1.9"><textPath href="#seal-path-c" id="seal-text-c">APPROVED</textPath></text>
+          <use href="#i-stamp" x="48" y="44" width="24" height="24" stroke="#ffffff" stroke-width="1.6" fill="none"/>
+          <text x="60" y="80" text-anchor="middle" fill="#e0e3ff" font-family="JetBrains Mono, monospace" font-size="7" letter-spacing="1">SEALED</text>
+        </svg>
+      </header>
+
+      <div class="mx-10 mt-8 flex gap-5 rounded-xl border border-[#e5e2da] bg-white p-4">
+        <img data-photo alt="" class="w-24 h-24 flex-none rounded-lg object-cover">
+        <div class="min-w-0">
+          <p class="text-xs text-[#6b7487]">Approved content</p>
+          <p class="mt-1 text-sm leading-5 text-[#141a29]" data-cert="caption"></p>
+          <p class="mt-1 text-sm text-[#3d5bd9]" data-cert="tags"></p>
+        </div>
+      </div>
+
+      <dl class="mx-10 mt-6 grid grid-cols-[140px_1fr] gap-x-6 gap-y-3 text-sm">
+        <dt class="text-[#6b7487]">Brand</dt><dd class="text-[#141a29]" data-cert="brand"></dd>
+        <dt class="text-[#6b7487]">Post</dt><dd class="text-[#141a29]" data-cert="post"></dd>
+        <dt class="text-[#6b7487]">Channels</dt><dd class="text-[#141a29]">Instagram · Facebook Page · LinkedIn Page (own caption)</dd>
+        <dt class="text-[#6b7487]">Submitted by</dt><dd class="text-[#141a29]">Alex Rivera, Member</dd>
+        <dt class="text-[#6b7487]">Approved by</dt><dd class="text-[#141a29]">Sarah Lin, Admin</dd>
+        <dt class="text-[#6b7487]">Approved on</dt><dd class="text-[#141a29] num" data-cert="date"></dd>
+        <dt class="text-[#6b7487]">Fingerprint</dt><dd class="font-mono text-xs leading-5 text-[#141a29] break-all" data-cert="hash"></dd>
+      </dl>
+
+      <footer class="mx-10 mt-8 mb-10 flex items-end justify-between gap-6 border-t border-[#e5e2da] pt-5">
+        <p class="max-w-md text-xs leading-5 text-[#4b5565]">The fingerprint is a SHA-256 of the caption, hashtags, call to action, media and per-channel wording. OmniPost checks it again right before publishing. If anything changed, nothing is published and the post returns for approval.</p>
+        <p class="flex-none font-mono text-xs text-[#6b7487]" data-cert="number"></p>
+      </footer>
+    </article>
+    <div class="no-print mt-4 flex justify-end gap-2">
+      <button data-close-cert class="flex items-center gap-2 h-10 rounded-lg border border-line bg-surface px-4 text-sm text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">Close</button>
+      <button data-print-cert class="btn-primary flex items-center gap-2 h-10 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white active:scale-[0.98] transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"><svg class="icon"><use href="#i-file-check"/></svg>Print or save as PDF</button>
+    </div>
+  </dialog>
+  <script>
+    // ---------- Demo data (the owner's product photo from design v1) ----------
+    const PHOTO = "https://lh3.googleusercontent.com/aida-public/AB6AXuAKRtMeWWUntxn-M5m9L51h1Bgazn9TF3jrzvdiGozQ3UAYvDRNj38tS4Tc3ACLven0KgzIExxxYvkfe2lgdYOO-cwXy634KQ7p3TX-sV7OAJyjWGla98oZHo66W8OJppnvS-flODfGOx7-7KhyRTHvLXM_2maiOK1Sh10WjDXJ_NnNGPZwvB0LXS1tcMdWWqEOFDetNzWvaljy_CDdm4OZYvVkiQxTPk0OJ6rHwlHTpBbD0Nf4uZV3";
+    const BRANDS = {
+      aura: {
+        name: "Aura Coffee Roasters", short: "Aura Coffee", initials: "AC", handle: "auracoffeeco",
+        meta: "English · Cafés and office managers", tone: "Warm and knowledgeable",
+        brand: "#D4A15F", deep: "#3a2716", ink: "#f2d3a5",
+        caption: "☕ Introducing our cold brew single-origin roast! Smooth, chocolaty, and brewed for 18 hours. Ready to elevate your morning routine?",
+        tags: ["#CoffeeLovers", "#SpecialtyRoast", "#ColdBrewSeason"],
+        li: "Our single-origin cold brew is now available for café and office accounts. Brewed for 18 hours and delivered ready to pour.",
+      },
+      mill: {
+        name: "Mill Street Bakery", short: "Mill Street", initials: "MS", handle: "millstreetbakes",
+        meta: "English · Neighbours and weekend regulars", tone: "Friendly and homely",
+        brand: "#E07A5F", deep: "#3d1f18", ink: "#f8cdbf",
+        caption: "Cold brew has landed at Mill Street ☕ Steeped overnight for 18 hours and poured over ice. Try it with a warm cinnamon bun this weekend.",
+        tags: ["#MillStreetBakery", "#ColdBrew", "#WeekendTreat"],
+        li: "Mill Street Bakery now serves cold brew in all three shops, steeped for 18 hours. Office catering orders open next week.",
+      },
+      north: {
+        name: "Northline Coworking", short: "Northline", initials: "NC", handle: "northline.work",
+        meta: "English · Freelancers and small teams", tone: "Clear and upbeat",
+        brand: "#3FB6A8", deep: "#12322e", ink: "#bdeee6",
+        caption: "New at the Northline café bar: single-origin cold brew on tap from 8 am. Brewed for 18 hours, ready before your first call.",
+        tags: ["#CoworkingLife", "#ColdBrew", "#NorthlineMembers"],
+        li: "Members asked and we listened. Single-origin cold brew is now on tap at every Northline space, included in every membership.",
+      },
+    };
+    const LIMITS = { ig: 2200, fb: 63206, li: 3000 };
+    const MEDIA_IDS = ["media-7f3a2c"]; // the fingerprint uses media IDs, never URLs
+
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+    const fmt = (n) => n.toLocaleString("en-US");
+    const esc = (t) => t.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const short = (h) => h.slice(0, 4) + "…" + h.slice(-3);
+
+    const post = { brand: "aura", caption: "", tags: [], li: "" };
+    let sealedHash = "";
+    let version = 2;
+    let approvedAt = null;
+
+    $$("[data-photo]").forEach((img) => (img.src = PHOTO));
+
+    // ---------- Fingerprint: SHA-256 of what reaches the platforms ----------
+    function cyrb53(str, seed) {
+      let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+      for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+    }
+    async function fingerprint() {
+      const text = JSON.stringify({ caption: post.caption, hashtags: post.tags, cta: null, media: MEDIA_IDS, overrides: { linkedin: { caption: post.li } } });
+      try {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+        return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      } catch {
+        return [0, 1, 2, 3].map((seed) => cyrb53(text, seed)).join(""); // demo fallback where Web Crypto is unavailable
+      }
+    }
+    function showSeal() {
+      $$("[data-hash-short]").forEach((el) => (el.textContent = short(sealedHash)));
+      $$("[data-ver]").forEach((el) => (el.textContent = "v" + version));
+      $("#seal-text").textContent = `APPROVED · V${version} · ${short(sealedHash).toUpperCase()} · OMNIPOST ·`;
+      $("#seal-text-2").textContent = `AWAITING APPROVAL · V${version} · ${short(sealedHash).toUpperCase()} ·`;
+      $("#seal-approved").setAttribute("aria-label", `Approval seal for v${version}, fingerprint ${short(sealedHash)}`);
+    }
+
+    // ---------- Live writing ----------
+    const captionBox = $("#caption");
+    function render() {
+      const tagText = post.tags.join(" ");
+      const shared = post.caption + (tagText ? "\n\n" + tagText : "");
+      const li = post.li + (tagText ? "\n\n" + tagText : "");
+      const lengths = { ig: [...shared].length, fb: [...shared].length, li: [...li].length };
+
+      for (const key of ["ig", "fb", "li"]) {
+        const n = lengths[key], limit = LIMITS[key], ratio = n / limit;
+        $(`[data-count="${key}"]`).textContent = fmt(n);
+        const ring = $(`[data-ring="${key}"]`);
+        const fill = $(".ring-fill", ring);
+        fill.style.strokeDashoffset = String(50.27 * (1 - Math.min(Math.max(ratio, n ? 0.04 : 0), 1)));
+        const status = $(`[data-status="${key}"]`);
+        if (ratio > 1) { ring.style.setProperty("--ring", "#f87171"); status.className = "text-red-300"; status.textContent = `Over by ${fmt(n - limit)}`; }
+        else if (ratio >= 0.8) { ring.style.setProperty("--ring", "#fbbf24"); status.className = "text-amber-200"; status.textContent = "Near limit"; }
+        else { ring.style.setProperty("--ring", "#818cf8"); status.className = key === "li" ? "text-ink-2" : "text-emerald-300"; status.textContent = key === "li" ? "Own caption" : "Ready"; }
+      }
+      $("[data-chars]").textContent = fmt(lengths.ig);
+      $("[data-words]").textContent = post.caption.trim() ? post.caption.trim().split(/\s+/).length : 0;
+      $$("[data-caption]").forEach((el) => (el.textContent = post.caption));
+      $$("[data-li-caption]").forEach((el) => (el.textContent = post.li));
+      $$("[data-tags]").forEach((el) => (el.textContent = tagText));
+      $("[data-tag-count]").textContent = post.tags.length;
+      renderTags();
+    }
+
+    function renderTags() {
+      const list = $("#tag-list");
+      list.innerHTML = post.tags.map((t, i) => `
+        <span class="flex items-center gap-1 h-8 rounded-lg border border-line bg-surface pl-3 pr-1 text-sm text-ink-1">${esc(t)}
+          <button data-remove="${i}" class="w-6 h-6 rounded-md grid place-items-center text-ink-3 hover:text-ink-1 hover:bg-surface-hover transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400" aria-label="Remove ${esc(t)}"><svg class="icon" style="width:14px;height:14px"><use href="#i-x"/></svg></button>
+        </span>`).join("") + (post.tags.length < 30 ? `
+        <button id="tag-add" class="flex items-center gap-2 h-8 rounded-lg border border-dashed border-line px-3 text-sm text-ink-3 hover:text-ink-1 hover:border-ink-3 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400"><svg class="icon"><use href="#i-hash"/></svg>Add hashtag</button>` : "");
+    }
+
+    function contentChanged() {
+      if (document.body.dataset.state === "approved") {
+        setState("draft");
+        toast(`Edit sent v${version} back to draft. Submit it again to get a new seal`);
+      }
+      render();
+    }
+
+    captionBox.addEventListener("input", () => { post.caption = captionBox.value; contentChanged(); });
+
+    $("#tag-list").addEventListener("click", (e) => {
+      const remove = e.target.closest("[data-remove]");
+      if (remove) { post.tags.splice(Number(remove.dataset.remove), 1); contentChanged(); $("#tag-add")?.focus(); return; }
+      if (e.target.closest("#tag-add")) openTagInput();
+    });
+    function openTagInput() {
+      const btn = $("#tag-add");
+      const input = Object.assign(document.createElement("input"), {
+        type: "text", placeholder: "Hashtag", "aria-label": "New hashtag",
+        className: "h-8 w-40 rounded-lg border border-brand-500/60 bg-surface px-3 text-sm text-ink-1 placeholder:text-ink-3 focus:outline-none",
+      });
+      input.setAttribute("aria-label", "New hashtag");
+      btn.replaceWith(input); input.focus();
+      let done = false;
+      const commit = (keep) => {
+        if (done) return; done = true;
+        const raw = input.value.trim().replace(/^#+/, "");
+        if (keep && raw) {
+          if (/\s/.test(raw)) { toast("Hashtags can't contain spaces"); }
+          else if (!post.tags.some((t) => t.toLowerCase() === "#" + raw.toLowerCase())) { post.tags.push("#" + raw); return contentChanged(); }
+        }
+        renderTags();
+      };
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commit(true); $("#tag-add")?.focus(); } if (e.key === "Escape") { commit(false); $("#tag-add")?.focus(); } });
+      input.addEventListener("blur", () => commit(true));
+    }
+
+    // ---------- Brand colors ----------
+    const brandBtn = $("#brand-btn"), brandMenu = $("#brand-menu");
+    $("#brand-items").innerHTML = Object.entries(BRANDS).map(([key, b]) => `
+      <button role="menuitemradio" data-brand="${key}" class="flex items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none transition-colors duration-150">
+        <span class="w-8 h-8 flex-none rounded-lg grid place-items-center text-xs font-medium" style="background:${b.deep};color:${b.ink};border:1px solid ${b.brand}66">${b.initials}</span>
+        <span class="min-w-0 flex-1"><span class="block truncate text-sm text-ink-1">${esc(b.name)}</span><span class="block truncate text-xs text-ink-3">${esc(b.meta)}</span></span>
+        <svg class="icon text-brand-300" data-check style="width:14px;height:14px"><use href="#i-check"/></svg>
+      </button>`).join("");
+    const brandItems = $$("[data-brand]");
+
+    function toggleMenu(open) {
+      brandMenu.hidden = !open;
+      brandBtn.setAttribute("aria-expanded", open);
+      if (open) (brandItems.find((b) => b.getAttribute("aria-checked") === "true") || brandItems[0]).focus();
+    }
+    brandBtn.addEventListener("click", () => toggleMenu(brandMenu.hidden));
+    document.addEventListener("click", (e) => { if (!brandMenu.hidden && !e.target.closest("#brand-menu, #brand-btn")) toggleMenu(false); });
+    brandMenu.addEventListener("keydown", (e) => {
+      const i = brandItems.indexOf(document.activeElement);
+      if (e.key === "Escape") { toggleMenu(false); brandBtn.focus(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); brandItems[(i + (e.key === "ArrowDown" ? 1 : -1) + brandItems.length) % brandItems.length].focus(); }
+    });
+    brandItems.forEach((item) => item.addEventListener("click", () => { setBrand(item.dataset.brand); toggleMenu(false); brandBtn.focus(); }));
+
+    async function setBrand(key) {
+      const b = BRANDS[key];
+      post.brand = key; post.caption = b.caption; post.tags = [...b.tags]; post.li = b.li;
+      const root = document.documentElement.style;
+      root.setProperty("--brand", b.brand); root.setProperty("--brand-deep", b.deep); root.setProperty("--brand-ink", b.ink);
+      for (const field of ["name", "short", "initials", "handle", "meta", "tone"]) $$(`[data-b="${field}"]`).forEach((el) => (el.textContent = b[field]));
+      brandItems.forEach((item) => {
+        const on = item.dataset.brand === key;
+        item.setAttribute("aria-checked", on);
+        $("[data-check]", item).style.visibility = on ? "visible" : "hidden";
+      });
+      captionBox.value = post.caption;
+      version = 2; // each brand opens its own post at v2
+      $$("li[data-dynamic]").forEach((li) => li.remove());
+      sealedHash = await fingerprint();
+      showSeal();
+      render();
+    }
+
+    // ---------- Preview tabs (arrow keys move between tabs) ----------
+    const tabs = $$('[role="tab"]');
+    function selectTab(tab) {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute("aria-selected", on);
+        t.tabIndex = on ? 0 : -1;
+        ["bg-surface-active", "raise", "text-ink-1"].forEach((c) => t.classList.toggle(c, on));
+        ["text-ink-3", "hover:text-ink-1"].forEach((c) => t.classList.toggle(c, !on));
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      });
+      $("#ambient").style.opacity = tab.id === "tab-li" ? "0.25" : "1"; // LinkedIn posts text only
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => selectTab(t));
+      t.addEventListener("keydown", (e) => {
+        const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return;
+        const next = tabs[(i + d + tabs.length) % tabs.length];
+        selectTab(next); next.focus();
+      });
+    });
+    selectTab(tabs[0]);
+
+    // ---------- Post state and actions ----------
+    const states = $$(".state");
+    function setState(s) {
+      const was = document.body.dataset.state;
+      document.body.dataset.state = s;
+      const seal = $("#seal-approved");
+      if (s === "approved" && was !== "approved") {
+        approvedAt = new Date();
+        seal.classList.remove("stamp-in"); void seal.getBBox(); seal.classList.add("stamp-in");
+      }
+      captionBox.readOnly = s === "pending";
+      states.forEach((b) => {
+        const on = b.dataset.set === s;
+        b.setAttribute("aria-pressed", on);
+        b.classList.toggle("bg-surface-active", on);
+        b.classList.toggle("text-ink-1", on);
+      });
+    }
+    states.forEach((b) => b.addEventListener("click", () => setState(b.dataset.set)));
+
+    $$("[data-action]").forEach((btn) => btn.addEventListener("click", async () => {
+      const action = btn.dataset.action;
+      if (action === "save") toast("Draft saved");
+      if (action === "withdraw") { setState("draft"); toast(`v${version} withdrawn. You can edit it now`); captionBox.focus(); }
+      if (action === "edit") { captionBox.focus(); toast("Any change sends the post back for approval"); }
+      if (action === "schedule") toast("The schedule picker comes with the app build");
+      if (action === "submit") {
+        const next = await fingerprint();
+        if (next !== sealedHash) {
+          version += 1; sealedHash = next;
+          const li = document.createElement("li");
+          li.className = "relative flex gap-4";
+          li.dataset.dynamic = "";
+          li.innerHTML = `
+            <span class="relative z-10 w-6 h-6 flex-none rounded-full border border-brand-500/40 bg-[#1c1f3a] grid place-items-center text-brand-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-file-check"/></svg></span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-baseline justify-between gap-3"><p class="text-sm text-ink-1">Alex Rivera submitted v${version}</p><time class="flex-none font-mono text-xs text-ink-3">Just now</time></div>
+              <p class="mt-1 flex items-center gap-1 font-mono text-xs text-brand-300"><svg class="icon" style="width:12px;height:12px"><use href="#i-stamp"/></svg><span class="num">${short(sealedHash)}</span></p>
+            </div>`;
+          $("#rec-pending").before(li);
+        }
+        showSeal();
+        setState("pending");
+        toast(`v${version} submitted and sealed ${short(sealedHash)}`);
+      }
+    }));
+
+    // ---------- Toast ----------
+    let toastTimer;
+    function toast(text) {
+      $("#toast-text").textContent = text;
+      $("#toast").dataset.show = "true";
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => ($("#toast").dataset.show = "false"), 3200);
+    }
+
+    // ---------- Approval certificate ----------
+    const cert = $("#cert");
+    $$("[data-open-cert]").forEach((btn) => btn.addEventListener("click", () => {
+      const b = BRANDS[post.brand];
+      const set = (k, v) => ($(`[data-cert="${k}"]`).textContent = v);
+      set("caption", post.caption);
+      set("tags", post.tags.join(" "));
+      set("brand", b.name);
+      set("post", `Cold brew launch · v${version}`);
+      set("date", new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeStyle: "short" }).format(approvedAt || new Date()));
+      set("hash", sealedHash);
+      set("number", "No. OP-" + sealedHash.slice(0, 8).toUpperCase());
+      $("#seal-text-c").textContent = `APPROVED · V${version} · ${short(sealedHash).toUpperCase()} · OMNIPOST ·`;
+      cert.showModal();
+    }));
+    $("[data-close-cert]").addEventListener("click", () => cert.close());
+    $("[data-print-cert]").addEventListener("click", () => window.print());
+    cert.addEventListener("click", (e) => { if (e.target === cert) cert.close(); });
+
+    // ---------- Start ----------
+    setState("pending");
+    setBrand("aura");
+  </script>
+</body>
+</html>
