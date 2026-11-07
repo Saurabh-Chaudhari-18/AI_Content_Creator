@@ -15,9 +15,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 function readStored(): Theme {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    return v === "light" || v === "dark" || v === "system" ? v : "light";
+    return v === "light" || v === "dark" || v === "system" ? v : "dark";
   } catch {
-    return "light"; // private mode / blocked storage: fall back silently
+    return "dark"; // private mode / blocked storage: fall back silently
   }
 }
 
@@ -25,7 +25,7 @@ function systemPrefersDark(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-/** Light is the product default (decided on the design canvas); dark is opt-in. */
+/** Dark is the product default (the owner's design); light stays available. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(readStored);
   const [systemDark, setSystemDark] = useState(systemPrefersDark);

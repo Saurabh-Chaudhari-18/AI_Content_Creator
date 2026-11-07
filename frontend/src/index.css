@@ -1,20 +1,24 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/instrument-serif";
 
 /* ─────────────────────────────────────────────────────────────────────
-   THEME — the "Chosen direction" from the design canvas:
-   Bento layout · calm colours · plain words.
-   Light values come from the Final-* artboards, dark from Dark-*.
-   To switch the whole app to another direction (e.g. Watermelon +
-   Impeccable), change ONLY the variables in :root and .dark below.
+   THEME — the product owner's design (docs/design/post-studio.html).
+   Dark is the default: obsidian surfaces, one indigo accent, amber for
+   "waiting", emerald for "good". Light mirrors it on cool greys.
+   Colour lives in a few moments (preview glow, approval seal, platform
+   tiles); the chrome stays quiet. Change ONLY the variables below to
+   retheme the app.
    ───────────────────────────────────────────────────────────────────── */
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -41,6 +45,11 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Surface steps from the owner's palette */
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+
   /* Status tiles (approval, warnings, failures) — soft background + text */
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -54,76 +63,88 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-info-border: var(--info-border);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Light: the owner's palette on cool greys */
 :root {
   --radius: 0.625rem;        /* 10px: inputs, buttons */
-  --radius-tile: 1.25rem;    /* 20px: bento tiles */
+  --radius-tile: 1rem;       /* 16px: cards */
 
-  --background: #f4f5f7;     /* page */
-  --foreground: #101828;
-  --card: #ffffff;           /* tiles */
-  --card-foreground: #101828;
+  --background: #f5f7fa;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
   --popover: #ffffff;
-  --popover-foreground: #101828;
-  --primary: #4f46e5;        /* indigo accent: the one primary action */
+  --popover-foreground: #111827;
+  --primary: #4f46e5;        /* indigo: the one primary action */
   --primary-foreground: #ffffff;
-  --secondary: #f2f4f7;
-  --secondary-foreground: #344054;
-  --muted: #f2f4f7;
-  --muted-foreground: #475467;
-  --accent: #eef2ff;
+  --secondary: #eef1f6;
+  --secondary-foreground: #374151;
+  --muted: #eef1f6;
+  --muted-foreground: #4b5565;
+  --accent: #eef0ff;
   --accent-foreground: #3730a3;
-  --destructive: #d92d20;
-  --border: #e4e7ec;
-  --input: #d0d5dd;
+  --destructive: #dc2626;
+  --border: #e3e7ee;
+  --input: #d5dbe5;
   --ring: #4f46e5;
 
-  --success: #067647;
-  --success-soft: #ecfdf3;
-  --success-border: #abefc6;
-  --warning: #93370d;
-  --warning-soft: #fffaeb;
-  --warning-border: #fedf89;
-  --danger: #912018;
-  --danger-soft: #fef3f2;
-  --danger-border: #fecdca;
+  --surface-subtle: #eef1f6;
+  --surface-hover: #e8ecf3;
+  --surface-active: #e1e6f0;
+
+  --success: #047857;
+  --success-soft: #ecfdf5;
+  --success-border: #a7f3d0;
+  --warning: #92400e;
+  --warning-soft: #fffbeb;
+  --warning-border: #fde68a;
+  --danger: #991b1b;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
   --info: #3730a3;
-  --info-soft: #eef2ff;
+  --info-soft: #eef0ff;
   --info-border: #c7d2fe;
 }
 
+/* Dark (default): the owner's obsidian palette */
 .dark {
-  --background: #0c111d;
-  --foreground: #f5f5f6;
-  --card: #161b26;
-  --card-foreground: #f5f5f6;
-  --popover: #161b26;
-  --popover-foreground: #f5f5f6;
+  --background: #0b0f17;     /* obsidian */
+  --foreground: #e8ecf4;
+  --card: #151d2a;           /* surface */
+  --card-foreground: #e8ecf4;
+  --popover: #151d2a;
+  --popover-foreground: #e8ecf4;
   --primary: #4f46e5;
   --primary-foreground: #ffffff;
-  --secondary: #222733;
-  --secondary-foreground: #cecfd2;
-  --muted: #222733;
-  --muted-foreground: #a4a7ae;
-  --accent: #1e1b4b;
+  --secondary: #1b2536;      /* surface hover */
+  --secondary-foreground: #a3aec2;
+  --muted: #1b2536;
+  --muted-foreground: #8b97ad;
+  --accent: #1e2240;         /* indigo-tinted selection */
   --accent-foreground: #c7d2fe;
-  --destructive: #f04438;
-  --border: #2a2f3b;
-  --input: #3a3f4b;
-  --ring: #6366f1;
+  --destructive: #e5484d;
+  --border: #232e42;         /* tech border */
+  --input: #2b3850;
+  --ring: #818cf8;
 
-  --success: #75e0a7;
-  --success-soft: #053321;
-  --success-border: #085d3a;
-  --warning: #fec84b;
-  --warning-soft: #2e1a05;
-  --warning-border: #7a4a0a;
-  --danger: #fda29b;
-  --danger-soft: #3b0f0c;
-  --danger-border: #7a271a;
+  --surface-subtle: #111722;
+  --surface-hover: #1b2536;
+  --surface-active: #212e44;
+
+  --success: #6ee7b7;
+  --success-soft: #0f2a22;
+  --success-border: #1d4d3c;
+  --warning: #fcd34d;
+  --warning-soft: #2a2215;
+  --warning-border: #5c4716;
+  --danger: #fca5a5;
+  --danger-soft: #2c1517;
+  --danger-border: #5b2427;
   --info: #c7d2fe;
-  --info-soft: #1e1b4b;
+  --info-soft: #1c1f3a;
   --info-border: #3730a3;
 }
 
@@ -138,5 +159,91 @@
     @apply bg-background text-foreground antialiased;
     font-size: 14px;
     line-height: 1.5;
+    font-feature-settings: "cv11", "ss01";
+  }
+  /* Figures line up in tables, counts and times */
+  .num,
+  time {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Primary buttons: a quiet indigo depth instead of a glow */
+@layer components {
+  .btn-depth {
+    background-image: linear-gradient(180deg, #6d70f4, #4f46e5);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px rgb(0 0 0 / 0.3);
+  }
+  .btn-depth:hover {
+    background-image: linear-gradient(180deg, #7b7ef6, #5b52ec);
+  }
+  /* Platform identity tiles: the platforms' own colours, small */
+  .tile-instagram {
+    background: linear-gradient(45deg, #f58529 0%, #dd2a7b 45%, #8134af 75%, #515bd4 100%);
+  }
+  .tile-facebook {
+    background: #1877f2;
+  }
+  .tile-linkedin {
+    background: #0a66c2;
+  }
+  /* A brand's own colour (set --b inline via brandStyle) on its tile and avatars */
+  .brand-tile {
+    --b: #8b97ad; /* overridden inline per brand */
+    background: color-mix(in srgb, var(--b) 18%, #ffffff);
+    color: color-mix(in srgb, var(--b) 72%, #000000);
+    border: 1px solid color-mix(in srgb, var(--b) 40%, transparent);
+  }
+  .dark .brand-tile {
+    background: color-mix(in srgb, var(--b) 22%, #0b0f17);
+    color: color-mix(in srgb, var(--b) 55%, #ffffff);
+  }
+}
+
+/* The approval seal presses down when a post is approved */
+@keyframes seal-stamp {
+  0% { opacity: 0; transform: rotate(-14deg) scale(1.35); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: rotate(-8deg) scale(1); }
+}
+.seal { transform: rotate(-8deg); filter: drop-shadow(0 12px 20px rgb(0 0 0 / 0.45)); }
+.seal-stamp { animation: seal-stamp 480ms var(--ease-out); }
+
+/* The post's own photo lights the preview stage */
+.preview-glow {
+  -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+}
+
+/* Printing the approval certificate prints only the certificate */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body * { visibility: hidden !important; }
+  .cert-print, .cert-print * { visibility: visible !important; }
+  .cert-print { position: fixed !important; inset: 0 auto auto 0 !important; width: 100% !important; transform: none !important; box-shadow: none !important; }
+  .no-print { display: none !important; }
+}
+
+/* Thin scrollbars that match the surfaces */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
   }
 }

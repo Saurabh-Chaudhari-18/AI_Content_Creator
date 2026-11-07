@@ -6,9 +6,9 @@ from .conftest import register
 pytestmark = pytest.mark.integration
 
 
-def test_new_user_defaults_to_light(api):
+def test_new_user_defaults_to_dark(api):
     actor = register(api)
-    assert api.get("/api/v1/auth/me", headers=actor.headers).json()["theme_preference"] == "light"
+    assert api.get("/api/v1/auth/me", headers=actor.headers).json()["theme_preference"] == "dark"
 
 
 def test_theme_is_saved_and_returned_on_next_login(api):
@@ -29,13 +29,13 @@ def test_theme_change_is_audited_once(api, db_exec):
     rows = db_exec(
         "SELECT changes FROM audit_events WHERE entity_type = 'User' AND entity_id = :id", id=actor.user_id
     ).all()
-    assert [r[0] for r in rows] == [{"before": {"theme_preference": "light"}, "after": {"theme_preference": "system"}}]
+    assert [r[0] for r in rows] == [{"before": {"theme_preference": "dark"}, "after": {"theme_preference": "system"}}]
 
 
 def test_one_user_cannot_change_another_users_theme(api):
     alice, bob = register(api, "Alice"), register(api, "Bob")
-    api.patch("/api/v1/auth/me", json={"theme_preference": "dark"}, headers=alice.headers)
-    assert api.get("/api/v1/auth/me", headers=bob.headers).json()["theme_preference"] == "light"
+    api.patch("/api/v1/auth/me", json={"theme_preference": "light"}, headers=alice.headers)
+    assert api.get("/api/v1/auth/me", headers=bob.headers).json()["theme_preference"] == "dark"
 
 
 def test_invalid_theme_and_anonymous_requests_are_rejected(api):

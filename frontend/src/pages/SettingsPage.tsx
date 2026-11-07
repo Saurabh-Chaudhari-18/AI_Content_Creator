@@ -124,7 +124,7 @@ export function SettingsPage() {
           <dl className="m-0 grid grid-cols-3 gap-3">
             {Object.entries(USAGE_LABEL).map(([k, label]) => (
               <div key={k} className="rounded-[12px] bg-muted p-3">
-                <dd className="m-0 text-2xl font-bold">{usage.data?.counts[k] ?? 0}</dd>
+                <dd className="m-0 text-2xl font-semibold">{usage.data?.counts[k] ?? 0}</dd>
                 <dt className="text-xs text-muted-foreground">{label}</dt>
               </div>
             ))}

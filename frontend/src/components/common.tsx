@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
-import { JOB_STATUS, POST_STATUS, TONE_CLASS } from "@/lib/format";
+import { JOB_STATUS, POST_STATUS, TONE_CLASS, TONE_DOT } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
   const s = POST_STATUS[status] ?? { label: status, tone: "neutral" as const };
   return (
-    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", TONE_CLASS[s.tone], className)}>
+    <span className={cn("inline-flex h-7 items-center gap-2 rounded-full border px-3 text-xs font-medium whitespace-nowrap", TONE_CLASS[s.tone], className)}>
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", TONE_DOT[s.tone])} />
       {s.label}
     </span>
   );
@@ -15,7 +16,8 @@ export function StatusBadge({ status, className }: { status: string; className?:
 export function JobBadge({ status }: { status: string }) {
   const s = JOB_STATUS[status] ?? { label: status, tone: "neutral" as const };
   return (
-    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", TONE_CLASS[s.tone])}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap", TONE_CLASS[s.tone])}>
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", TONE_DOT[s.tone])} />
       {s.label}
     </span>
   );
@@ -27,7 +29,7 @@ export function PageHeader({ eyebrow, title, actions }: { eyebrow?: ReactNode; t
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
         {eyebrow && <span className="text-[13px] text-muted-foreground">{eyebrow}</span>}
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

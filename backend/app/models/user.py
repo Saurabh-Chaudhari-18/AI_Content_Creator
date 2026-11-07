@@ -20,7 +20,7 @@ class User(Base):
     # UI preference, restored on every login on any device.
     theme_preference = Column(
         pg_enum(ThemePreference, "theme_preference"), nullable=False,
-        default=ThemePreference.LIGHT, server_default=ThemePreference.LIGHT.value,
+        default=ThemePreference.DARK, server_default=ThemePreference.DARK.value,
     )
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())

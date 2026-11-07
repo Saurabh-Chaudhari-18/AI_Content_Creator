@@ -25,13 +25,8 @@ import { api, ApiError, type Schemas, type SocialAccount } from "@/lib/api";
 import { daysUntil, formatDateTime, PLATFORMS, platformName } from "@/lib/format";
 import { keys, useAccounts, useMyRole, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { PlatformMark } from "@/pages/posts/parts";
 import { useWorkspace } from "@/lib/workspace";
-
-const PLATFORM_MARK: Record<string, { text: string; className: string }> = {
-  facebook: { text: "f", className: "bg-[#DBE5FF] text-[#1D4ED8]" },
-  instagram: { text: "ig", className: "bg-[#FCE7F6] text-[#9E165F]" },
-  linkedin: { text: "in", className: "bg-[#E0F2FE] text-[#026AA2]" },
-};
 
 function health(a: SocialAccount): { label: string; tone: "success" | "warning" | "danger" | "neutral"; days: number | null } {
   const days = daysUntil(a.token_expires_at);
@@ -128,15 +123,12 @@ export function AccountsPage() {
       ) : (
         accounts.data!.map((a) => {
           const h = health(a);
-          const mark = PLATFORM_MARK[a.platform] ?? { text: "?", className: "bg-muted" };
           const isTest = a.platform_account_id.startsWith("mock") || a.account_type === "test";
           const pct = h.days === null ? 100 : Math.max(4, Math.min(100, Math.round((h.days / 60) * 100)));
           return (
             <Tile key={a.id} tone={h.tone === "warning" ? "warning" : h.tone === "danger" ? "danger" : "default"} className="md:col-span-4">
               <div className="flex items-center gap-3">
-                <span aria-hidden="true" className={cn("flex size-11 items-center justify-center rounded-xl font-bold", mark.className)}>
-                  {mark.text}
-                </span>
+                <PlatformMark platform={a.platform} size="lg" />
                 <div className="flex flex-col">
                   <span className="font-semibold">{a.account_name}</span>
                   <span className="text-[13px] opacity-80">{platformName(a.platform)} · {a.account_type ?? "account"}</span>
@@ -162,7 +154,7 @@ export function AccountsPage() {
                     <span className="font-semibold">{h.days <= 0 ? "now" : `${h.days} days`}</span>
                   </div>
                   <div aria-hidden="true" className="h-1.5 rounded-full bg-muted">
-                    <div className={cn("h-1.5 rounded-full", h.tone === "success" ? "bg-[#17B26A]" : "bg-[#F79009]")} style={{ width: `${pct}%` }} />
+                    <div className={cn("h-1.5 rounded-full", h.tone === "success" ? "bg-emerald-400" : "bg-amber-400")} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               )}

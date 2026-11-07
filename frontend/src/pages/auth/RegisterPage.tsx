@@ -50,7 +50,7 @@ export function RegisterPage() {
 
   return (
     <AuthLayout>
-      <h2 className="text-2xl font-bold">Create your workspace</h2>
+      <h2 className="text-2xl font-semibold">Create your workspace</h2>
       <p className="text-muted-foreground">Free to start. You can invite your team later.</p>
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         {error && (

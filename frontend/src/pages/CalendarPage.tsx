@@ -80,7 +80,7 @@ export function CalendarPage() {
 
       <Tile aria-label={monthFmt.format(month)} className="min-w-0 gap-4 md:col-span-9">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-bold">{monthFmt.format(month)}</h2>
+          <h2 className="text-xl font-semibold">{monthFmt.format(month)}</h2>
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="icon" aria-label="Previous month" onClick={() => shift(-1)}>
               <ChevronLeft aria-hidden="true" />

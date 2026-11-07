@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api, ApiError, type Brand } from "@/lib/api";
+import { brandStyle } from "@/lib/brandColor";
 import { humanize, initials } from "@/lib/format";
 import { keys, useMyRole, useTemplates } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
@@ -86,7 +87,7 @@ export function BrandsPage() {
               {b.logo_url ? (
                 <img src={b.logo_url} alt="" className="size-12 rounded-[14px] object-cover" />
               ) : (
-                <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-[14px] bg-accent font-bold text-accent-foreground">
+                <span aria-hidden="true" style={brandStyle(b)} className="brand-tile flex size-12 items-center justify-center rounded-[14px] font-medium">
                   {initials(b.name)}
                 </span>
               )}

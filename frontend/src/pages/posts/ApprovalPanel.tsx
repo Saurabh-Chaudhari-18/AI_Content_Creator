@@ -1,81 +1,174 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { FileCheck, ShieldCheck, Stamp, Undo2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { TileTitle } from "@/components/common";
-import { Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, ApiError, type Post } from "@/lib/api";
-import { APPROVAL_ACTION, formatDateTime } from "@/lib/format";
+import { formatDateTime, ROLE_LABEL } from "@/lib/format";
 import { keys, useMembers, type ApprovalLog } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
-/** Who approved what, when — the "Approval evidence" tile. */
-export function ApprovalHistory({ post }: { post: Post }) {
-  const history = useQuery({
-    queryKey: keys.history(post.id),
-    queryFn: () => api<ApprovalLog[]>(`/posts/${post.id}/history`),
+import { ApprovalCertificate, ApprovalSeal, shortHash } from "./Seal";
+
+const ACTION_ORDER: Record<string, number> = { submitted: 0, rejected: 1, approved: 1, invalidated: 2 };
+
+/** Statuses in which the latest approval still stands. */
+const APPROVAL_HOLDS = ["approved", "scheduled", "publishing", "published", "partially_published", "failed"];
+
+export function usePostHistory(postId: string | undefined) {
+  return useQuery({
+    queryKey: keys.history(postId),
+    queryFn: () => api<ApprovalLog[]>(`/posts/${postId}/history`),
+    enabled: !!postId,
   });
+}
+
+function Entry({ log, who, currentHash }: { log: ApprovalLog; who: string; currentHash: string | null | undefined }) {
+  const hash = log.content_hash_at_action;
+  const look = {
+    submitted: { icon: FileCheck, ring: "border-primary/40 bg-info-soft text-info", text: `${who} sent it for approval` },
+    approved: { icon: ShieldCheck, ring: "border-success-border bg-success-soft text-success", text: `${who} approved it` },
+    rejected: { icon: Undo2, ring: "border-warning-border bg-warning-soft text-warning", text: `${who} asked for changes` },
+    invalidated: { icon: Undo2, ring: "border-dashed bg-surface-subtle text-muted-foreground", text: "Back to draft after an edit" },
+  }[log.action] ?? { icon: FileCheck, ring: "bg-surface-subtle text-muted-foreground", text: log.action };
+  const Icon = look.icon;
+  return (
+    <li className="relative flex list-none gap-4">
+      <span className={cn("relative z-10 grid size-6 flex-none place-items-center rounded-full border", look.ring)}>
+        <Icon className="size-3" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="m-0 text-sm">{look.text}</p>
+          <time dateTime={log.created_at} className="flex-none font-mono text-xs text-muted-foreground">
+            {formatDateTime(log.created_at)}
+          </time>
+        </div>
+        {log.rejection_reason && (
+          <blockquote className="m-0 mt-2 border-l-2 border-warning-border pl-3 text-sm leading-5 text-secondary-foreground">
+            {log.rejection_reason}
+          </blockquote>
+        )}
+        {hash && log.action !== "rejected" && (
+          <p
+            className={cn(
+              "m-0 mt-1 flex items-center gap-1 font-mono text-xs",
+              log.action === "approved" ? "text-success" : log.action === "submitted" ? "text-info" : "text-muted-foreground",
+            )}
+          >
+            <Stamp className="size-3" aria-hidden="true" />
+            <span className="num">{shortHash(hash)}</span>
+            {log.action === "approved" && hash === currentHash && <span className="font-sans text-muted-foreground">· matches this version</span>}
+          </p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** Who approved what, when — with the seal of the exact content that was reviewed. */
+export function ApprovalRecord({
+  post,
+  brandName,
+  imageUrl,
+}: {
+  post: Post;
+  brandName: string;
+  imageUrl?: string;
+}) {
+  const history = usePostHistory(post.id);
   const members = useMembers();
-  const nameOf = (id: string) => members.data?.find((m) => m.user_id === id)?.full_name ?? "Someone";
+  const [certOpen, setCertOpen] = useState(false);
 
-  const lastApproval = history.data?.find((h) => h.action === "approved");
-  const approvalStillValid = lastApproval && ["approved", "scheduled", "publishing", "published", "partially_published", "failed"].includes(post.status);
-  // History is newest-first. A draft whose latest event is a rejection must show
-  // the reviewer's comments — otherwise the author can't see what to fix.
-  const latest = history.data?.[0];
-  const changesRequested = post.status === "draft" && latest?.action === "rejected";
+  // Stamp the seal when the post becomes approved while this screen is open.
+  const prevStatus = useRef(post.status);
+  const [stamp, setStamp] = useState(false);
+  useEffect(() => {
+    if (prevStatus.current === "pending_approval" && post.status === "approved") setStamp(true);
+    prevStatus.current = post.status;
+  }, [post.status]);
 
-  if (post.status === "draft" && !changesRequested) {
-    return null; // nothing useful to say about a fresh draft
-  }
+  const logs = history.data ?? []; // newest first
+  const lastApproval = logs.find((h) => h.action === "approved");
+  const lastSubmit = logs.find((h) => h.action === "submitted");
+  const sealed = !!lastApproval?.content_hash_at_action && APPROVAL_HOLDS.includes(post.status);
+  const waiting = post.status === "pending_approval" && !!post.content_hash;
 
-  if (changesRequested) {
-    return (
-      <Tile tone="warning" aria-labelledby="approval-h">
-        <TileTitle id="approval-h">Changes requested</TileTitle>
-        <p className="m-0">
-          <strong>{nameOf(latest.user_id)}</strong> asked for changes on {formatDateTime(latest.created_at)}:
-        </p>
-        {latest.rejection_reason && <blockquote className="m-0 border-l-2 border-current pl-3 italic">{latest.rejection_reason}</blockquote>}
-        <p className="m-0 text-[13px]">Edit the post, save, then send it for approval again.</p>
-      </Tile>
-    );
-  }
+  if (!logs.length && !waiting) return null;
+
+  const member = (userId: string) => members.data?.find((m) => m.user_id === userId);
+  const nameOf = (userId: string) => member(userId)?.full_name ?? "Someone";
+  const withRole = (log: ApprovalLog | undefined) => {
+    if (!log) return "—";
+    const r = member(log.user_id)?.role;
+    return `${nameOf(log.user_id)}${r ? `, ${ROLE_LABEL[r] ?? r}` : ""}`;
+  };
 
   return (
-    <Tile tone={approvalStillValid ? "info" : "default"} aria-labelledby="approval-h">
-      <TileTitle id="approval-h">Who approved this?</TileTitle>
-      {approvalStillValid ? (
-        <p className="m-0">
-          <strong>{nameOf(lastApproval.user_id)}</strong> approved this exact version on {formatDateTime(lastApproval.created_at)}.
-          If anyone changes it, it needs approval again.
-        </p>
-      ) : (
-        <p className="m-0 text-muted-foreground">Not approved yet.</p>
+    <section aria-labelledby="record-h" className="relative rounded-[var(--radius-tile)] border bg-card">
+      <div className={cn("flex h-16 flex-col justify-center gap-1 border-b pl-5", sealed || waiting ? "pr-32" : "pr-5")}>
+        <h2 id="record-h" className="m-0 text-sm font-medium">Approval record</h2>
+        <p className="m-0 text-xs text-muted-foreground">Every step is kept, with the seal of what was reviewed</p>
+      </div>
+
+      {sealed && (
+        <ApprovalSeal
+          hash={lastApproval.content_hash_at_action!}
+          version={post.version_number}
+          state="approved"
+          stamp={stamp}
+          className="absolute -top-7 right-4 size-[104px]"
+        />
       )}
-      {approvalStillValid && lastApproval.content_hash_at_action && (
-        <p className="m-0 text-xs">
-          Proof code <span className="font-mono">{lastApproval.content_hash_at_action.slice(0, 4)} {lastApproval.content_hash_at_action.slice(4, 8)} … {lastApproval.content_hash_at_action.slice(-4)}</span>
-        </p>
+      {!sealed && waiting && (
+        <ApprovalSeal hash={post.content_hash!} version={post.version_number} state="waiting" className="absolute -top-7 right-4 size-[104px]" />
       )}
-      {(history.data?.length ?? 0) > 0 && (
-        <details className="text-[13px]">
-          <summary className="cursor-pointer font-medium">Full history ({history.data!.length})</summary>
-          <ol className="mt-2 flex flex-col gap-2 pl-0">
-            {history.data!.map((h) => (
-              <li key={h.id} className="list-none">
-                <span className="font-medium">{APPROVAL_ACTION[h.action] ?? h.action}</span> · {nameOf(h.user_id)} ·{" "}
-                <span className="opacity-80">{formatDateTime(h.created_at)}</span>
-                {h.rejection_reason && <span className="block opacity-80">“{h.rejection_reason}”</span>}
-              </li>
-            ))}
-          </ol>
-        </details>
+
+      <ol className="relative m-0 flex flex-col gap-5 p-5">
+        <span aria-hidden="true" className="absolute top-8 bottom-8 left-[32px] w-px bg-border" />
+        {[...logs]
+          .sort((a, b) => a.created_at.localeCompare(b.created_at) || (ACTION_ORDER[a.action] ?? 3) - (ACTION_ORDER[b.action] ?? 3))
+          .map((log) => (
+          <Entry key={log.id} log={log} who={nameOf(log.user_id)} currentHash={post.content_hash} />
+        ))}
+        {post.status === "pending_approval" && (
+          <li className="relative flex list-none items-center gap-4">
+            <span aria-hidden="true" className="relative z-10 grid size-6 flex-none place-items-center rounded-full border border-dashed bg-card">
+              <span className="size-1.5 rounded-full bg-amber-400" />
+            </span>
+            <p className="m-0 text-sm text-muted-foreground">Waiting for an owner or admin to approve</p>
+          </li>
+        )}
+      </ol>
+
+      {sealed && (
+        <div className="border-t px-5 py-4">
+          <Button variant="outline" size="sm" onClick={() => setCertOpen(true)}>
+            <Stamp aria-hidden="true" /> View approval certificate
+          </Button>
+          <ApprovalCertificate
+            open={certOpen}
+            onOpenChange={setCertOpen}
+            data={{
+              brandName,
+              postTitle: post.title || "Untitled post",
+              version: post.version_number,
+              caption: post.caption,
+              hashtags: post.hashtags,
+              imageUrl,
+              submittedBy: withRole(lastSubmit),
+              approvedBy: withRole(lastApproval),
+              approvedAt: lastApproval.created_at,
+              hash: lastApproval.content_hash_at_action!,
+            }}
+          />
+        </div>
       )}
-    </Tile>
+    </section>
   );
 }
 
@@ -105,7 +198,7 @@ export function ApprovalActions({
   const approve = useMutation({
     mutationFn: () => api<Post>(`/posts/${post.id}/approve`, { method: "POST" }),
     onSuccess: () => {
-      toast.success("Approved. It’s ready to schedule.");
+      toast.success("Approved and sealed. It’s ready to schedule.");
       refresh();
     },
     onError,
@@ -131,21 +224,21 @@ export function ApprovalActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {!canApprove && approveBlockedReason && <span className="text-[13px] text-muted-foreground">{approveBlockedReason}</span>}
+      {canManage && (
+        <Button variant="outline" onClick={() => withdraw.mutate()} disabled={withdraw.isPending}>
+          <Undo2 aria-hidden="true" /> Withdraw to edit
+        </Button>
+      )}
       {canApprove && (
         <>
-          <Button onClick={() => approve.mutate()} disabled={approve.isPending}>
-            {approve.isPending ? "Approving…" : "Approve"}
-          </Button>
           <Button variant="outline" onClick={() => setRejectOpen(true)}>
             Request changes
           </Button>
+          <Button className="btn-depth" onClick={() => approve.mutate()} disabled={approve.isPending}>
+            <ShieldCheck aria-hidden="true" /> {approve.isPending ? "Approving…" : "Approve"}
+          </Button>
         </>
-      )}
-      {!canApprove && approveBlockedReason && <span className="text-[13px] text-muted-foreground">{approveBlockedReason}</span>}
-      {canManage && (
-        <Button variant="ghost" onClick={() => withdraw.mutate()} disabled={withdraw.isPending}>
-          Withdraw to edit
-        </Button>
       )}
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>

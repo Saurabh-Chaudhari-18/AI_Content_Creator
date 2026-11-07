@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CheckCircle2, Circle, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, ExternalLink, LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router";
 
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type Post, type UsageSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { brandStyle } from "@/lib/brandColor";
 import { daysUntil, formatDateTime, humanize, initials, platformName } from "@/lib/format";
 import { keys, useAccounts, useTemplates, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -129,12 +130,11 @@ export function HomePage() {
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section
         className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-[var(--radius-tile)] p-6 text-white sm:p-7 md:col-span-8"
-        style={{ background: "linear-gradient(135deg, var(--primary) 0%, #1e1b4b 100%)" }}
+        style={{ background: "linear-gradient(135deg, #4f46e5 0%, #312e81 70%, #1e1b4b 100%)" }}
       >
-        <div aria-hidden="true" className="pointer-events-none absolute -top-20 -right-20 size-72 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex flex-col gap-1.5">
           <span className="text-sm text-white/75">{longDate.format(new Date())}</span>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight">
             {greeting()}, {firstName}
           </h1>
           {loadingCore ? (
@@ -153,7 +153,7 @@ export function HomePage() {
           </div>
           <Button asChild size="lg" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
             <Link to="/templates">
-              <Sparkles aria-hidden="true" /> Browse templates
+              <LayoutTemplate aria-hidden="true" /> Browse templates
             </Link>
           </Button>
         </div>
@@ -192,15 +192,15 @@ export function HomePage() {
         )}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-xl bg-muted py-2">
-            <span className="block text-xl font-bold">{usage.data?.counts.post_created ?? "–"}</span>
+            <span className="block text-xl font-semibold">{usage.data?.counts.post_created ?? "–"}</span>
             <span className="text-[11px] text-muted-foreground">written · 30d</span>
           </div>
           <div className="rounded-xl bg-muted py-2">
-            <span className="block text-xl font-bold">{usage.data?.counts.post_published ?? "–"}</span>
+            <span className="block text-xl font-semibold">{usage.data?.counts.post_published ?? "–"}</span>
             <span className="text-[11px] text-muted-foreground">published · 30d</span>
           </div>
           <div className="rounded-xl bg-muted py-2">
-            <span className="block text-xl font-bold">{usage.data?.counts.media_uploaded ?? "–"}</span>
+            <span className="block text-xl font-semibold">{usage.data?.counts.media_uploaded ?? "–"}</span>
             <span className="text-[11px] text-muted-foreground">photos · 30d</span>
           </div>
         </div>
@@ -243,7 +243,7 @@ export function HomePage() {
                   {post.media[0] ? (
                     <img src={post.media[0].media_url} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
                   ) : (
-                    <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">{initials(brandName(post.brand_id))}</span>
+                    <span aria-hidden="true" style={brandStyle(brands.find((b) => b.id === post.brand_id))} className="brand-tile flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-medium">{initials(brandName(post.brand_id))}</span>
                   )}
                   <div className="flex min-w-[200px] flex-1 flex-col">
                     <span className="font-semibold">{post.title || "Untitled post"} <span className="font-normal text-muted-foreground">· {brandName(post.brand_id)}</span></span>
@@ -278,8 +278,8 @@ export function HomePage() {
                 <li key={p.id} className="list-none">
                   <Link to={`/posts/${p.id}`} className="flex gap-3 text-foreground no-underline">
                     <span className="flex w-12 shrink-0 flex-col items-center rounded-xl bg-muted py-1.5">
-                      <span className="text-[11px] text-muted-foreground uppercase">{dayChip.format(d)}</span>
-                      <span className="text-lg leading-tight font-bold">{d.getDate()}</span>
+                      <span className="text-[11px] text-muted-foreground">{dayChip.format(d)}</span>
+                      <span className="text-lg leading-tight font-semibold">{d.getDate()}</span>
                     </span>
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate font-semibold">{p.title || "Untitled post"}</span>
@@ -321,7 +321,7 @@ export function HomePage() {
                     </span>
                   </div>
                   <div aria-hidden="true" className="h-1.5 rounded-full bg-muted">
-                    <div className={cn("h-1.5 rounded-full", soon ? "bg-[#F79009]" : "bg-[#17B26A]")} style={{ width: `${pct}%` }} />
+                    <div className={cn("h-1.5 rounded-full", soon ? "bg-amber-400" : "bg-emerald-400")} style={{ width: `${pct}%` }} />
                   </div>
                 </li>
               );
@@ -345,7 +345,7 @@ export function HomePage() {
                   {b.logo_url ? (
                     <img src={b.logo_url} alt="" className="size-11 shrink-0 rounded-xl object-cover" />
                   ) : (
-                    <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent font-bold text-accent-foreground">{initials(b.name)}</span>
+                    <span aria-hidden="true" style={brandStyle(b)} className="brand-tile flex size-11 shrink-0 items-center justify-center rounded-xl font-medium">{initials(b.name)}</span>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-semibold">{b.name}</span>
@@ -438,7 +438,7 @@ function CountTile({
   return (
     <Tile tone={tone} className="group justify-between p-0 md:col-span-3">
       <Link to={to} className="flex h-full flex-col justify-between gap-3 p-5 text-inherit no-underline sm:p-6">
-        {loading ? <Skeleton className="h-9 w-10" /> : <span className="text-4xl leading-none font-bold">{value ?? 0}</span>}
+        {loading ? <Skeleton className="h-9 w-10" /> : <span className="text-4xl leading-none font-semibold">{value ?? 0}</span>}
         <span className="flex items-center justify-between font-medium">
           {label}
           <ArrowRight aria-hidden="true" className="size-4 opacity-0 transition-opacity group-hover:opacity-70" />

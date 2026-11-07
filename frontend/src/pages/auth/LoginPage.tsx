@@ -37,7 +37,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <h2 className="text-2xl font-bold">Welcome back</h2>
+      <h2 className="text-2xl font-semibold">Welcome back</h2>
       <p className="text-muted-foreground">Sign in to your workspace.</p>
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         {error && (

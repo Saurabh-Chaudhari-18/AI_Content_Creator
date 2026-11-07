@@ -18,7 +18,7 @@ type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 /** Post status → plain-language label + colour tone. */
 export const POST_STATUS: Record<string, { label: string; tone: Tone }> = {
   draft: { label: "Draft", tone: "neutral" },
-  pending_approval: { label: "Waiting for approval", tone: "info" },
+  pending_approval: { label: "Waiting for approval", tone: "warning" },
   approved: { label: "Approved", tone: "success" },
   scheduled: { label: "Scheduled", tone: "info" },
   publishing: { label: "Publishing…", tone: "warning" },
@@ -44,11 +44,20 @@ export const APPROVAL_ACTION: Record<string, string> = {
 };
 
 export const TONE_CLASS: Record<Tone, string> = {
-  neutral: "bg-secondary text-secondary-foreground",
-  info: "bg-info-soft text-info",
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  danger: "bg-danger-soft text-danger",
+  neutral: "border-border bg-secondary text-secondary-foreground",
+  info: "border-info-border bg-info-soft text-info",
+  success: "border-success-border bg-success-soft text-success",
+  warning: "border-warning-border bg-warning-soft text-warning",
+  danger: "border-danger-border bg-danger-soft text-danger",
+};
+
+/** The small dot inside a status pill. */
+export const TONE_DOT: Record<Tone, string> = {
+  neutral: "bg-muted-foreground",
+  info: "bg-indigo-400",
+  success: "bg-emerald-400",
+  warning: "bg-amber-400",
+  danger: "bg-red-400",
 };
 
 export const ROLE_LABEL: Record<string, string> = { owner: "Owner", admin: "Admin", member: "Member" };
