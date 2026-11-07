@@ -8,22 +8,23 @@
 | 4 Nov 2026 | Security and correctness review; fixes for approval integrity, worker safety (no double-posting) and input validation |
 | 4 Nov 2026 | Closed every remaining Phase 1 backend gap: per-platform content overrides, pre-publish validation, carousel reorder, brand logo upload, usage summary, workspace-wide post list, self-approval setting, demo seed data |
 | 5 Nov 2026 | Integration tests for the full publishing journey and every retry safety rule; backend architecture documentation. Frontend screens for posts and publishing under way |
-| 6 Nov 2026 | Per-user light / dark theme preference, saved to the account and restored at every sign-in |
+| 6 Nov 2026 | Per-user light / dark theme preference, saved to the account and restored at every sign-in. System design document. Post Studio design approved with the owner (obsidian + indigo palette) |
+| 6–7 Nov 2026 | Whole web app converted to the owner's design: dark by default, icon-rail navigation, rebuilt Post Studio (live per-platform previews, limit rings, approval seal and printable approval certificate). Full journey verified in the browser: write → approve → publish to test accounts |
 
-### Phase 1 scope — backend status
+### Phase 1 scope — status
 
-| Owner's MVP area | Backend status |
-|---|---|
-| Web application: sign-in, protected workspace | ✅ Done |
-| Brand setup (name, industry, audience, tone, language, logo) | ✅ Done |
-| Content studio | ✅ Done with **Smart Templates** + manual editing (AI is Phase 2) |
-| Visual content: upload, carousel order, preview text | ✅ Done (upload only; no AI image generation) |
-| Platform-specific content and validation | ✅ Done |
-| Approval workflow (submit, approve, reject, withdraw, history) | ✅ Done, with content-fingerprint lock |
-| Publishing: connect accounts, schedule, publish now, retry, per-account status | ✅ Done (Facebook + Instagram via Meta login; LinkedIn adapter built, connect flow pending) |
-| Content calendar | ✅ Done |
-| Usage tracking | ✅ Done (AI usage slot reserved) |
-| Demo and deployment | 🟡 Docker setup and demo seed done; hosted review environment not yet set up |
+| Owner's MVP area | Backend | Web app |
+|---|---|---|
+| Web application: sign-in, protected workspace | ✅ Done | ✅ Done: sign-in, register, silent session refresh, icon rail, brand switcher, light/dark |
+| Brand setup (name, industry, audience, tone, language, logo) | ✅ Done | ✅ Done: list, add, edit, logo, remove |
+| Content studio | ✅ Done with **Smart Templates** + manual editing (AI is Phase 2) | ✅ Done: Post Studio, Smart Templates with fill-in blanks, live previews |
+| Visual content: upload, carousel order, preview text | ✅ Done (upload only; no AI image generation) | ✅ Done: upload, reorder, remove |
+| Platform-specific content and validation | ✅ Done | ✅ Done: own wording per channel, limit rings, pre-publish check per account |
+| Approval workflow (submit, approve, reject, withdraw, history) | ✅ Done, with content-fingerprint lock | ✅ Done: approval record with seal, approval certificate (print / PDF) |
+| Publishing: connect accounts, schedule, publish now, retry, per-account status | ✅ Done (Facebook + Instagram via Meta login; LinkedIn adapter built, connect flow pending) | ✅ Done with test accounts; real Meta connect needs the client's Meta app |
+| Content calendar | ✅ Done | ✅ Done: month view, unscheduled list |
+| Usage tracking | ✅ Done (AI usage slot reserved) | ✅ Done: 30-day usage in Settings, counts on Home |
+| Demo and deployment | 🟡 Docker setup and demo seed done; hosted review environment not yet set up | 🟡 Runs locally; hosting not set up |
 
 ### How it is tested
 
@@ -47,7 +48,7 @@
 
 | Item | Who / what is needed |
 |---|---|
-| **Frontend** (React + TypeScript web app) — the 11 screens on top of this API | In progress |
+| **Frontend polish and testing:** automated browser tests (Playwright) for the main journey, accessibility pass, phone-layout pass on every screen | Us |
 | **Meta developer app** with a business-verified test Page and Instagram business account, to prove real Facebook and Instagram publishing | Client's Meta Business account access |
 | **LinkedIn decision:** add the LinkedIn connect flow (~1.5 days) if the client's LinkedIn developer app is approved for the Community Management API; otherwise LinkedIn stays mock-only for Phase 1 | Client's LinkedIn developer app |
 | **Hosted review environment** — recommended: Railway or Render (API, worker, scheduler, managed PostgreSQL and Redis) + Cloudflare R2 for media | Hosting choice and account |

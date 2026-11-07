@@ -1,4 +1,4 @@
-# AI Content Creator — web app
+# OmniPost — web app
 
 React 19 + TypeScript + Vite 6 + Tailwind CSS 4 + shadcn/ui.
 Data: TanStack Query. Routing: React Router 7.
@@ -36,13 +36,17 @@ Demo login (after `python -m seeds.seed` in `backend/`): `demo@example.com` / `D
 
 ## Design
 
-The look is the "Chosen direction" on the design canvas: bento tiles, calm colours, plain words. All colours are tokens in `src/index.css` (`:root` = light, `.dark` = dark); components use token classes (`bg-card`, `text-muted-foreground`, `bg-warning-soft`, …), never raw hex. To restyle the app, change the tokens, not the components.
+The look is the product owner's design (reference mock: `docs/design/post-studio.html` in the project repo): obsidian surfaces, one indigo accent, amber for "waiting", emerald for "good", Plus Jakarta Sans + JetBrains Mono (Instrument Serif only on the approval certificate). The chrome stays quiet; colour lives in a few moments: the photo glow behind the live preview, the approval seal, the platforms' own tiles, and each brand's colour on its tiles.
 
+All colours are tokens in `src/index.css` (`:root` = light, `.dark` = dark); components use token classes (`bg-card`, `text-muted-foreground`, `bg-surface-subtle`, `bg-warning-soft`, …), never raw hex. To restyle the app, change the tokens, not the components.
+
+- **Dark is the default** for new accounts; Light and "Match my device" are in the avatar menu, saved to the account. `index.html` applies the saved theme before the first paint, so reloads never flash.
+- `src/app/AppShell.tsx` — icon rail on desktop (workspace mark, brand switcher, sections with tooltips, settings, account), compact top bar + bottom bar on phones.
+- `src/lib/brandColor.ts` — a brand's colour (its palette's first colour, or a stable colour from its id) for brand-owned elements only.
+- `src/pages/posts/Seal.tsx` — the approval seal and the printable approval certificate.
 - `src/components/ui/` — shadcn/ui components (owned by us, edit freely).
-- `src/components/Tile.tsx` — `BentoGrid` + `Tile` (tones: default / info / success / warning / danger).
-- Light is the default; users can pick Dark or "Match my device" in the account menu.
 
-Rules we follow (from the Impeccable review): one primary action per screen; a row or tile that needs action looks different from the rest; zero counts don't use alarm colours; every field has a visible label; no emoji as icons.
+Rules we follow: one primary action per screen; colour only where it means something; no glows, gradient text or emoji icons; every field has a visible label; motion only where it explains something (and none for users who turn on reduced motion).
 
 ## Screens (Phase 1)
 
@@ -51,7 +55,7 @@ Rules we follow (from the Impeccable review): one primary action per screen; a r
 | `/login`, `/register` | Sign in / Register | Session in memory, silent refresh on reload |
 | `/` | Home | Live counts, “Needs your attention” (failures first), account health |
 | `/posts` | Posts | All posts, status tabs, brand filter, paging, “New post” (asks which brand) |
-| `/posts/new?brand=…[&template=…]`, `/posts/:id` | Post Studio | Write; Smart Templates with fill-in blanks; per-platform text; hashtags; photos (upload, reorder, remove); send / approve / request changes / withdraw; pre-publish check per account; schedule or post now; live job status; **Try again** for failed posts (unknown outcomes need a “I checked” confirmation); approval evidence and history |
+| `/posts/new?brand=…[&template=…]`, `/posts/:id` | Post Studio | Live Instagram / Facebook / LinkedIn previews with per-platform limit rings; write; Smart Templates with fill-in blanks; per-platform text; hashtags; photos (upload, reorder, remove); send / approve / request changes / withdraw; pre-publish check per account; schedule or post now; live job status; **Try again** for failed posts (unknown outcomes need a “I checked” confirmation); approval record with the seal; printable approval certificate |
 | `/calendar` | Calendar | Month grid of scheduled / published / failed posts; posts not yet scheduled |
 | `/templates` | Smart Templates | Filter by industry, type, search; “Use this template” opens Post Studio |
 | `/accounts` (`/social-accounts`) | Accounts | Health and expiry per account, connect Facebook (needs Meta app), add test account (dev), disconnect, recent failures |
