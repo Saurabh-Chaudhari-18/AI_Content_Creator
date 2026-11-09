@@ -1,4 +1,30 @@
-# Local development stack: PostgreSQL 16 + Redis 7 + MinIO (S3-compatible)
+# OmniPost — Docker services.
+#
+# Everyday development (you run the API, worker and web app yourself):
+#     docker compose up -d postgres redis
+#
+# Whole project in Docker (only Docker needed), from this backend folder:
+#     docker compose --profile full up -d --build
+#     → web app on http://localhost:4173, API on http://localhost:8000
+#     (from the repository root: docker compose -f backend/docker-compose.yml --profile full up -d --build)
+#
+# backend/.env must exist in both cases (scripts/setup.* or scripts/docker-up.* create it).
+#
+# A port already taken on your machine? Override it, e.g. WEB_PORT=4174 or POSTGRES_PORT=5433
+# (if you change POSTGRES_PORT or REDIS_PORT for local development, update backend/.env to match).
+
+x-backend: &backend
+  build: .
+  env_file: .env
+  environment: &backend-env
+    DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ai_content
+    REDIS_URL: redis://redis:6379/0
+    S3_ENDPOINT_URL: http://minio:9000
+    FRONTEND_URL: http://localhost:${WEB_PORT:-4173}
+    META_REDIRECT_URI: http://localhost:8000/api/v1/social/callback/facebook
+  volumes:
+    - uploads:/code/uploads
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,7 +33,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_content
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +46,7 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes   # scheduled jobs survive restarts
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -29,8 +55,10 @@ services:
       timeout: 3s
       retries: 10
 
+  # Optional S3-compatible storage for real photo publishing (see docs/07_setup_guide.md §12)
   minio:
     image: minio/minio:latest
+    profiles: ["s3"]
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -41,53 +69,56 @@ services:
     volumes:
       - miniodata:/data
 
-  api:
-    build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ai_content
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_URL: http://minio:9000
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./app:/code/app
+  # ── Whole project in Docker: `--profile full` ──────────────────────
+
+  # One-off: create/upgrade tables, then add demo data (safe to repeat)
+  migrate:
+    <<: *backend
+    profiles: ["full"]
+    command: sh -c "alembic upgrade head && python -m seeds.seed"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
-  worker:
-    build: .
-    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ai_content
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_URL: http://minio:9000
-    volumes:
-      - ./app:/code/app
+  api:
+    <<: *backend
+    profiles: ["full"]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "${API_PORT:-8000}:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *backend
+    profiles: ["full"]
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
   # REQUIRED for scheduled publishing — Beat dispatches due jobs every minute.
   beat:
-    build: .
-    command: celery -A app.workers.celery_app beat --loglevel=info
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ai_content
-      REDIS_URL: redis://redis:6379/0
+    <<: *backend
+    profiles: ["full"]
+    command: celery -A app.workers.celery_app beat --loglevel=info --schedule /tmp/celerybeat-schedule
     depends_on:
-      redis:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build: ../frontend
+    profiles: ["full"]
+    ports:
+      - "${WEB_PORT:-4173}:80"
+    depends_on:
+      - api
 
 volumes:
   pgdata:
   redisdata:
   miniodata:
+  uploads:

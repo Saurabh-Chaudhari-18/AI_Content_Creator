@@ -8,8 +8,33 @@ Tested on Windows 11 with PowerShell, Docker Desktop, Python 3.12.10, Node.js 20
 
 ---
 
+## 0. Pick the quickest way for you
+
+| Way | Use it for | Commands (from the repository root) |
+|---|---|---|
+| **A. Setup scripts** | The quickest start, and day-to-day development | Once: `scripts\setup.ps1` (Windows) or `bash scripts/setup.sh` (macOS/Linux)<br>Every day: `scripts\start.ps1` or `bash scripts/start.sh` |
+| **B. Step by step** | Understanding every part, or when a script stops | Sections 2–6 below |
+
+Both need the tools from section 2 (Git, Python 3.12, Node 20+, Docker Desktop).
+
+**A. Setup scripts.** `setup` checks your tools and versions, creates `backend/.env` with new secret keys (it never overwrites an existing one), makes the Python virtual environment, installs everything, starts PostgreSQL and Redis, creates the tables and adds demo data. It's safe to run again. `start` applies any new database changes and starts the API, worker, scheduler and web app (Windows: four windows; macOS/Linux: one terminal, logs in `.logs/`, Ctrl+C stops all). Then open **http://localhost:5173**.
+
+On Windows the full commands are below; `-ExecutionPolicy Bypass` lets PowerShell run just this script, without changing any setting:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1
+```
+
+If a script stops, its message says what is missing; the matching step in sections 2–6 explains it in detail.
+
+Versions are pinned for version managers: `.python-version` (3.12) for pyenv, `.nvmrc` (20) for nvm or fnm.
+
+---
+
 ## Contents
 
+0. [Pick the quickest way for you](#0-pick-the-quickest-way-for-you)
 1. [What you will run](#1-what-you-will-run)
 2. [Install the tools](#2-install-the-tools)
 3. [Get the code](#3-get-the-code)
@@ -336,7 +361,9 @@ omnipost/
 │   │   ├── lib/             API client, auth, theme, workspace, query hooks
 │   │   └── index.css        all colours and fonts (design tokens)
 │   └── vite.config.ts       dev server + /api proxy
-└── docs/                    project documentation (this file is 07)
+├── scripts/                 setup and start, for Windows (.ps1) and macOS/Linux (.sh)
+├── docs/                    project documentation (this file is 07)
+└── .nvmrc, .python-version  pinned Node and Python versions
 ```
 
 Where to read next: [05_backend_technical_guide.md](05_backend_technical_guide.md) for how the backend works, [06_system_design.md](06_system_design.md) for the overall design, `frontend/README.md` for the web app.
@@ -404,7 +431,9 @@ Then e.g. `\dt` (tables), `SELECT email FROM users;`, `SELECT title, status FROM
 
 ## 14. Short version
 
-Once everything is installed:
+Quickest: `scripts\setup.ps1` once, then `scripts\start.ps1` (Windows), or `bash scripts/setup.sh` then `bash scripts/start.sh` (macOS/Linux).
+
+By hand, once everything is installed:
 
 ```bash
 # backend (venv active)
