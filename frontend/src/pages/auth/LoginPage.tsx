@@ -26,8 +26,9 @@ export function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      await login(email.trim(), password);
-      navigate(from, { replace: true });
+      const user = await login(email.trim(), password);
+      // Staff land in their console unless they were heading somewhere else.
+      navigate(user.platform_role === "super_admin" && from === "/" ? "/admin" : from, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sign-in failed. Please try again.");
     } finally {

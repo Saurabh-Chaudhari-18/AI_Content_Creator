@@ -160,6 +160,25 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
   return parse<T>(res);
 }
 
+/** A file download (CSV and the like) with the same auth and refresh as `api`. */
+export async function apiBlob(path: string, opts: RequestOptions = {}): Promise<Blob> {
+  let res = await rawRequest(path, opts);
+  if (res.status === 401 && !opts.noRefresh && accessToken !== null) {
+    if (await refreshSession()) res = await rawRequest(path, opts);
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    let detail: unknown = null;
+    try {
+      detail = text ? JSON.parse(text)?.detail ?? null : null;
+    } catch {
+      detail = null;
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.blob();
+}
+
 // ── Auth endpoints ─────────────────────────────────────────────────────
 export const authApi = {
   login: (email: string, password: string) =>

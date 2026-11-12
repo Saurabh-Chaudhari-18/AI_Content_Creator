@@ -1,0 +1,31 @@
+[
+ {
+  "scope": "app",
+  "shape": "app screen",
+  "theme": "console",
+  "axes": "dark/grotesk-sans/chromatic-amber",
+  "nav": "sidebar, three groups",
+  "footer": "none",
+  "imagery": "none",
+  "photos": [],
+  "entry": "overview watchlist",
+  "fingerprint": "app-console-sidebar-trail-slip",
+  "sections": [
+   "overview",
+   "workspaces",
+   "workspace detail",
+   "logins",
+   "plans matrix",
+   "feature switches",
+   "templates",
+   "usage",
+   "audit trail",
+   "settings"
+  ],
+  "signature": "the change slip previews the audit row",
+  "waived": [],
+  "prompt": "super admin interface from the backend admin API",
+  "date": "2026-11-12",
+  "mode": "build"
+ }
+]

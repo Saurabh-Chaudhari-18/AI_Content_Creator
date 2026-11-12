@@ -17,6 +17,9 @@ const TemplatesPage = lazy(() => import("@/pages/TemplatesPage").then((m) => ({ 
 const AccountsPage = lazy(() => import("@/pages/AccountsPage").then((m) => ({ default: m.AccountsPage })));
 const BrandsPage = lazy(() => import("@/pages/BrandsPage").then((m) => ({ default: m.BrandsPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const SetPasswordPage = lazy(() => import("@/pages/auth/SetPasswordPage").then((m) => ({ default: m.SetPasswordPage })));
+// The staff console is its own chunk: customers never download it.
+const AdminRoutes = lazy(() => import("@/admin/AdminRoutes"));
 
 function FullPageLoading() {
   return (
@@ -45,9 +48,19 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 function GuestOnly({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   if (status === "loading") return <FullPageLoading />;
-  if (status === "signed-in") return <Navigate to="/" replace />;
+  if (status === "signed-in") return <Navigate to={user?.platform_role === "super_admin" ? "/admin" : "/"} replace />;
+  return children;
+}
+
+/** The staff console: platform staff only. Everyone else is sent home (the API answers them 404 anyway). */
+function RequireStaff({ children }: { children: ReactNode }) {
+  const { status, user } = useAuth();
+  const location = useLocation();
+  if (status === "loading") return <FullPageLoading />;
+  if (status === "signed-out") return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  if (user?.platform_role !== "super_admin") return <Navigate to="/" replace />;
   return children;
 }
 
@@ -58,6 +71,9 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+      {/* Setup links from the staff console point here; open to anyone holding a link. */}
+      <Route path="/set-password" element={<Suspense fallback={<FullPageLoading />}><SetPasswordPage /></Suspense>} />
+      <Route path="/admin/*" element={<RequireStaff><Suspense fallback={<FullPageLoading />}><AdminRoutes /></Suspense></RequireStaff>} />
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={page(<HomePage />)} />
         <Route path="posts" element={page(<PostsPage />)} />

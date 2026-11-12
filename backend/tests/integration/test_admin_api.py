@@ -53,6 +53,13 @@ def test_the_admin_api_does_not_exist_for_customers(api):
     assert r.status_code == 404  # nobody can promote themselves
 
 
+def test_auth_me_says_who_is_staff(api, admin):
+    """The web app sends staff to the console after sign-in, so /auth/me carries the role."""
+    customer = register(api)
+    assert api.get("/api/v1/auth/me", headers=customer.headers).json()["platform_role"] is None
+    assert api.get("/api/v1/auth/me", headers=admin.headers).json()["platform_role"] == "super_admin"
+
+
 def test_losing_the_role_takes_effect_on_the_next_request(api, db_exec, admin):
     assert api.get(f"{ADMIN}/overview", headers=admin.headers).status_code == 200
     db_exec("UPDATE users SET platform_role = NULL WHERE id = :id", id=admin.user_id)

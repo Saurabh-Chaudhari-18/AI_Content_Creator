@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniPost staff console</title>
+  <meta name="description" content="The OmniPost super admin console: workspaces, logins, plans and feature switches, usage checks and the audit trail.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./admin.css">
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="app" id="app">
+    <aside class="side" id="side" aria-label="Staff console">
+      <a class="brand" href="#/overview" aria-label="OmniPost staff console, overview">
+        <b>OmniPost</b>
+        <span>Staff console</span>
+      </a>
+
+      <nav class="nav" aria-label="Main">
+        <ul class="nav__group" aria-labelledby="g-watch">
+          <li class="nav__label" id="g-watch">Watch</li>
+          <li><a href="#/overview" data-nav="overview">Overview</a></li>
+          <li><a href="#/usage" data-nav="usage">Usage <span class="count" id="nav-usage-count"></span></a></li>
+          <li><a href="#/audit" data-nav="audit">Audit trail</a></li>
+        </ul>
+        <ul class="nav__group" aria-labelledby="g-customers">
+          <li class="nav__label" id="g-customers">Customers</li>
+          <li><a href="#/workspaces" data-nav="workspaces">Workspaces</a></li>
+          <li><a href="#/users" data-nav="users">Logins</a></li>
+        </ul>
+        <ul class="nav__group" aria-labelledby="g-product">
+          <li class="nav__label" id="g-product">Product</li>
+          <li><a href="#/plans" data-nav="plans">Plans and limits</a></li>
+          <li><a href="#/features" data-nav="features">Feature switches</a></li>
+          <li><a href="#/templates" data-nav="templates">Smart Templates</a></li>
+          <li><a href="#/settings" data-nav="settings">Platform settings</a></li>
+        </ul>
+      </nav>
+
+      <div class="side__foot">
+        <div class="whoami">
+          <span class="muted">Signed in as staff</span>
+          <b>Sample Staff</b>
+          <span class="mono" title="The PostgreSQL role this API runs as">omnipost_admin</span>
+        </div>
+        <fieldset class="proto" id="proto">
+          <legend>Prototype: show data regions as</legend>
+          <div class="seg">
+            <input type="radio" name="proto-state" id="ps-full" value="full" checked><label for="ps-full">Full</label>
+            <input type="radio" name="proto-state" id="ps-loading" value="loading"><label for="ps-loading">Loading</label>
+            <input type="radio" name="proto-state" id="ps-empty" value="empty"><label for="ps-empty">Empty</label>
+            <input type="radio" name="proto-state" id="ps-error" value="error"><label for="ps-error">Error</label>
+          </div>
+        </fieldset>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="bar">
+        <button class="btn btn--ghost menu-btn" type="button" id="menu-btn" aria-controls="side" aria-expanded="false">Menu</button>
+        <ol class="crumbs" id="crumbs" aria-label="You are here"></ol>
+        <div class="bar__end">
+          <form class="search" id="search" role="search">
+            <label class="visually-hidden" for="q">Find a workspace or login</label>
+            <input class="input" id="q" name="q" type="search" placeholder="Find a workspace or login" autocomplete="off">
+            <kbd aria-hidden="true">Ctrl K</kbd>
+          </form>
+          <span class="chip chip--cool" title="Every figure on these screens is sample data for the design">Sample data</span>
+        </div>
+      </header>
+
+      <main class="page" id="main" tabindex="-1">
+        <noscript><p>This prototype draws its screens with JavaScript. Turn scripting on to see them.</p></noscript>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="slip" id="slip" aria-labelledby="slip-title"></dialog>
+
+  <script src="./admin.js"></script>
+</body>
+</html>

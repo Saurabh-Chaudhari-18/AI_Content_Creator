@@ -11,12 +11,13 @@ import {
   Moon,
   MoreHorizontal,
   Settings2,
+  ShieldCheck,
   SquarePen,
   Sun,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet } from "react-router";
 
 import {
   DropdownMenu,
@@ -118,6 +119,13 @@ function AccountMenu({ side }: { side: "right" | "bottom" }) {
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
+        {user?.platform_role === "super_admin" && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin">
+              <ShieldCheck aria-hidden="true" /> Staff console
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={() => void logout()}>
           <LogOut aria-hidden="true" /> Sign out
         </DropdownMenuItem>

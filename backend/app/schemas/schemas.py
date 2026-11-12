@@ -71,7 +71,7 @@ def _clean_hashtags(v: list[str]) -> list[str]:
         raise ValueError(f"At most {HASHTAG_MAX_COUNT} hashtags are allowed")
     return out
 
-from app.models.enums import OperationType, SocialPlatform, ThemePreference, WorkspaceRole
+from app.models.enums import OperationType, PlatformRole, SocialPlatform, ThemePreference, WorkspaceRole
 
 
 # ── Auth ──────────────────────────────────────────────────────────────
@@ -127,6 +127,9 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str] = None
     is_active: bool
     theme_preference: ThemePreference
+    # Platform staff only (`super_admin`); null for every customer. Lets the
+    # web app send staff to the admin console after they sign in.
+    platform_role: Optional[PlatformRole] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

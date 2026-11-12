@@ -10,7 +10,8 @@ type AuthStatus = "loading" | "signed-in" | "signed-out";
 type AuthContextValue = {
   status: AuthStatus;
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  /** Resolves with the signed-in user, so the caller can route staff to the console. */
+  login: (email: string, password: string) => Promise<User>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   /** Apply a theme now and save it to the account, so it comes back on the next login. */
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await authApi.login(email, password);
     setAccessToken(res.access_token);
     signIn(res.user);
+    return res.user;
   }, [signIn]);
 
   const register = useCallback(async (fullName: string, email: string, password: string) => {
