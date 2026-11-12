@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
+  // Sent here from the staff console: say so, or the redirect looks like a broken link.
+  const toStaff = from.startsWith("/admin");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,8 +30,14 @@ export function LoginPage() {
     setBusy(true);
     try {
       const user = await login(email.trim(), password);
+      const isStaff = user.platform_role === "super_admin";
+      if (toStaff && !isStaff) {
+        toast.error("This login is not platform staff, so it cannot open the staff console. You are in your workspace instead.");
+        navigate("/", { replace: true });
+        return;
+      }
       // Staff land in their console unless they were heading somewhere else.
-      navigate(user.platform_role === "super_admin" && from === "/" ? "/admin" : from, { replace: true });
+      navigate(isStaff && from === "/" ? "/admin" : from, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sign-in failed. Please try again.");
     } finally {
@@ -38,8 +47,12 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <h2 className="text-2xl font-semibold">Welcome back</h2>
-      <p className="text-muted-foreground">Sign in to your workspace.</p>
+      <h2 className="text-2xl font-semibold">{toStaff ? "Sign in to the staff console" : "Welcome back"}</h2>
+      <p className="text-muted-foreground">
+        {toStaff
+          ? "The console needs a platform staff login. After you sign in you go straight back to it."
+          : "Sign in to your workspace."}
+      </p>
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         {error && (
           <Alert variant="destructive" role="alert">
@@ -74,12 +87,12 @@ export function LoginPage() {
           {busy ? "Signing in…" : "Sign in"}
         </Button>
       </form>
-      <p className="text-center text-muted-foreground">
+      {!toStaff && <p className="text-center text-muted-foreground">
         New here?{" "}
         <Link to="/register" className="font-semibold text-accent-foreground underline-offset-4 hover:underline">
           Create a free workspace
         </Link>
-      </p>
+      </p>}
       <p className="mt-auto text-xs text-muted-foreground">
         Your social accounts’ login keys are stored encrypted and never shown in the browser.
       </p>
