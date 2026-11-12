@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet, useMatch } from "react-router";
 
 import {
   DropdownMenu,
@@ -67,23 +67,20 @@ function RailTip({ label, children }: { label: string; children: ReactNode }) {
 
 function RailLink({ item }: { item: NavItem }) {
   const Icon = item.icon;
+  // Work out "active" here rather than via NavLink's function className: the tooltip's
+  // Slot merges className as plain strings and would stringify the function.
+  const isActive = useMatch({ path: item.to, end: item.end ?? false }) !== null;
   return (
     <RailTip label={item.label}>
-      <NavLink
+      <Link
         to={item.to}
-        end={item.end}
         aria-label={item.label}
-        className={({ isActive }) =>
-          cn(railButton, isActive && "bg-surface-active text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.06)] hover:bg-surface-active")
-        }
+        aria-current={isActive ? "page" : undefined}
+        className={cn(railButton, isActive && "bg-surface-active text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.06)] hover:bg-surface-active")}
       >
-        {({ isActive }) => (
-          <>
-            {isActive && <span aria-hidden="true" className="absolute top-3 bottom-3 -left-3 w-[3px] rounded-r bg-primary" />}
-            <Icon className="size-5" strokeWidth={1.5} aria-hidden="true" />
-          </>
-        )}
-      </NavLink>
+        {isActive && <span aria-hidden="true" className="absolute top-3 bottom-3 -left-3 w-[3px] rounded-r bg-primary" />}
+        <Icon className="size-5" strokeWidth={1.5} aria-hidden="true" />
+      </Link>
     </RailTip>
   );
 }
