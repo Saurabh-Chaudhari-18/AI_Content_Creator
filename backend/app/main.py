@@ -7,11 +7,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect
 from sqlalchemy.exc import DataError, IntegrityError
 
 from app.api.v1.router import api_v1_router
 from app.config import settings
 from app.core.middleware import RequestIDMiddleware, SecurityHeadersMiddleware
+from app.services.features import PLAN_FEATURE_HEADER, PLAN_RESTRICTION_HEADER
 from app.services.storage import LOCAL_UPLOAD_DIR
 
 logging.basicConfig(
@@ -32,12 +34,40 @@ async def lifespan(app: FastAPI):
             from app.db.base import Base
             from app.db.session import get_async_engine
 
+            def _create_all_if_unmigrated(sync_conn) -> None:
+                # A database Alembic already manages must only change through
+                # migrations: creating a new model's table here would make
+                # the migration that adds it fail with "already exists".
+                if not inspect(sync_conn).has_table("alembic_version"):
+                    Base.metadata.create_all(sync_conn)
+
             async with get_async_engine().begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
+                await conn.run_sync(_create_all_if_unmigrated)
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Dev create_all skipped (database unreachable?): {exc}")
+    # Features and platform settings are defined in code; make the database match so
+    # the admin panel shows exactly the features that exist. Skipped under
+    # test: the test suite owns the event loop the database engine binds to.
+    if settings.ENVIRONMENT != "test":
+        try:
+            from app.db.session import get_async_engine
+            from app.services.features import sync_feature_registry
+            from app.services.platform_settings import sync_settings_registry
+
+            async with get_async_engine().begin() as conn:
+                await conn.run_sync(sync_feature_registry)
+                await conn.run_sync(sync_settings_registry)
+        except Exception:  # noqa: BLE001 — a missing table means migrations have not run yet
+            logger.exception("Feature / settings registry sync failed. Run `python -m alembic upgrade head`.")
     logger.info(f"startup environment={settings.ENVIRONMENT}")
     yield
+    # Close pooled database connections cleanly (both pools). Skipped under
+    # test for the same reason as above; the test fixture does it itself.
+    if settings.ENVIRONMENT != "test":
+        from app.db.session import get_admin_async_engine, get_async_engine
+
+        await get_admin_async_engine().dispose()
+        await get_async_engine().dispose()
     logger.info("shutdown")
 
 
@@ -74,6 +104,8 @@ def create_app() -> FastAPI:
         allow_credentials=True,                  # the HttpOnly refresh cookie
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", settings.CSRF_HEADER_NAME],
+        # Lets the web app tell "not in your plan" apart from any other 403.
+        expose_headers=[PLAN_RESTRICTION_HEADER, PLAN_FEATURE_HEADER],
     )
 
     # Local-dev media serving; S3/R2 serves media in staging/production.

@@ -183,7 +183,7 @@ python -m alembic upgrade head
 python -m seeds.seed
 ```
 
-- `alembic upgrade head` creates every table (migrations `0001` → `0004`). Check with `python -m alembic current`: it ends with `(head)`.
+- `alembic upgrade head` creates every table (migrations `0001` → `0006`). Check with `python -m alembic current`: it ends with `(head)`.
 - `seeds.seed` adds a demo agency, two demo users, two brands, two test social accounts (a Facebook Page and a LinkedIn page), posts in every state and the 16 Smart Templates. Add a test Instagram account any time from **Connected accounts → Add a test account**. It is safe to run again (no duplicates) and refuses to run in production.
 
 ---
@@ -348,7 +348,7 @@ omnipost/
 │   │   ├── schemas/         request / response models
 │   │   ├── services/        platform adapters, Meta OAuth, storage, encryption, audit
 │   │   └── workers/         Celery tasks: publishing, token checks, cleanup
-│   ├── alembic/versions/    database migrations 0001–0004
+│   ├── alembic/versions/    database migrations 0001–0006
 │   ├── seeds/               demo data + Smart Templates
 │   ├── tests/               unit + database integration tests
 │   ├── docker-compose.yml   PostgreSQL, Redis, MinIO for local development

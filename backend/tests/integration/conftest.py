@@ -65,6 +65,12 @@ def api(database):
 
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
+        # Close the pooled connections inside the client's own event loop.
+        # Left open, they make the loop's shutdown hang on Windows.
+        from app.db.session import get_admin_async_engine, get_async_engine
+
+        c.portal.call(get_admin_async_engine().dispose)
+        c.portal.call(get_async_engine().dispose)
 
 
 @pytest.fixture()

@@ -1,10 +1,13 @@
 # 2. Database
 
-PostgreSQL 16, **13 tables**, managed with Alembic migrations:
+PostgreSQL 16, managed with Alembic migrations. This page covers the **13 core tables**; the 8 admin-platform tables (plans, features, usage checks) added by `0005` are in [08_admin_panel_database.md](08_admin_panel_database.md).
 
 - `0001_initial_schema` — creates every table, enum type and constraint
 - `0002_workspace_self_approval` — adds the `allow_self_approval` setting to workspaces
 - `0003_user_theme_preference` — adds each user's light / dark / system theme choice
+- `0004_dark_theme_default` — new accounts start in the dark theme
+- `0005_admin_platform` — super admin role, plans, per-customer features, usage and alert tables
+- `0006_admin_db_role` — the read-only database role the admin panel connects with
 
 All primary keys are UUIDs. All timestamps are stored with time zone (UTC).
 

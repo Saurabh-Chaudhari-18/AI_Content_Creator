@@ -11,7 +11,8 @@ Status as of **7 November 2026**. This folder explains what we have built so far
 | 5 | [05_backend_technical_guide.md](05_backend_technical_guide.md) | Deeper developer guide: request flow, publishing internals, how to add an endpoint |
 | 6 | [06_system_design.md](06_system_design.md) | **System design**: architecture, components, key flows, security, reliability, scaling, deployment, AI design, development approach and delivery plan |
 | 7 | [07_setup_guide.md](07_setup_guide.md) | **Developer setup**: install, configure and run the whole project on a new laptop, step by step |
-| 8 | [database_guide.pdf](database_guide.pdf) | Printable database reference (5 Nov snapshot; `02_database.md` is the current reference) |
+| 8 | [08_admin_panel_database.md](08_admin_panel_database.md) | **Admin panel**: super admin role, plans and per-customer features, usage checks, and the process every admin setting must follow (database, plan checks and admin API built; admin screens not yet) |
+| 9 | [database_guide.pdf](database_guide.pdf) | Printable database reference (5 Nov snapshot; `02_database.md` is the current reference) |
 
 **Short version.** The Phase 1 backend is feature-complete: sign-in, workspaces and team roles, brands, post creation with Smart Templates, media upload, a strict approval workflow, scheduling, and background publishing to Facebook, Instagram and LinkedIn, with an audit trail of every action. 66 automated tests cover it. The web app covers every Phase 1 screen in the owner's design (dark by default) and the full journey has been verified in the browser. AI content generation is planned for Phase 2.
 

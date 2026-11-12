@@ -101,6 +101,20 @@ class RegisterRequest(BaseModel):
         return v
 
 
+class SetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=20, max_length=200)
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes")
+        return v
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -462,6 +476,23 @@ class UsageSummaryResponse(BaseModel):
     counts: dict[str, int]          # operation -> count (every OperationType present, 0 if none)
     media_bytes: int                # sum of uploaded bytes in the window
     ai_generations: int             # reserved for Phase 2 credits; always 0 in Phase 1
+
+
+# ── Plan features ─────────────────────────────────────────────────────
+class WorkspaceFeature(BaseModel):
+    key: str
+    name: str
+    category: str
+    value_type: str                 # boolean | limit
+    enabled: bool
+    limit: Optional[int] = None     # limit features only; null = unlimited
+
+
+class WorkspaceFeaturesResponse(BaseModel):
+    workspace_id: UUID
+    plan_key: str
+    plan_name: str
+    features: list[WorkspaceFeature]
 
 
 # ── Media ─────────────────────────────────────────────────────────────

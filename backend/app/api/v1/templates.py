@@ -12,12 +12,34 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_workspace_member
 from app.db.session import get_db
-from app.models import CaptionTemplate, TemplateCategory, User
+from app.models import CaptionTemplate, TemplateCategory, User, WorkspaceMember
 from app.schemas.schemas import CaptionTemplateListResponse, CaptionTemplateResponse
+from app.services.features import assert_enabled, get_feature
 
 router = APIRouter(prefix="/templates", tags=["Templates"])
+
+
+async def _require_templates(db: AsyncSession, user: User, workspace_id: Optional[UUID]) -> None:
+    """Smart Templates are a plan feature, but the library is global, not
+    per workspace. With `workspace_id` that workspace's plan decides.
+    Without it (the web app does not send it yet) the caller needs the
+    feature in at least one of their workspaces."""
+    if workspace_id is not None:
+        await get_workspace_member(workspace_id, db, user)
+        assert_enabled(await get_feature(db, workspace_id, "caption_templates"))
+        return
+    ids = (await db.execute(
+        select(WorkspaceMember.workspace_id).where(WorkspaceMember.user_id == user.id)
+    )).scalars().all()
+    value = None
+    for ws_id in ids:
+        value = await get_feature(db, ws_id, "caption_templates")
+        if value.enabled:
+            return
+    if value is not None:  # a user in no workspace has nothing to write a post in
+        assert_enabled(value)
 
 
 @router.get("", response_model=CaptionTemplateListResponse)
@@ -25,9 +47,11 @@ async def list_templates(
     industry: Optional[str] = Query(None),
     category: Optional[TemplateCategory] = Query(None),
     search: Optional[str] = Query(None),
+    workspace_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    await _require_templates(db, user, workspace_id)
     stmt = select(CaptionTemplate).where(CaptionTemplate.is_active == True)  # noqa: E712
     if industry:
         stmt = stmt.where(func.lower(CaptionTemplate.industry) == industry.lower().strip())
@@ -54,8 +78,10 @@ async def list_templates(
 
 
 @router.get("/{template_id}", response_model=CaptionTemplateResponse)
-async def get_template(template_id: UUID, db: AsyncSession = Depends(get_db),
+async def get_template(template_id: UUID, workspace_id: Optional[UUID] = Query(None),
+                       db: AsyncSession = Depends(get_db),
                        user: User = Depends(get_current_user)):
+    await _require_templates(db, user, workspace_id)
     template = await db.scalar(select(CaptionTemplate).where(CaptionTemplate.id == template_id))
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found.")

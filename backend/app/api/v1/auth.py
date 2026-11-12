@@ -11,11 +11,10 @@ import hmac as hmac_mod
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.api.v1.workspaces import generate_slug
 from app.core.dependencies import client_ip, get_current_user
 from app.core.rate_limit import auth_rate_limit
 from app.core.security import (
@@ -27,12 +26,13 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
-from app.models import AuditAction, RefreshToken, User, Workspace, WorkspaceMember, WorkspaceRole
+from app.models import AuditAction, RefreshToken, User, UserSetupToken
 from app.schemas.schemas import (
     AccessTokenResponse, AuthResponse, LoginRequest, MessageResponse,
-    RegisterRequest, UserPreferencesUpdate, UserResponse,
+    RegisterRequest, SetPasswordRequest, UserPreferencesUpdate, UserResponse,
 )
 from app.services.audit import record_audit_event
+from app.services.accounts import create_workspace, hash_setup_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -103,14 +103,7 @@ async def register(req: RegisterRequest, request: Request, response: Response,
     db.add(user)
     await db.flush()
 
-    workspace = Workspace(
-        name=f"{req.full_name.strip()}'s Workspace",
-        slug=generate_slug(req.full_name),
-        owner_id=user.id,
-    )
-    db.add(workspace)
-    await db.flush()
-    db.add(WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role=WorkspaceRole.OWNER))
+    await create_workspace(db, owner_id=user.id, name=f"{req.full_name.strip()}'s Workspace")
 
     raw_refresh, record = _new_refresh_record(request, user.id)
     db.add(record)
@@ -138,11 +131,49 @@ async def login(req: LoginRequest, request: Request, response: Response,
 
     raw_refresh, record = _new_refresh_record(request, user.id)
     db.add(record)
+    user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
+    await db.refresh(user)
 
     _set_auth_cookies(response, raw_refresh)
     return AuthResponse(user=UserResponse.model_validate(user),
                         access_token=create_access_token(str(user.id)))
+
+
+@router.post("/set-password", response_model=MessageResponse, dependencies=[Depends(auth_rate_limit)])
+async def set_password(req: SetPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Redeem a one-time link from the admin panel: a new login chooses its
+    password, or an existing one replaces a forgotten password. The link is
+    the proof of identity, so every failure gets the same answer."""
+    invalid = HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="This link is invalid or has expired. Ask for a new one.")
+    now = datetime.now(timezone.utc)
+    token = await db.scalar(
+        select(UserSetupToken)
+        .where(UserSetupToken.token_hash == hash_setup_token(req.token))
+        .with_for_update()  # two requests with the same link: only one wins
+    )
+    if token is None or token.used_at is not None or token.expires_at <= now:
+        raise invalid
+    user = await db.scalar(select(User).where(User.id == token.user_id))
+    if user is None or not user.is_active:
+        raise invalid
+
+    user.password_hash = hash_password(req.password)
+    token.used_at = now
+    # Whoever knew the old password, or held a session, is signed out.
+    await db.execute(
+        update(RefreshToken).where(RefreshToken.user_id == user.id, RefreshToken.is_revoked == False)  # noqa: E712
+        .values(is_revoked=True)
+    )
+    record_audit_event(
+        db, action=AuditAction.UPDATE, entity_type="User", entity_id=user.id,
+        workspace_id=None, user_id=user.id, user_email=user.email, user_name=user.full_name,
+        changes={"after": {"password": "set from a setup link", "purpose": token.purpose.value}},
+        ip_address=client_ip(request),
+    )
+    await db.commit()
+    return MessageResponse(message="Password saved. You can sign in now.")
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)

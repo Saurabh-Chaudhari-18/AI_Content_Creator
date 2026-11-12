@@ -4,7 +4,7 @@ from uuid import UUID
 import uuid as uuid_mod
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -15,6 +15,7 @@ from app.db.session import get_db
 from app.models import AuditAction, Brand, User, WorkspaceRole
 from app.schemas.schemas import BrandCreate, BrandLogoResponse, BrandResponse, BrandUpdate, MessageResponse
 from app.services.audit import record_audit_event
+from app.services.features import enforce_limit
 from app.services.storage import get_storage
 
 router = APIRouter(tags=["Brands"], dependencies=[Depends(workspace_rate_limit)])
@@ -38,6 +39,12 @@ async def create_brand(workspace_id: UUID, req: BrandCreate, request: Request,
                        db: AsyncSession = Depends(get_db),
                        user: User = Depends(get_current_user)):
     await get_workspace_member(workspace_id, db, user)  # any member can create brands
+
+    async def active_brands() -> int:
+        return await db.scalar(
+            select(func.count(Brand.id)).where(Brand.workspace_id == workspace_id, Brand.is_active == True)  # noqa: E712
+        )
+    await enforce_limit(db, workspace_id, "max_brands", active_brands)
 
     brand = Brand(
         workspace_id=workspace_id,

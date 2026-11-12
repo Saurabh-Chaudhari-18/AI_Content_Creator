@@ -37,6 +37,10 @@ from app.schemas.schemas import (
     ValidateRequest, ValidateResponse,
 )
 from app.services.audit import record_audit_event
+from app.services.features import (
+    PLATFORM_FEATURE, assert_enabled, enforce_limit, feature_disabled_error, require_feature,
+    resolve_features,
+)
 from app.services.publishing.factory import get_adapter
 from app.services.storage import get_storage
 from app.core.constants import PLATFORM_CHAR_LIMITS
@@ -174,6 +178,19 @@ async def create_post(brand_id: UUID, req: PostCreate, request: Request,
                       db: AsyncSession = Depends(get_db),
                       user: User = Depends(get_current_user)):
     brand = await get_brand_access(brand_id, db, user)
+
+    async def posts_created_this_month() -> int:
+        # Counted from the usage log, not the posts table: deleting a post
+        # must not hand the month's allowance back.
+        month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return await db.scalar(
+            select(func.count(UsageLog.id)).where(
+                UsageLog.workspace_id == brand.workspace_id,
+                UsageLog.operation == OperationType.POST_CREATED,
+                UsageLog.created_at >= month_start,
+            )
+        )
+    await enforce_limit(db, brand.workspace_id, "max_posts_per_month", posts_created_this_month)
 
     post = Post(
         brand_id=brand_id,
@@ -464,6 +481,16 @@ async def _validated_accounts(post: Post, account_ids: list[UUID], db: AsyncSess
     return accounts
 
 
+async def _require_platforms_in_plan(db: AsyncSession, workspace_id: UUID,
+                                     accounts: list[SocialAccount]) -> None:
+    """A new publish request needs each target platform in the plan. Jobs
+    that are already queued are not re-checked — see services/features.py."""
+    keys = tuple(sorted({PLATFORM_FEATURE[a.platform] for a in accounts}))
+    if keys:
+        for value in (await resolve_features(db, workspace_id, keys)).values():
+            assert_enabled(value)
+
+
 def _make_jobs(post: Post, accounts: list[SocialAccount], when: datetime, db: AsyncSession) -> list[PublishJob]:
     jobs = []
     for account in accounts:
@@ -497,11 +524,18 @@ async def validate_for_accounts(post_id: UUID, req: ValidateRequest,
     results = []
     # Adapters only need the media COUNT for validation; no URLs are signed.
     media_placeholders = [f"media:{m.id}" for m in post.media]
+    plan = {}
+    if accounts:
+        plan = await resolve_features(db, accounts[0].workspace_id,
+                                      tuple(sorted({PLATFORM_FEATURE[a.platform] for a in accounts})))
     for account in accounts:
         adapter = get_adapter(account.platform)
         caption, hashtags, cta = resolve_platform_content(post, account.platform.value)
         text = adapter.render_text(caption, hashtags, cta)
         errors = adapter.validate_text(text) + adapter.validate_media(media_placeholders)
+        platform_feature = plan[PLATFORM_FEATURE[account.platform]]
+        if not platform_feature.enabled:
+            errors.append(feature_disabled_error(platform_feature).detail)
         warnings = []
         if not account.is_active:
             errors.append(f"'{account.account_name}' is disconnected. Reconnect it first.")
@@ -535,8 +569,10 @@ async def schedule_post(post_id: UUID, req: ScheduleRequest, request: Request,
     if req.scheduled_at <= datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Scheduled time must be in the future.")
+    await require_feature(db, member.workspace_id, "scheduling")
 
     accounts = await _validated_accounts(post, req.social_account_ids, db)
+    await _require_platforms_in_plan(db, member.workspace_id, accounts)
 
     post.scheduled_at = req.scheduled_at
     post.timezone = req.timezone
@@ -573,6 +609,7 @@ async def publish_now(post_id: UUID, req: PublishNowRequest, request: Request,
         )
 
     accounts = await _validated_accounts(post, req.social_account_ids, db)
+    await _require_platforms_in_plan(db, member.workspace_id, accounts)
 
     now = datetime.now(timezone.utc)
     post.status = PostStatus.SCHEDULED  # worker transitions to publishing
@@ -677,6 +714,7 @@ async def retry_post(post_id: UUID, req: RetryRequest, request: Request,
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Reconnect {', '.join(inactive) or 'the account'} first, then try again.",
         )
+    await _require_platforms_in_plan(db, member.workspace_id, accounts)
 
     now = datetime.now(timezone.utc)
     previous = []

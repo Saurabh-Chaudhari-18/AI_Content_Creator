@@ -26,6 +26,8 @@ def record_audit_event(
     changes: dict[str, Any] | None = None,
     ip_address: str | None = None,
     user_agent: str | None = None,
+    actor_platform_role: str | None = None,
+    reason: str | None = None,
 ) -> None:
     try:
         db.add(AuditEvent(
@@ -39,6 +41,8 @@ def record_audit_event(
             changes=changes or {},
             ip_address=ip_address,
             user_agent=user_agent,
+            actor_platform_role=actor_platform_role,
+            reason=reason,
         ))
     except Exception:  # noqa: BLE001
         logger.exception("AUDIT WRITE FAILED for %s %s on %s", action, entity_type, entity_id)

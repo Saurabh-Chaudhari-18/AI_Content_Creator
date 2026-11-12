@@ -26,6 +26,7 @@ from app.models import (
     WorkspaceMember, WorkspaceRole,
 )
 from app.services.encryption import encrypt_token
+from app.services.plans import get_default_plan_id
 
 SEED_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -152,7 +153,8 @@ async def seed() -> None:
         if not workspace:
             # Two members -> author != approver, as add_member would set it.
             workspace = Workspace(name="Demo Agency", slug="demo-agency", owner_id=owner.id,
-                                  allow_self_approval=False)
+                                  allow_self_approval=False,
+                                  plan_id=await get_default_plan_id(db))
             db.add(workspace)
             await db.flush()
             print("  + workspace 'Demo Agency'")

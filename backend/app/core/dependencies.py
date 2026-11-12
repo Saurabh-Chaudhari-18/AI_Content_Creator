@@ -16,7 +16,10 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import Brand, Post, User, WorkspaceMember, WorkspaceRole
+from app.core.middleware import request_is_write
+from app.models import (
+    Brand, PlatformRole, Post, User, Workspace, WorkspaceMember, WorkspaceRole, WorkspaceStatus,
+)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -47,6 +50,32 @@ async def get_current_user(
     return user
 
 
+async def require_super_admin(user: User = Depends(get_current_user)) -> User:
+    """Gate for every /admin route. The role is read from the database on
+    each request (get_current_user loads the row), so removing it takes
+    effect at once. 404, not 403: the admin API does not exist for customers."""
+    if user.platform_role != PlatformRole.SUPER_ADMIN:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    return user
+
+
+WORKSPACE_SUSPENDED_DETAIL = "This workspace is suspended. Contact support to restore it."
+
+
+async def assert_workspace_writable(db: AsyncSession, workspace_id: UUID) -> None:
+    """A suspended workspace is read-only: its members can sign in and look,
+    nothing can be created, changed or published. Called by the tenancy
+    helpers below on every request that changes something."""
+    if not request_is_write.get():
+        return
+    workspace_status = await db.scalar(select(Workspace.status).where(Workspace.id == workspace_id))
+    if workspace_status == WorkspaceStatus.SUSPENDED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=WORKSPACE_SUSPENDED_DETAIL,
+            headers={"X-Plan-Restriction": "workspace_suspended"},
+        )
+
+
 async def get_workspace_member(
     workspace_id: UUID,
     db: AsyncSession,
@@ -62,6 +91,7 @@ async def get_workspace_member(
     )
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found.")
+    await assert_workspace_writable(db, workspace_id)
     return member
 
 
@@ -82,6 +112,7 @@ async def get_brand_access(brand_id: UUID, db: AsyncSession, user: User) -> Bran
     )
     if brand is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found.")
+    await assert_workspace_writable(db, brand.workspace_id)
     return brand
 
 
@@ -96,6 +127,9 @@ async def get_post_access(post_id: UUID, db: AsyncSession, user: User) -> Post:
     )
     if post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
+    if request_is_write.get():
+        workspace_id = await db.scalar(select(Brand.workspace_id).where(Brand.id == post.brand_id))
+        await assert_workspace_writable(db, workspace_id)
     return post
 
 

@@ -1,5 +1,6 @@
 """Security headers + request correlation."""
 import uuid
+from contextvars import ContextVar
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -7,6 +8,12 @@ from starlette.requests import Request
 from app.config import settings
 
 _DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
+
+# True while handling a request that changes something (POST, PATCH, PUT,
+# DELETE). The tenancy helpers read it to refuse writes to a suspended
+# workspace. False outside a request, so workers and scripts are unaffected.
+request_is_write: ContextVar[bool] = ContextVar("request_is_write", default=False)
+_READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 _CSP = (
     "default-src 'self'; "
@@ -39,6 +46,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         request.state.request_id = request_id
+        request_is_write.set(request.method not in _READ_METHODS)
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response

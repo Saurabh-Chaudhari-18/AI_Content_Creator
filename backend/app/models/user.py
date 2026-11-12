@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.enums import ThemePreference, pg_enum
+from app.models.enums import PlatformRole, ThemePreference, pg_enum
 
 
 class User(Base):
@@ -17,6 +17,10 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     avatar_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, nullable=False, server_default="true")
+    # Platform staff only (product owner's side); NULL for every customer.
+    # Granted from the command line / admin panel, never by the customer API.
+    platform_role = Column(pg_enum(PlatformRole, "platform_role"), nullable=True)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
     # UI preference, restored on every login on any device.
     theme_preference = Column(
         pg_enum(ThemePreference, "theme_preference"), nullable=False,

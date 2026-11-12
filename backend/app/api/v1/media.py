@@ -19,7 +19,7 @@ from uuid import UUID
 import filetype
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from PIL import Image
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -35,10 +35,13 @@ from app.models import (
     Post, PostMedia, PostStatus, UsageLog, User, WorkspaceMember,
 )
 from app.schemas.schemas import MediaReorderRequest, MediaUploadResponse, MessageResponse
+from app.services.features import enforce_limit, require_feature
 from app.services.storage import get_storage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/media", tags=["Media"])
+
+_MB = 1024 * 1024
 
 
 def _strip_exif(data: bytes, ext: str) -> bytes:
@@ -135,6 +138,23 @@ async def upload_media(
 
     data, ext, mime, media_type = await read_validated_upload(file)
 
+    brand = await db.scalar(select(Brand).where(Brand.id == post.brand_id))
+    if media_type == MediaType.VIDEO:
+        await require_feature(db, brand.workspace_id, "video_uploads")
+
+    async def megabytes_after_upload() -> int:
+        # Media the workspace is keeping right now (deleting media frees
+        # space) plus this file, rounded up to a whole megabyte.
+        stored = await db.scalar(
+            select(func.coalesce(func.sum(PostMedia.meta["file_size"].as_integer()), 0))
+            .join(Post, Post.id == PostMedia.post_id)
+            .join(Brand, Brand.id == Post.brand_id)
+            .where(Brand.workspace_id == brand.workspace_id)
+        )
+        return -(-(int(stored) + len(data)) // _MB)
+    await enforce_limit(db, brand.workspace_id, "max_storage_mb", megabytes_after_upload, adding=0,
+                        message="This upload would go over your plan's media storage limit.")
+
     storage_key = f"media/{uuid_mod.uuid4().hex}{ext}"
     get_storage().save(storage_key, data)
 
@@ -149,7 +169,6 @@ async def upload_media(
     await db.refresh(post, ["media"])
     await _invalidate_if_approved(post, user, db, "Media added after approval; reset to draft.")
 
-    brand = await db.scalar(select(Brand).where(Brand.id == post.brand_id))
     db.add(UsageLog(workspace_id=brand.workspace_id, user_id=user.id,
                     operation=OperationType.MEDIA_UPLOADED,
                     meta={"post_id": str(post.id), "bytes": len(data)}))

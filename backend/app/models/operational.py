@@ -56,4 +56,8 @@ class AuditEvent(Base):
     changes = Column(JSONB, nullable=False, default=dict)                   # {"before": {...}, "after": {...}}
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
+    # Set when the actor was platform staff, so a customer's own audit log
+    # can show "done by OmniPost staff". Snapshot, like user_email.
+    actor_platform_role = Column(String(30), nullable=True)
+    reason = Column(Text, nullable=True)  # required for admin-panel changes
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

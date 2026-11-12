@@ -32,7 +32,7 @@ from app.core.security import post_content_hash, resolve_platform_content
 from app.db.session import worker_session
 from app.models import (
     ApprovalAction, ApprovalLog, AuditAction, JobStatus, OperationType,
-    Post, PostStatus, PublishJob, SocialAccount, UsageLog,
+    Post, PostStatus, PublishJob, SocialAccount, UsageLog, Workspace, WorkspaceStatus,
 )
 from app.services.audit import record_audit_event
 from app.services.encryption import decrypt_token
@@ -186,6 +186,14 @@ def publish_post_task(self, job_id: str):
         if post is None or social_account is None:
             _fail_job(db, job, "Post or social account was deleted before execution.")
             return {"status": "aborted", "reason": "record_missing"}
+
+        # Guard 0c — a suspended workspace publishes nothing. The job fails
+        # (visibly) rather than waiting: a post going out days late, the
+        # moment the workspace is restored, is worse than one to retry.
+        workspace = db.get(Workspace, social_account.workspace_id)
+        if workspace is not None and workspace.status == WorkspaceStatus.SUSPENDED:
+            _fail_job(db, job, "The workspace is suspended. Nothing was posted.")
+            return {"status": "failed", "reason": "workspace_suspended"}
 
         # Guard 1 — post must still be in a publishable state.
         if post.status not in (PostStatus.SCHEDULED, PostStatus.PUBLISHING):

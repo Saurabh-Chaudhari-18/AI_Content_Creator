@@ -14,6 +14,8 @@ os.environ.setdefault("META_APP_ID", "test-app-id")
 os.environ.setdefault("META_APP_SECRET", "test-app-secret")
 # Integration tests register many users from one client IP.
 os.environ.setdefault("RATE_LIMIT_AUTH_ATTEMPTS", "10000")
+# ...and routes without a workspace in the path are limited per IP too.
+os.environ.setdefault("RATE_LIMIT_WORKSPACE_PER_MINUTE", "100000")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

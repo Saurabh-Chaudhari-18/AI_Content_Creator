@@ -12,24 +12,20 @@ from sqlalchemy.orm import selectinload
 from app.core.dependencies import client_ip, get_current_user, get_workspace_member, require_role
 from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
-from app.models import AuditAction, OperationType, UsageLog, User, Workspace, WorkspaceMember, WorkspaceRole
+from app.core.features import FEATURES
+from app.models import (
+    AuditAction, OperationType, Plan, UsageLog, User, Workspace, WorkspaceMember, WorkspaceRole,
+)
 from app.schemas.schemas import (
     AddMemberRequest, MemberResponse, MessageResponse, UsageSummaryResponse,
-    WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate,
+    WorkspaceCreate, WorkspaceFeature, WorkspaceFeaturesResponse, WorkspaceResponse, WorkspaceUpdate,
 )
 from app.services.audit import record_audit_event
+from app.services import accounts
+from app.services.features import require_feature, resolve_features
 
 router = APIRouter(prefix="/workspaces", tags=["Workspaces"], dependencies=[Depends(workspace_rate_limit)])
 
-
-def generate_slug(name: str) -> str:
-    """URL-safe, unique workspace slug: "aura-coffee-3f9c1a".
-
-    A random suffix (not a timestamp): two people with the same name signing
-    up in the same second used to collide on the unique index and get a 409.
-    """
-    base = re.sub(r"[^a-zA-Z0-9]+", "-", name.lower()).strip("-")[:80] or "workspace"
-    return f"{base}-{secrets.token_hex(3)}"
 
 @router.get("", response_model=List[WorkspaceResponse])
 async def list_my_workspaces(db: AsyncSession = Depends(get_db),
@@ -47,10 +43,7 @@ async def list_my_workspaces(db: AsyncSession = Depends(get_db),
 async def create_workspace(req: WorkspaceCreate, request: Request,
                            db: AsyncSession = Depends(get_db),
                            user: User = Depends(get_current_user)):
-    workspace = Workspace(name=req.name.strip(), slug=generate_slug(req.name), owner_id=user.id)
-    db.add(workspace)
-    await db.flush()
-    db.add(WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role=WorkspaceRole.OWNER))
+    workspace = await accounts.create_workspace(db, owner_id=user.id, name=req.name)
     record_audit_event(
         db, action=AuditAction.CREATE, entity_type="Workspace", entity_id=workspace.id,
         workspace_id=workspace.id, user_id=user.id, user_email=user.email, user_name=user.full_name,
@@ -90,6 +83,10 @@ async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Re
     if req.allow_self_approval is not None:
         # Governance switch — owner only (an admin must not relax the rule for themselves).
         require_role(member, WorkspaceRole.OWNER)
+        # Requiring a second person to approve is the plan's approval
+        # workflow. Switching the rule OFF is always allowed.
+        if not req.allow_self_approval and workspace.allow_self_approval:
+            await require_feature(db, workspace_id, "approval_workflow")
         before["allow_self_approval"] = workspace.allow_self_approval
         workspace.allow_self_approval = req.allow_self_approval
         after["allow_self_approval"] = workspace.allow_self_approval
@@ -130,6 +127,28 @@ async def usage_summary(workspace_id: UUID, days: int = Query(30, ge=1, le=365),
     return UsageSummaryResponse(
         workspace_id=workspace_id, days=days, counts=counts,
         media_bytes=int(media_bytes or 0), ai_generations=counts[OperationType.AI_GENERATION.value],
+    )
+
+
+@router.get("/{workspace_id}/features", response_model=WorkspaceFeaturesResponse)
+async def workspace_features(workspace_id: UUID, db: AsyncSession = Depends(get_db),
+                             user: User = Depends(get_current_user)):
+    """What this workspace's plan allows, for the web app to hide or lock
+    what is not included. Display only — every route enforces it itself."""
+    await get_workspace_member(workspace_id, db, user)
+    plan = await db.scalar(
+        select(Plan).join(Workspace, Workspace.plan_id == Plan.id).where(Workspace.id == workspace_id)
+    )
+    resolved = await resolve_features(db, workspace_id)
+    return WorkspaceFeaturesResponse(
+        workspace_id=workspace_id, plan_key=plan.key, plan_name=plan.name,
+        features=[
+            WorkspaceFeature(
+                key=f.key, name=f.name, category=f.category, value_type=f.value_type.value,
+                enabled=resolved[f.key].enabled, limit=resolved[f.key].limit,
+            )
+            for f in FEATURES
+        ],
     )
 
 
@@ -191,14 +210,12 @@ async def add_member(workspace_id: UUID, req: AddMemberRequest, request: Request
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="User is already a member of this workspace.")
 
-    # Locked so two concurrent invites can't both see "one member" and race.
-    workspace = await db.scalar(select(Workspace).where(Workspace.id == workspace_id).with_for_update())
-    members_before = await db.scalar(
-        select(func.count(WorkspaceMember.id)).where(WorkspaceMember.workspace_id == workspace_id)
+    # Plan limit, row lock and the "second member" rule live in the shared
+    # account rules, so the admin panel adds members exactly the same way.
+    review_switched_on = await accounts.add_member(
+        db, workspace_id=workspace_id, user_id=target.id, role=req.role,
+        enable_review_on_second_member=True,
     )
-
-    new_member = WorkspaceMember(workspace_id=workspace_id, user_id=target.id, role=req.role)
-    db.add(new_member)
     record_audit_event(
         db, action=AuditAction.INVITE, entity_type="WorkspaceMember", entity_id=target.id,
         workspace_id=workspace_id, user_id=user.id, user_email=user.email, user_name=user.full_name,
@@ -212,11 +229,10 @@ async def add_member(workspace_id: UUID, req: AddMemberRequest, request: Request
     # transition only. If the owner later re-enables it deliberately, later
     # invites leave that choice alone.
     message = f"Added {target.full_name} to the workspace."
-    if members_before == 1 and workspace.allow_self_approval:
-        workspace.allow_self_approval = False
+    if review_switched_on:
         record_audit_event(
-            db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,
-            workspace_id=workspace.id, user_id=user.id, user_email=user.email, user_name=user.full_name,
+            db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace_id,
+            workspace_id=workspace_id, user_id=user.id, user_email=user.email, user_name=user.full_name,
             changes={"before": {"allow_self_approval": True}, "after": {"allow_self_approval": False},
                      "reason": "automatic: second member joined"},
             ip_address=client_ip(request),

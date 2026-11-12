@@ -41,6 +41,36 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+# ── Admin API: a separate pool that runs as the restricted database role ──
+ADMIN_DB_ROLE = "omnipost_admin"
+
+
+@lru_cache
+def get_admin_async_engine():
+    """Every connection in this pool runs as `omnipost_admin` (migration
+    0006): customer content is read-only and secrets are unreadable, enforced
+    by PostgreSQL itself rather than by admin code being careful."""
+    return create_async_engine(
+        settings.ADMIN_DATABASE_URL or settings.DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+        pool_size=3,
+        max_overflow=5,
+        connect_args={"server_settings": {"role": ADMIN_DB_ROLE}},
+    )
+
+
+@lru_cache
+def get_admin_session_factory() -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(get_admin_async_engine(), expire_on_commit=False, autoflush=False)
+
+
+async def get_admin_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency for /admin routes — never use get_db there."""
+    async with get_admin_session_factory()() as session:
+        yield session
+
+
 @lru_cache
 def get_sync_engine():
     return create_engine(

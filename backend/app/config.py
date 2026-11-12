@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # --- Database (PostgreSQL 16) ---
     DATABASE_URL: str  # postgresql+asyncpg://user:pass@host:5432/db
     SYNC_DATABASE_URL: str = ""  # derived from DATABASE_URL when empty
+    # The admin API's own database login (a member of the `omnipost_admin`
+    # role, see migration 0006). Empty = connect as DATABASE_URL's user and
+    # switch to that role, which needs that user to be a member of it.
+    ADMIN_DATABASE_URL: str = ""
 
     # --- Redis (Celery broker + rate limiting) ---
     REDIS_URL: str = "redis://localhost:6379/0"

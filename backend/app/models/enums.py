@@ -17,6 +17,48 @@ class WorkspaceRole(str, enum.Enum):
     MEMBER = "member"
 
 
+class PlatformRole(str, enum.Enum):
+    """Platform staff (the product owner's side). NULL on users = a customer.
+    Never a workspace role: staff are not members of customer workspaces."""
+    SUPER_ADMIN = "super_admin"
+
+
+class WorkspaceStatus(str, enum.Enum):
+    ACTIVE = "active"
+    # Members can still sign in and read; every write and publish is blocked.
+    SUSPENDED = "suspended"
+
+
+class FeatureValueType(str, enum.Enum):
+    BOOLEAN = "boolean"  # on / off
+    LIMIT = "limit"      # on / off plus a number (NULL number = unlimited)
+
+
+class SetupTokenPurpose(str, enum.Enum):
+    ACCOUNT_SETUP = "account_setup"
+    PASSWORD_RESET = "password_reset"
+
+
+class AdminAlertType(str, enum.Enum):
+    OVER_LIMIT = "over_limit"                # real usage is above the plan limit
+    USAGE_MISMATCH = "usage_mismatch"        # usage_logs disagrees with the real tables
+    USAGE_SPIKE = "usage_spike"
+    REPEAT_SIGNUPS = "repeat_signups"
+    HIGH_FAILURE_RATE = "high_failure_rate"
+
+
+class AlertSeverity(str, enum.Enum):
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class AlertStatus(str, enum.Enum):
+    OPEN = "open"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+
+
 class ThemePreference(str, enum.Enum):
     """Per-user UI colour scheme. SYSTEM follows the device setting."""
     LIGHT = "light"
@@ -93,3 +135,14 @@ class AuditAction(str, enum.Enum):
     DISCONNECT = "DISCONNECT"
     INVITE = "INVITE"
     ROLE_CHANGE = "ROLE_CHANGE"
+    # Platform staff actions (admin panel) — added in 0005_admin_platform.
+    VIEW = "VIEW"                              # staff opened customer content
+    SUSPEND = "SUSPEND"
+    REACTIVATE = "REACTIVATE"
+    PLAN_CHANGE = "PLAN_CHANGE"
+    FEATURE_CHANGE = "FEATURE_CHANGE"
+    SETTING_CHANGE = "SETTING_CHANGE"
+    OWNERSHIP_TRANSFER = "OWNERSHIP_TRANSFER"
+    SETUP_LINK = "SETUP_LINK"
+    FORCE_LOGOUT = "FORCE_LOGOUT"
+    ALERT_UPDATE = "ALERT_UPDATE"
