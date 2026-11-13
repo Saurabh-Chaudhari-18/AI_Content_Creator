@@ -217,7 +217,8 @@ export function AppShell() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-svh pb-20 md:pb-0 md:pl-16">
+      {/* overflow-x-clip (not hidden) so decorative bleeds never cause sideways scroll and sticky headers still work */}
+      <div className="min-h-svh overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:pb-0 md:pl-16">
         {/* ── Desktop: the icon rail ─────────────────────────────── */}
         <aside aria-label="Main" className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center justify-between border-r bg-surface-subtle py-4 md:flex">
           <div className="flex w-full flex-col items-center gap-4">
@@ -247,7 +248,7 @@ export function AppShell() {
         <Outlet />
 
         {/* ── Phone: bottom bar, five items; the rest under More ──── */}
-        <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t bg-surface-subtle pb-[env(safe-area-inset-bottom)] md:hidden">
+        <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t bg-surface-subtle pb-[env(safe-area-inset-bottom)] md:hidden">
           {PHONE_BAR.map((item) => {
             const Icon = item.icon;
             return (

@@ -134,7 +134,7 @@ export function HomePage() {
       >
         <div className="relative flex flex-col gap-1.5">
           <span className="text-sm text-white/75">{longDate.format(new Date())}</span>
-          <h1 className="text-3xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {greeting()}, {firstName}
           </h1>
           {loadingCore ? (
@@ -207,10 +207,13 @@ export function HomePage() {
       </Tile>
 
       {/* ── Counts (each opens Posts pre-filtered) ───────────────── */}
-      <CountTile to={`/posts?status=pending_approval${brandQuery}`} label="waiting for approval" value={pending.data?.total} tone={pending.data?.total ? "info" : "default"} loading={pending.isLoading} />
-      <CountTile to={`/posts?status=scheduled${brandQuery}`} label="scheduled" value={scheduled.data?.total} tone="default" loading={scheduled.isLoading} />
-      <CountTile to={`/posts?status=published${brandQuery}`} label="published this month" value={recent.isLoading ? undefined : publishedThisMonth} tone={publishedThisMonth ? "success" : "default"} loading={recent.isLoading} />
-      <CountTile to={`/posts?status=failed${brandQuery}`} label="didn’t publish" value={(failed.data?.total ?? 0) + (partial.data?.total ?? 0)} tone={(failed.data?.total ?? 0) + (partial.data?.total ?? 0) ? "danger" : "default"} loading={failed.isLoading} />
+      {/* Two-by-two on phones, one row of four from md up. */}
+      <div className="grid grid-cols-2 gap-4 md:col-span-12 md:grid-cols-4">
+        <CountTile to={`/posts?status=pending_approval${brandQuery}`} label="waiting for approval" value={pending.data?.total} tone={pending.data?.total ? "info" : "default"} loading={pending.isLoading} />
+        <CountTile to={`/posts?status=scheduled${brandQuery}`} label="scheduled" value={scheduled.data?.total} tone="default" loading={scheduled.isLoading} />
+        <CountTile to={`/posts?status=published${brandQuery}`} label="published this month" value={recent.isLoading ? undefined : publishedThisMonth} tone={publishedThisMonth ? "success" : "default"} loading={recent.isLoading} />
+        <CountTile to={`/posts?status=failed${brandQuery}`} label="didn’t publish" value={(failed.data?.total ?? 0) + (partial.data?.total ?? 0)} tone={(failed.data?.total ?? 0) + (partial.data?.total ?? 0) ? "danger" : "default"} loading={failed.isLoading} />
+      </div>
 
       {/* ── Needs you / setup ────────────────────────────────────── */}
       {!loadingCore && !setupDone ? (
@@ -245,7 +248,7 @@ export function HomePage() {
                   ) : (
                     <span aria-hidden="true" style={brandStyle(brands.find((b) => b.id === post.brand_id))} className="brand-tile flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-medium">{initials(brandName(post.brand_id))}</span>
                   )}
-                  <div className="flex min-w-[200px] flex-1 flex-col">
+                  <div className="flex min-w-0 flex-1 basis-40 flex-col">
                     <span className="font-semibold">{post.title || "Untitled post"} <span className="font-normal text-muted-foreground">· {brandName(post.brand_id)}</span></span>
                     <span className="line-clamp-1 text-[13px] text-muted-foreground">{post.caption || "No caption yet"}</span>
                   </div>
@@ -436,10 +439,10 @@ function CountTile({
   loading: boolean;
 }) {
   return (
-    <Tile tone={tone} className="group justify-between p-0 md:col-span-3">
-      <Link to={to} className="flex h-full flex-col justify-between gap-3 p-5 text-inherit no-underline sm:p-6">
-        {loading ? <Skeleton className="h-9 w-10" /> : <span className="text-4xl leading-none font-semibold">{value ?? 0}</span>}
-        <span className="flex items-center justify-between font-medium">
+    <Tile tone={tone} className="group min-h-24 justify-between p-0 sm:p-0">
+      <Link to={to} className="flex h-full flex-col justify-between gap-3 p-4 text-inherit no-underline sm:p-6">
+        {loading ? <Skeleton className="h-9 w-10" /> : <span className="text-3xl leading-none font-semibold sm:text-4xl">{value ?? 0}</span>}
+        <span className="flex items-center justify-between gap-2 leading-snug font-medium">
           {label}
           <ArrowRight aria-hidden="true" className="size-4 opacity-0 transition-opacity group-hover:opacity-70" />
         </span>

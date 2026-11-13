@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth";
 
 import { useAdmin, useOverview, type UsageReport } from "./api";
 import { SlipProvider } from "./ChangeSlip";
-import { CrumbsContext, type Crumb } from "./ui";
+import { CrumbsContext, labelTableCells, type Crumb } from "./ui";
 
 const GROUPS: [string, [string, string][]][] = [
   ["Watch", [["/admin", "Overview"], ["/admin/usage", "Usage"], ["/admin/audit", "Audit trail"]]],
@@ -35,6 +35,18 @@ export function AdminShell() {
     setMenuOpen(false);
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // On a phone each table row is drawn as a block of labelled values (admin.css);
+  // the labels are the column heads, copied onto every cell as they render.
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    const label = () => labelTableCells(main);
+    label();
+    const mo = new MutationObserver(label);
+    mo.observe(main, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

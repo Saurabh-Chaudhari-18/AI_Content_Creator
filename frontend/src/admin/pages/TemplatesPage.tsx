@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
 
 import { adminSend, useAdmin, type AdminTemplate } from "../api";
@@ -46,6 +46,14 @@ export function TemplatesPage() {
     setParams(p);
   };
   const create = () => openSlip(newTemplateSlip((id) => update({ id, q: "", show: "" })));
+  // On a narrow screen the editor sits below the list: bring it into view when a template is picked.
+  const picked = useRef(false);
+  const selectedId = params.get("id");
+  useEffect(() => {
+    if (!picked.current) return;
+    picked.current = false;
+    if (window.matchMedia("(max-width: 75rem)").matches) document.getElementById("h-tpl")?.scrollIntoView({ block: "start" });
+  }, [selectedId]);
 
   return (
     <>
@@ -78,7 +86,7 @@ export function TemplatesPage() {
                 <ul className="list">
                   {list.map((t) => (
                     <li key={t.id}>
-                      <button type="button" aria-current={t.id === sel?.id ? "true" : undefined} onClick={() => update({ id: t.id })}>
+                      <button type="button" aria-current={t.id === sel?.id ? "true" : undefined} onClick={() => { picked.current = true; update({ id: t.id }); }}>
                         <b>{t.title}</b>
                         {!t.is_active ? <Chip>Switched off</Chip> : <span />}
                         <span className="sub">{t.industry}, {t.category}</span>

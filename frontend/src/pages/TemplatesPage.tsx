@@ -53,10 +53,10 @@ export function TemplatesPage() {
       </div>
 
       <Tile className="flex-row flex-wrap items-end gap-3 md:col-span-12">
-        <label className="flex flex-col gap-1.5 text-[13px] font-medium">
+        <label className="flex w-full flex-col gap-1.5 text-[13px] font-medium sm:w-auto">
           Industry
           <Select value={industry} onValueChange={setIndustry}>
-            <SelectTrigger className="h-10 w-48" aria-label="Industry">
+            <SelectTrigger className="h-10 w-full sm:w-48" aria-label="Industry">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -69,10 +69,10 @@ export function TemplatesPage() {
             </SelectContent>
           </Select>
         </label>
-        <label className="flex flex-col gap-1.5 text-[13px] font-medium">
+        <label className="flex w-full flex-col gap-1.5 text-[13px] font-medium sm:w-auto">
           Type
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="h-10 w-44" aria-label="Type">
+            <SelectTrigger className="h-10 w-full sm:w-44" aria-label="Type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -85,9 +85,9 @@ export function TemplatesPage() {
             </SelectContent>
           </Select>
         </label>
-        <label className="flex flex-1 flex-col gap-1.5 text-[13px] font-medium">
+        <label className="flex w-full flex-col gap-1.5 text-[13px] font-medium sm:w-auto sm:flex-1">
           Search
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. offer, launch, festival" className="h-10 max-w-sm" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. offer, launch, festival" className="h-10 sm:max-w-sm" />
         </label>
         <span className="ml-auto text-[13px] text-muted-foreground">{templates.data?.total ?? 0} templates</span>
       </Tile>

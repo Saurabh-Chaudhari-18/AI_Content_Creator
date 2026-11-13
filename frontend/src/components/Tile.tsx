@@ -27,7 +27,8 @@ export function BentoGrid({ className, ...props }: ComponentProps<"main">) {
   return (
     <main
       className={cn(
-        "mx-auto grid max-w-[1360px] auto-rows-[minmax(96px,auto)] grid-cols-1 gap-4 px-4 pt-5 pb-10 sm:px-7 md:grid-cols-12",
+        // The 96px row floor only makes sense for the 12-col bento; on phones it leaves gaps under page titles.
+        "mx-auto grid max-w-[1360px] grid-cols-1 gap-4 px-4 pt-5 pb-10 sm:px-7 md:auto-rows-[minmax(96px,auto)] md:grid-cols-12",
         className,
       )}
       {...props}

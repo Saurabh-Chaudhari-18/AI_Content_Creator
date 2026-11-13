@@ -91,19 +91,25 @@ export function PostsPage() {
       </div>
 
       <Tile className="gap-4 md:col-span-12">
-        <div role="tablist" aria-label="Filter by status" className="flex flex-wrap gap-1">
+        {/* Phones: one swipeable row that bleeds to the tile edge; wider screens wrap. */}
+        <div
+          role="tablist"
+          aria-label="Filter by status"
+          className="-mx-5 flex gap-1 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+        >
           {FILTERS.map((f) => (
             <button
               key={f.value}
               type="button"
               role="tab"
               aria-selected={filter === f.value}
-              onClick={() => {
+              onClick={(e) => {
                 setFilter(f.value);
                 setPage(1);
+                e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
               }}
               className={cn(
-                "h-9 rounded-lg px-3 text-secondary-foreground transition-colors hover:bg-muted",
+                "h-9 shrink-0 rounded-lg px-3 whitespace-nowrap text-secondary-foreground transition-colors hover:bg-muted",
                 filter === f.value && "bg-accent font-semibold text-accent-foreground hover:bg-accent",
               )}
             >
@@ -134,20 +140,27 @@ export function PostsPage() {
                 <li key={p.id}>
                   <Link
                     to={`/posts/${p.id}`}
-                    className="flex flex-wrap items-center gap-4 rounded-xl border-t px-2 py-3.5 text-foreground no-underline hover:bg-muted/60"
+                    className="flex items-center gap-3 rounded-xl border-t px-2 py-3.5 text-foreground no-underline hover:bg-muted/60 md:gap-4"
                   >
                     {thumb ? (
-                      <img src={thumb.media_url} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
+                      <img src={thumb.media_url} alt="" className="size-12 shrink-0 self-start rounded-lg object-cover md:self-center" />
                     ) : (
-                      <span aria-hidden="true" className="size-12 shrink-0 rounded-lg bg-muted" />
+                      <span aria-hidden="true" className="size-12 shrink-0 self-start rounded-lg bg-muted md:self-center" />
                     )}
-                    <div className="flex min-w-[220px] flex-1 flex-col">
-                      <span className="font-semibold">{p.title || "Untitled post"}</span>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate font-semibold">{p.title || "Untitled post"}</span>
                       <span className="line-clamp-1 text-[13px] text-muted-foreground">{p.caption || "No caption yet"}</span>
+                      {/* Phones: brand, time and status fold under the title. */}
+                      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground md:hidden">
+                        <StatusBadge status={p.status} />
+                        <span>{brandName(p.brand_id)} · {when ? formatDateTime(when) : "Not scheduled"}</span>
+                      </span>
                     </div>
-                    <span className="w-32 text-[13px] text-muted-foreground">{brandName(p.brand_id)}</span>
-                    <span className="w-40 text-[13px] text-muted-foreground">{when ? formatDateTime(when) : "Not scheduled"}</span>
-                    <StatusBadge status={p.status} />
+                    <span className="hidden w-32 shrink-0 truncate text-[13px] text-muted-foreground md:block">{brandName(p.brand_id)}</span>
+                    <span className="hidden w-40 shrink-0 text-[13px] text-muted-foreground md:block">{when ? formatDateTime(when) : "Not scheduled"}</span>
+                    <span className="hidden w-36 shrink-0 md:block">
+                      <StatusBadge status={p.status} />
+                    </span>
                   </Link>
                 </li>
               );
@@ -156,7 +169,7 @@ export function PostsPage() {
         )}
 
         {pages > 1 && (
-          <div className="flex items-center justify-between gap-3 border-t pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <span className="text-[13px] text-muted-foreground">
               Page {page} of {pages} · {total} posts
             </span>

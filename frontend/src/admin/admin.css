@@ -412,3 +412,55 @@
 .staff .head__meta .chip { font-size: var(--text-xs); }
 .staff .table tbody tr[data-href]:focus-within { background: color-mix(in oklab, var(--color-paper-2) 60%, var(--color-rule)); }
 .staff .slip { margin: auto; }
+
+/* ── Phones ─────────────────────────────────────────────────────────── */
+/* A before-and-after table always fits its column: long values wrap. */
+.staff .diff { table-layout: fixed; }
+.staff .diff th, .staff .diff td { overflow-wrap: anywhere; }
+
+@media (max-width: 60rem) {
+  .staff .plan-actions .btn { min-height: var(--control-h); }
+  .staff .head__actions .btn { flex: 1 1 auto; }
+}
+
+@media (max-width: 40rem) {
+  .staff .toolbar .field, .staff .toolbar .field--grow { flex: 1 1 100%; }
+  .staff .toolbar .seg { flex-wrap: wrap; }
+  .staff .toolbar__end { margin-left: 0; width: 100%; justify-content: space-between; }
+  .staff .panel__head, .staff .panel__body { padding-inline: var(--space-md); }
+  .staff .panel__foot { flex-direction: column; align-items: flex-start; padding-inline: var(--space-md); }
+  .staff .trail > li { padding-inline: var(--space-md); }
+  .staff .trail__body { padding-left: var(--space-sm); }
+
+  /* Each table row becomes a block of labelled values; the labels come from
+     the column heads (labelTableCells in ui.tsx). The plan table stays a grid. */
+  .staff .table:not(.matrix) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .staff .table:not(.matrix), .staff .table:not(.matrix) tbody { display: block; width: 100%; }
+  .staff .table:not(.matrix) tbody tr { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-sm) var(--space-md); border-top: var(--rule-hair) solid var(--color-rule); }
+  .staff .table:not(.matrix) tbody tr:first-child { border-top: 0; }
+  .staff .table:not(.matrix) td { position: static; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs) var(--space-xs); padding: 0; border: 0; background: none; text-align: left; overflow-wrap: anywhere; }
+  .staff .table:not(.matrix) td::before { content: attr(data-label); flex: 0 0 8rem; margin-right: var(--space-2xs); font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-muted); }
+  .staff .table:not(.matrix) td > .name { flex: 1 1 0; min-width: 0; }
+  .staff .table:not(.matrix) td:first-child::before, .staff .table:not(.matrix) td[data-label=""]::before, .staff .table:not(.matrix) td:not([data-label])::before { content: none; }
+  .staff .table:not(.matrix) td:first-child .name a, .staff .table:not(.matrix) td:first-child .name > .ink2 { font-size: var(--text-md); }
+  .staff .table:not(.matrix) tr.group { padding-block: var(--space-xs); background: var(--color-paper); }
+  .staff .table:not(.matrix) tr.group td { display: block; }
+  .staff .table:not(.matrix) tr.is-flagged { background: var(--color-bad-soft); }
+  .staff .table:not(.matrix) tr.is-flagged td { background: none; }
+  .staff .actions-cell { justify-content: flex-start; flex-wrap: wrap; margin-left: calc(-1 * var(--space-sm)); }
+
+  .staff .slip__head, .staff .slip__body, .staff .slip__foot { padding-inline: var(--space-md); }
+  .staff .slip__foot .btns { width: 100%; }
+  .staff .slip__foot .btns .btn { flex: 1 1 0; }
+  .staff .setting { padding: var(--space-md); }
+  .staff .setting__row { flex-wrap: wrap; }
+}
+.staff .panel__head h2 { scroll-margin-top: calc(var(--bar-h) + var(--space-md)); }
+
+/* The plans table stays a grid on phones: a narrow pinned feature column, plan columns scrolling beside it. */
+@media (max-width: 60rem) {
+  .staff .matrix th:first-child, .staff .matrix td:first-child { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; white-space: normal; box-shadow: 1px 0 0 var(--color-rule); }
+  .staff .matrix .rowhead .mono { overflow-wrap: anywhere; font-size: var(--text-xs); }
+  .staff .matrix th.plan { min-width: 8rem; }
+  .staff .matrix th:first-child + th, .staff .matrix td:first-child + td { padding-left: var(--space-md); }
+}

@@ -171,6 +171,31 @@ export function Pager({ page, limit, total, onPage, noun }: { page: number; limi
   );
 }
 
+// ── Phone tables ───────────────────────────────────────────────────
+/**
+ * Copies each column head onto its cells as `data-label`, so admin.css can
+ * draw a row as a block of labelled values on a phone instead of a table
+ * that scrolls sideways. A head that is only visually hidden (an actions
+ * column) gives no label. Group rows (one cell spanning the row) are skipped.
+ */
+export function labelTableCells(root: HTMLElement) {
+  root.querySelectorAll<HTMLTableElement>("table.table:not(.matrix)").forEach((table) => {
+    const heads = [...table.querySelectorAll<HTMLTableCellElement>("thead th")].map((th) =>
+      th.querySelector(".visually-hidden") && !th.textContent?.replace(th.querySelector(".visually-hidden")!.textContent ?? "", "").trim()
+        ? ""
+        : (th.textContent ?? "").trim(),
+    );
+    table.querySelectorAll("tbody tr").forEach((tr) => {
+      const cells = [...tr.children] as HTMLElement[];
+      if (cells.length === 1 && (cells[0] as HTMLTableCellElement).colSpan > 1) return;
+      cells.forEach((cell, i) => {
+        const want = heads[i] ?? "";
+        if (cell.dataset.label !== want) cell.dataset.label = want;
+      });
+    });
+  });
+}
+
 // ── Before and after ───────────────────────────────────────────────────
 export type DiffRow = [field: string, before: string, after: string];
 

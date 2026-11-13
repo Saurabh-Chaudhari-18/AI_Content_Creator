@@ -18,6 +18,7 @@ import { NewPostButton } from "./posts/PostsPage";
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const monthFmt = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" });
 const timeFmt = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" });
+const weekdayFmt = new Intl.DateTimeFormat("en-IN", { weekday: "short" });
 
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -70,6 +71,15 @@ export function CalendarPage() {
   const notOnCalendar = (unscheduled.data?.items ?? []).filter((p) => ["draft", "pending_approval", "approved"].includes(p.status));
 
   const today = dayKey(new Date());
+  // Days of this month that have posts, in order, for the phone agenda.
+  const agenda = days
+    .filter((d) => d.getMonth() === month.getMonth() && byDay.has(dayKey(d)))
+    .map((day) => ({
+      day,
+      items: [...byDay.get(dayKey(day))!].sort(
+        (a, b) => new Date(a.published_at ?? a.scheduled_at!).getTime() - new Date(b.published_at ?? b.scheduled_at!).getTime(),
+      ),
+    }));
   const shift = (n: number) => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + n, 1));
 
   return (
@@ -78,7 +88,7 @@ export function CalendarPage() {
         <PageHeader eyebrow="Scheduled, published and failed posts by day" title="Calendar" actions={<NewPostButton />} />
       </div>
 
-      <Tile aria-label={monthFmt.format(month)} className="min-w-0 gap-4 md:col-span-9">
+      <Tile aria-label={monthFmt.format(month)} className="min-w-0 gap-4 md:col-span-12 xl:col-span-9">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">{monthFmt.format(month)}</h2>
           <div className="flex items-center gap-1.5">
@@ -100,8 +110,52 @@ export function CalendarPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[640px] grid-cols-7 gap-1.5">
+        {/* Phones: a day-by-day agenda, since seven columns don't fit. */}
+        <div className="md:hidden">
+          {cal.isLoading ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+            </div>
+          ) : agenda.length === 0 ? (
+            <p className="m-0 rounded-xl bg-muted/50 px-4 py-6 text-center text-muted-foreground">Nothing on the calendar in {monthFmt.format(month)}.</p>
+          ) : (
+            <ol className="m-0 flex flex-col gap-2 p-0">
+              {agenda.map(({ day, items }) => {
+                const isToday = dayKey(day) === today;
+                return (
+                  <li key={dayKey(day)} className={cn("flex list-none gap-3 rounded-xl bg-muted/50 p-2.5", isToday && "bg-card ring-2 ring-primary")}>
+                    <span className="flex w-11 shrink-0 flex-col items-center rounded-lg bg-background/60 py-1">
+                      <span className="text-[11px] text-muted-foreground">{weekdayFmt.format(day)}</span>
+                      <span className={cn("text-lg leading-tight font-semibold", isToday && "text-primary")}>{day.getDate()}</span>
+                    </span>
+                    <ul className="m-0 flex min-w-0 flex-1 flex-col gap-1.5 p-0">
+                      {items.map((p) => {
+                        const at = p.published_at ?? p.scheduled_at;
+                        const tone = POST_STATUS[p.status]?.tone ?? "neutral";
+                        return (
+                          <li key={p.id} className="list-none">
+                            <Link
+                              to={`/posts/${p.id}`}
+                              className={cn("flex min-w-0 items-baseline gap-2 rounded-md px-2 py-1.5 text-[13px] no-underline", TONE_CLASS[tone])}
+                            >
+                              <span className="shrink-0 font-mono text-xs">{at ? timeFmt.format(new Date(at)) : ""}</span>
+                              <span className="min-w-0 flex-1 truncate font-semibold">{p.title || "Untitled"}</span>
+                              <span className="shrink-0 truncate text-xs opacity-80">{brandName(p.brand_id)}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
+          <div className="grid min-w-[560px] grid-cols-7 gap-1.5">
             {WEEKDAYS.map((d) => (
               <span key={d} className="px-2 text-xs font-semibold text-muted-foreground">
                 {d}
@@ -150,7 +204,7 @@ export function CalendarPage() {
         </div>
       </Tile>
 
-      <div className="flex flex-col gap-4 md:col-span-3">
+      <div className="flex flex-col gap-4 md:col-span-12 md:grid md:grid-cols-2 xl:col-span-3 xl:flex">
         <Tile aria-labelledby="notyet-h">
           <TileTitle id="notyet-h">Not on the calendar yet</TileTitle>
           {unscheduled.isLoading ? (
