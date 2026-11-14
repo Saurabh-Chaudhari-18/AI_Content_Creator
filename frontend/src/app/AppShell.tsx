@@ -36,6 +36,8 @@ import { useTheme, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
 
+import { NotificationBell } from "./NotificationBell";
+
 type NavItem = { to: string; label: string; short?: string; icon: LucideIcon; end?: boolean };
 
 const NAV: NavItem[] = [
@@ -232,6 +234,7 @@ export function AppShell() {
             </nav>
           </div>
           <div className="flex flex-col items-center gap-3">
+            <NotificationBell side="right" />
             <RailLink item={SETTINGS} />
             <AccountMenu side="right" />
           </div>
@@ -242,6 +245,7 @@ export function AppShell() {
           <WorkspaceMark side="bottom" />
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{workspace?.name ?? "…"}</span>
           <BrandMenu side="bottom" compact />
+          <NotificationBell side="bottom" />
           <AccountMenu side="bottom" />
         </header>
 

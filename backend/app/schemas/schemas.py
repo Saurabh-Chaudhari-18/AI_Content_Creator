@@ -176,6 +176,9 @@ class WorkspaceUpdate(BaseModel):
     # Owner-only. True lets a post's author approve it (one-person business);
     # false enforces author != approver (agency / compliance).
     allow_self_approval: Optional[bool] = None
+    # Owner/admin. Default lifetime of client approval links, in minutes;
+    # must sit inside the platform range. Send 0 to follow the platform default.
+    approval_link_default_minutes: Optional[int] = Field(None, ge=0)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -189,6 +192,7 @@ class WorkspaceResponse(BaseModel):
     slug: str
     owner_id: UUID
     allow_self_approval: bool = True
+    approval_link_default_minutes: Optional[int] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -335,6 +339,10 @@ class PostResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     media: list[PostMediaResponse] = []
+    # Who was asked to review (pending posts only): a manager or a client contact.
+    assigned_approver_id: Optional[UUID] = None
+    assigned_contact_id: Optional[UUID] = None
+    assigned_name: Optional[str] = None
 
 
 class PostListResponse(BaseModel):
@@ -359,13 +367,23 @@ class RejectRequest(BaseModel):
 class ApprovalLogResponse(BaseModel):
     id: UUID
     post_id: UUID
-    user_id: UUID
+    user_id: Optional[UUID] = None          # None: a client (via link) or the system
+    approval_link_id: Optional[UUID] = None
+    actor_name: Optional[str] = None        # client name / "System"
     action: str
     content_hash_at_action: Optional[str] = None
     rejection_reason: Optional[str] = None
+    assigned_user_id: Optional[UUID] = None
+    assigned_contact_id: Optional[UUID] = None
+    assigned_name: Optional[str] = None
+    acted_by_assignee: Optional[bool] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @property
+    def via_link(self) -> bool:
+        return self.approval_link_id is not None
 
 
 # ── Scheduling ────────────────────────────────────────────────────────

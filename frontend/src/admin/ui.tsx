@@ -250,6 +250,8 @@ const ACTION_TEXT: Record<string, string> = {
   PLAN_CHANGE: "changed the plan of", FEATURE_CHANGE: "changed a feature on", SETTING_CHANGE: "changed",
   OWNERSHIP_TRANSFER: "transferred ownership of", SETUP_LINK: "issued a setup link for",
   FORCE_LOGOUT: "signed out every session of", ALERT_UPDATE: "updated an alert on",
+  SHARE_LINK: "shared a client approval link for", REVOKE_LINK: "revoked a client approval link for",
+  ASSIGN: "changed the reviewer of", CONTACT_CHANGE: "changed a client contact on",
 };
 export const AUDIT_ACTIONS = Object.keys(ACTION_TEXT);
 
@@ -257,6 +259,7 @@ const ENTITY_TEXT: Record<string, string> = {
   Workspace: "a workspace", WorkspaceMember: "a member", WorkspaceFeatureOverride: "a workspace feature",
   User: "a login", Plan: "a plan", PlanFeature: "a plan value", Feature: "a feature switch",
   PlatformSetting: "a platform setting", CaptionTemplate: "a Smart Template", Post: "a post",
+  BrandContact: "a client contact",
 };
 
 export function TrailItem({ a }: { a: AuditRow }) {

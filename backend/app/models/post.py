@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import (
-    CheckConstraint, Column, DateTime, ForeignKey,
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey,
     Integer, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -23,6 +23,10 @@ class Post(Base):
         CheckConstraint(
             "NOT (status IN ('publishing', 'published', 'partially_published') AND content_hash IS NULL)",
             name="ck_publishing_requires_hash",
+        ),
+        CheckConstraint(
+            "NOT (assigned_approver_id IS NOT NULL AND assigned_contact_id IS NOT NULL)",
+            name="ck_posts_single_assignee",
         ),
     )
 
@@ -46,6 +50,14 @@ class Post(Base):
     # Raw provider responses are never persisted (may carry tokens/PII).
     publish_result = Column(JSONB, nullable=True)
     retry_count = Column(Integer, nullable=False, default=0)
+    # Who we ASKED to review this pending post (a manager or a saved client
+    # contact; at most one). Any manager may still decide — this only routes
+    # the request. Cleared when the post leaves pending_approval. Not part of
+    # the content hash. The permanent record is on approval_logs.
+    assigned_approver_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assigned_contact_id = Column(UUID(as_uuid=True), ForeignKey("brand_contacts.id", ondelete="SET NULL"),
+                                 nullable=True)
+    assigned_name = Column(String(120), nullable=True)  # display snapshot of the assignee
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -78,15 +90,34 @@ class PostMedia(Base):
 
 
 class ApprovalLog(Base):
-    """Append-only approval ledger. NEVER updated or deleted."""
+    """Append-only approval ledger. NEVER updated or deleted.
+
+    The actor is a workspace user (user_id), a client acting through an
+    approval link (approval_link_id + actor_name), or — for `reassigned`
+    rows only — the system (neither).
+    """
     __tablename__ = "approval_logs"
+    __table_args__ = (
+        CheckConstraint("NOT (user_id IS NOT NULL AND approval_link_id IS NOT NULL)",
+                        name="ck_approval_logs_single_actor"),
+        CheckConstraint("user_id IS NOT NULL OR approval_link_id IS NOT NULL OR action::text = 'reassigned'",
+                        name="ck_approval_logs_actor_required"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    approval_link_id = Column(UUID(as_uuid=True), ForeignKey("approval_links.id"), nullable=True)
+    actor_name = Column(String(120), nullable=True)   # client name / "System" snapshot
     action = Column(pg_enum(ApprovalAction, "approval_action"), nullable=False)
     content_hash_at_action = Column(String(64), nullable=True)
     rejection_reason = Column(Text, nullable=True)
+    # Who the post was assigned to when this row was written (snapshots, no FK).
+    assigned_user_id = Column(UUID(as_uuid=True), nullable=True)
+    assigned_contact_id = Column(UUID(as_uuid=True), nullable=True)
+    assigned_name = Column(String(120), nullable=True)
+    # approved / rejected rows: False when someone other than the assignee acted.
+    acted_by_assignee = Column(Boolean, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     post = relationship("Post", back_populates="approval_logs")

@@ -214,6 +214,26 @@ async def list_settings(db: AsyncSession = Depends(get_admin_db)):
     ]
 
 
+_EXPIRY_KEYS = ("approval_link_min_expiry_minutes", "approval_link_default_minutes",
+                "approval_link_max_expiry_minutes")
+
+
+async def _check_link_expiry_range(db: AsyncSession, key: str, value) -> None:
+    """The three client-link lifetimes must stay ordered: min <= default <= max."""
+    if key not in _EXPIRY_KEYS:
+        return
+    from app.services.platform_settings import get_setting
+
+    values = {k: await get_setting(db, k) for k in _EXPIRY_KEYS}
+    values[key] = value
+    lo, default, hi = (values[k] for k in _EXPIRY_KEYS)
+    if not lo <= default <= hi:
+        raise bad_request(
+            f"Client link lifetimes must stay ordered: shortest ({lo}) <= default ({default}) "
+            f"<= longest ({hi}) minutes. Change the other value first."
+        )
+
+
 @router.patch("/settings/{key}", response_model=list[AdminSetting])
 async def update_setting(key: str, req: SettingIn, request: Request,
                          db: AsyncSession = Depends(get_admin_db),
@@ -225,6 +245,8 @@ async def update_setting(key: str, req: SettingIn, request: Request,
         definition.validate(req.value)
     except ValueError as exc:
         raise bad_request(f"{key} {exc}.") from None
+
+    await _check_link_expiry_range(db, key, req.value)
 
     setting = await db.scalar(select(PlatformSetting).where(PlatformSetting.key == key))
     if setting is None:  # rows are created at startup, by the application's own database user

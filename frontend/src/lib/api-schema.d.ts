@@ -377,7 +377,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Submit For Approval */
+        /**
+         * Submit For Approval
+         * @description Send a draft for review. Optionally ask a specific manager or saved
+         *     client contact (D2); a contact gets a no-login link, returned ONCE.
+         */
         post: operations["submit_for_approval_api_v1_posts__post_id__submit_post"];
         delete?: never;
         options?: never;
@@ -553,6 +557,272 @@ export interface paths {
         get: operations["list_jobs_api_v1_posts__post_id__jobs_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/posts/{post_id}/approvers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Approvers
+         * @description Who can be asked to review this post (D2), and who reviewed it last (D11).
+         */
+        get: operations["list_approvers_api_v1_posts__post_id__approvers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/posts/{post_id}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Reassign
+         * @description Change who is asked to review a pending post. Writes a `reassigned`
+         *     history row; earlier rows are never rewritten.
+         */
+        patch: operations["reassign_api_v1_posts__post_id__assignee_patch"];
+        trace?: never;
+    };
+    "/api/v1/brands/{brand_id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contacts */
+        get: operations["list_contacts_api_v1_brands__brand_id__contacts_get"];
+        put?: never;
+        /** Create Contact */
+        post: operations["create_contact_api_v1_brands__brand_id__contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/brands/{brand_id}/contacts/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Contact
+         * @description Remove a contact: their open links stop working and their pending
+         *     posts move to "any manager" (D12). The name stays in history.
+         */
+        delete: operations["remove_contact_api_v1_brands__brand_id__contacts__contact_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Contact */
+        patch: operations["update_contact_api_v1_brands__brand_id__contacts__contact_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/approval-link-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Link Options
+         * @description The lifetimes this caller may pick in the Share dialog (D5).
+         */
+        get: operations["link_options_api_v1_workspaces__workspace_id__approval_link_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/posts/{post_id}/approval-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Links */
+        get: operations["list_links_api_v1_posts__post_id__approval_links_get"];
+        put?: never;
+        /**
+         * Share With Client
+         * @description Create a link for a pending post. The URL is in this response ONLY.
+         */
+        post: operations["share_with_client_api_v1_posts__post_id__approval_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approval-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Link */
+        delete: operations["revoke_link_api_v1_approval_links__link_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approval-links/{link_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Link
+         * @description A fresh link to the same recipient, same lifetime, for an expired or
+         *     revoked one — only while the post is still pending with the same content.
+         */
+        post: operations["resend_link_api_v1_approval_links__link_id__resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications */
+        get: operations["list_notifications_api_v1_workspaces__workspace_id__notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unread Count */
+        get: operations["unread_count_api_v1_workspaces__workspace_id__notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Read */
+        post: operations["mark_read_api_v1_workspaces__workspace_id__notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark All Read */
+        post: operations["mark_all_read_api_v1_workspaces__workspace_id__notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/approval/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** View */
+        post: operations["view_api_v1_public_approval_view_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/approval/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description Approve or request changes. First decision wins (D9); the deadline is
+         *     checked here, on the server's clock, at the moment of deciding (D5).
+         */
+        post: operations["decide_api_v1_public_approval_decide_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1601,6 +1871,7 @@ export interface components {
             jobs_needing_review: number;
             /** Open Alerts */
             open_alerts: number;
+            client_approvals?: components["schemas"]["ApprovalStats"] | null;
             /** Database Role */
             database_role: string;
         };
@@ -2029,6 +2300,7 @@ export interface components {
             post_count: number;
             /** Social Account Count */
             social_account_count: number;
+            approvals?: components["schemas"]["ApprovalStats"] | null;
         };
         /** AdminWorkspaceFeature */
         AdminWorkspaceFeature: {
@@ -2084,6 +2356,70 @@ export interface components {
             /** Plan Key */
             plan_key?: string | null;
         };
+        /** ApprovalLinkCreate */
+        ApprovalLinkCreate: {
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Recipient Name */
+            recipient_name?: string | null;
+            /** Recipient Contact */
+            recipient_contact?: string | null;
+            /** Expires In Minutes */
+            expires_in_minutes?: number | null;
+        };
+        /** ApprovalLinkResponse */
+        ApprovalLinkResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Recipient Name */
+            recipient_name: string;
+            /** Status */
+            status: string;
+            /** Version At Share */
+            version_at_share: number;
+            /** Expiry Minutes */
+            expiry_minutes: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** View Count */
+            view_count: number;
+            /** First Viewed At */
+            first_viewed_at?: string | null;
+            /** Last Viewed At */
+            last_viewed_at?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /** Resent From Id */
+            resent_from_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Can Resend
+             * @default false
+             */
+            can_resend: boolean;
+        };
         /** ApprovalLogResponse */
         ApprovalLogResponse: {
             /**
@@ -2096,17 +2432,26 @@ export interface components {
              * Format: uuid
              */
             post_id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
+            /** User Id */
+            user_id?: string | null;
+            /** Approval Link Id */
+            approval_link_id?: string | null;
+            /** Actor Name */
+            actor_name?: string | null;
             /** Action */
             action: string;
             /** Content Hash At Action */
             content_hash_at_action?: string | null;
             /** Rejection Reason */
             rejection_reason?: string | null;
+            /** Assigned User Id */
+            assigned_user_id?: string | null;
+            /** Assigned Contact Id */
+            assigned_contact_id?: string | null;
+            /** Assigned Name */
+            assigned_name?: string | null;
+            /** Acted By Assignee */
+            acted_by_assignee?: boolean | null;
             /**
              * Created At
              * Format: date-time
@@ -2114,10 +2459,54 @@ export interface components {
             created_at: string;
         };
         /**
+         * ApprovalStats
+         * @description Client-approval funnel over the last `window_days` (counts only).
+         */
+        ApprovalStats: {
+            /** Window Days */
+            window_days: number;
+            /** Links Created */
+            links_created: number;
+            /** Links Opened */
+            links_opened: number;
+            /** Client Approved */
+            client_approved: number;
+            /** Client Changes Requested */
+            client_changes_requested: number;
+            /** Links Expired Unanswered */
+            links_expired_unanswered: number;
+            /** Median Client Response Minutes */
+            median_client_response_minutes?: number | null;
+            /** Approvals By Client */
+            approvals_by_client: number;
+            /** Approvals By Manager */
+            approvals_by_manager: number;
+            /** On Behalf Percent */
+            on_behalf_percent?: number | null;
+            /** Saved Contacts */
+            saved_contacts: number;
+            /** Workspaces Using Links */
+            workspaces_using_links?: number | null;
+        };
+        /** ApproversResponse */
+        ApproversResponse: {
+            /** Managers */
+            managers: components["schemas"]["ManagerOption"][];
+            /** Contacts */
+            contacts: components["schemas"]["ContactOption"][];
+            suggested?: components["schemas"]["SuggestedReviewer"] | null;
+            /** Suggestion Note */
+            suggestion_note?: string | null;
+            /** Can Add Contacts */
+            can_add_contacts: boolean;
+            /** Client Links Enabled */
+            client_links_enabled: boolean;
+        };
+        /**
          * AuditAction
          * @enum {string}
          */
-        AuditAction: "CREATE" | "UPDATE" | "DELETE" | "PUBLISH" | "SUBMIT" | "APPROVE" | "REJECT" | "SCHEDULE" | "CONNECT" | "DISCONNECT" | "INVITE" | "ROLE_CHANGE" | "VIEW" | "SUSPEND" | "REACTIVATE" | "PLAN_CHANGE" | "FEATURE_CHANGE" | "SETTING_CHANGE" | "OWNERSHIP_TRANSFER" | "SETUP_LINK" | "FORCE_LOGOUT" | "ALERT_UPDATE";
+        AuditAction: "CREATE" | "UPDATE" | "DELETE" | "PUBLISH" | "SUBMIT" | "APPROVE" | "REJECT" | "SCHEDULE" | "CONNECT" | "DISCONNECT" | "INVITE" | "ROLE_CHANGE" | "VIEW" | "SUSPEND" | "REACTIVATE" | "PLAN_CHANGE" | "FEATURE_CHANGE" | "SETTING_CHANGE" | "OWNERSHIP_TRANSFER" | "SETUP_LINK" | "FORCE_LOGOUT" | "ALERT_UPDATE" | "SHARE_LINK" | "REVOKE_LINK" | "ASSIGN" | "CONTACT_CHANGE";
         /** AuditList */
         AuditList: {
             /** Total */
@@ -2210,6 +2599,61 @@ export interface components {
             post_id: string;
             /** Alt Text */
             alt_text?: string | null;
+        };
+        /** BrandContactCreate */
+        BrandContactCreate: {
+            /** Name */
+            name: string;
+            /** Role Label */
+            role_label?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Email */
+            email?: string | null;
+        };
+        /** BrandContactResponse */
+        BrandContactResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /** Name */
+            name: string;
+            /** Role Label */
+            role_label?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Forgotten
+             * @default false
+             */
+            forgotten: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** BrandContactUpdate */
+        BrandContactUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Role Label */
+            role_label?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Email */
+            email?: string | null;
         };
         /** BrandCreate */
         BrandCreate: {
@@ -2372,6 +2816,22 @@ export interface components {
             /** Authorization Url */
             authorization_url: string;
         };
+        /** ContactOption */
+        ContactOption: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Name */
+            name: string;
+            /** Role Label */
+            role_label?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Email */
+            email?: string | null;
+        };
         /** FeatureOverride */
         FeatureOverride: {
             /** Enabled */
@@ -2455,6 +2915,21 @@ export interface components {
             /** Result */
             result?: Record<string, never> | null;
         };
+        /** LinkOptionsResponse */
+        LinkOptionsResponse: {
+            /** Presets */
+            presets: number[];
+            /** Default Minutes */
+            default_minutes: number;
+            /** Min Minutes */
+            min_minutes: number;
+            /** Max Minutes */
+            max_minutes: number;
+            /** Max For You */
+            max_for_you: number;
+            /** Workspace Default Minutes */
+            workspace_default_minutes?: number | null;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -2464,6 +2939,18 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** ManagerOption */
+        ManagerOption: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
         };
         /** MediaReorderRequest */
         MediaReorderRequest: {
@@ -2532,6 +3019,63 @@ export interface components {
              * @default page
              */
             account_type: string | null;
+        };
+        /** NewLinkResponse */
+        NewLinkResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Url */
+            url: string;
+            /** Recipient Name */
+            recipient_name: string;
+            /** Recipient Phone */
+            recipient_phone?: string | null;
+            /** Recipient Email */
+            recipient_email?: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Expiry Minutes */
+            expiry_minutes: number;
+        };
+        /** NotificationListResponse */
+        NotificationListResponse: {
+            /** Items */
+            items: components["schemas"]["NotificationResponse"][];
+            /** Unread */
+            unread: number;
+            /** Page */
+            page: number;
+            /** Limit */
+            limit: number;
+        };
+        /** NotificationResponse */
+        NotificationResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Type */
+            type: string;
+            /** Post Id */
+            post_id?: string | null;
+            /** Actor Name */
+            actor_name?: string | null;
+            /** Message */
+            message: string;
+            /** Read At */
+            read_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** PendingSetupLink */
         PendingSetupLink: {
@@ -2673,6 +3217,12 @@ export interface components {
              * @default []
              */
             media: components["schemas"]["PostMediaResponse"][];
+            /** Assigned Approver Id */
+            assigned_approver_id?: string | null;
+            /** Assigned Contact Id */
+            assigned_contact_id?: string | null;
+            /** Assigned Name */
+            assigned_name?: string | null;
         };
         /**
          * PostStatus
@@ -2691,6 +3241,97 @@ export interface components {
             cta?: string | null;
             /** Platform Targets */
             platform_targets?: Record<string, never> | null;
+        };
+        /** PublicDecideRequest */
+        PublicDecideRequest: {
+            /** Token */
+            token: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approve" | "request_changes";
+            /** Name */
+            name: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** PublicMedia */
+        PublicMedia: {
+            /** Url */
+            url: string;
+            /** Media Type */
+            media_type: string;
+            /** Alt Text */
+            alt_text?: string | null;
+        };
+        /** PublicPlatformPreview */
+        PublicPlatformPreview: {
+            /** Platform */
+            platform: string;
+            /** Text */
+            text: string;
+            /** Character Count */
+            character_count: number;
+        };
+        /** PublicReceipt */
+        PublicReceipt: {
+            /** Decision */
+            decision: string;
+            /** Name */
+            name: string;
+            /**
+             * Decided At
+             * Format: date-time
+             */
+            decided_at: string;
+            /** Version */
+            version: number;
+            /** Fingerprint */
+            fingerprint: string;
+        };
+        /** PublicTokenRequest */
+        PublicTokenRequest: {
+            /** Token */
+            token: string;
+        };
+        /** PublicViewResponse */
+        PublicViewResponse: {
+            /** State */
+            state: string;
+            /** Message */
+            message?: string | null;
+            /** Agency Name */
+            agency_name: string;
+            /** Brand Name */
+            brand_name: string;
+            /** Brand Logo Url */
+            brand_logo_url?: string | null;
+            /** Recipient Name */
+            recipient_name: string;
+            /** Version */
+            version: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /**
+             * Platforms
+             * @default []
+             */
+            platforms: components["schemas"]["PublicPlatformPreview"][];
+            /**
+             * Media
+             * @default []
+             */
+            media: components["schemas"]["PublicMedia"][];
+            receipt?: components["schemas"]["PublicReceipt"] | null;
         };
         /** PublishNowRequest */
         PublishNowRequest: {
@@ -2735,6 +3376,18 @@ export interface components {
              * @default false
              */
             confirm_not_posted: boolean;
+        };
+        /**
+         * ReviewerChoice
+         * @description Who to ask: a manager, a saved client contact, or neither (any manager).
+         */
+        ReviewerChoice: {
+            /** Assign To User Id */
+            assign_to_user_id?: string | null;
+            /** Assign To Contact Id */
+            assign_to_contact_id?: string | null;
+            /** Expires In Minutes */
+            expires_in_minutes?: number | null;
         };
         /** ScheduleRequest */
         ScheduleRequest: {
@@ -2837,6 +3490,87 @@ export interface components {
          * @enum {string}
          */
         SocialPlatform: "facebook" | "instagram" | "linkedin";
+        /** SubmitResponse */
+        SubmitResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Brand Id
+             * Format: uuid
+             */
+            brand_id: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /** Title */
+            title?: string | null;
+            /** Caption */
+            caption: string;
+            /** Hashtags */
+            hashtags: string[];
+            /** Cta */
+            cta?: string | null;
+            /** Status */
+            status: string;
+            /** Content Hash */
+            content_hash?: string | null;
+            /** Version Number */
+            version_number: number;
+            /** Platform Targets */
+            platform_targets?: Record<string, never> | null;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** Timezone */
+            timezone?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Publish Result */
+            publish_result?: Record<string, never> | null;
+            /** Retry Count */
+            retry_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Media
+             * @default []
+             */
+            media: components["schemas"]["PostMediaResponse"][];
+            /** Assigned Approver Id */
+            assigned_approver_id?: string | null;
+            /** Assigned Contact Id */
+            assigned_contact_id?: string | null;
+            /** Assigned Name */
+            assigned_name?: string | null;
+            approval_link?: components["schemas"]["NewLinkResponse"] | null;
+        };
+        /** SuggestedReviewer */
+        SuggestedReviewer: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "manager" | "contact";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /**
          * TemplateCategory
          * @enum {string}
@@ -2857,6 +3591,11 @@ export interface components {
              * Format: uuid
              */
             new_owner_user_id: string;
+        };
+        /** UnreadCountResponse */
+        UnreadCountResponse: {
+            /** Unread */
+            unread: number;
         };
         /** UsageReport */
         UsageReport: {
@@ -3040,6 +3779,8 @@ export interface components {
              * @default true
              */
             allow_self_approval: boolean;
+            /** Approval Link Default Minutes */
+            approval_link_default_minutes?: number | null;
             /**
              * Created At
              * Format: date-time
@@ -3062,6 +3803,8 @@ export interface components {
             name?: string | null;
             /** Allow Self Approval */
             allow_self_approval?: boolean | null;
+            /** Approval Link Default Minutes */
+            approval_link_default_minutes?: number | null;
         };
     };
     responses: never;
@@ -3826,6 +4569,8 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["PostStatus"] | null;
                 brand_id?: string | null;
+                /** @description `me`: posts waiting for MY approval */
+                assigned_to?: string | null;
                 page?: number;
                 limit?: number;
             };
@@ -3963,7 +4708,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewerChoice"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3971,7 +4720,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PostResponse"];
+                    "application/json": components["schemas"]["SubmitResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4302,6 +5051,565 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_approvers_api_v1_posts__post_id__approvers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproversResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reassign_api_v1_posts__post_id__assignee_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewerChoice"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contacts_api_v1_brands__brand_id__contacts_get: {
+        parameters: {
+            query?: {
+                include_removed?: boolean;
+            };
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandContactResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contact_api_v1_brands__brand_id__contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandContactCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandContactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_contact_api_v1_brands__brand_id__contacts__contact_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Also erase phone and email (DPDP) */
+                forget?: boolean;
+            };
+            header?: never;
+            path: {
+                brand_id: string;
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_contact_api_v1_brands__brand_id__contacts__contact_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandContactUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandContactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_options_api_v1_workspaces__workspace_id__approval_link_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkOptionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_links_api_v1_posts__post_id__approval_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalLinkResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    share_with_client_api_v1_posts__post_id__approval_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_link_api_v1_approval_links__link_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_link_api_v1_approval_links__link_id__resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_workspaces__workspace_id__notifications_get: {
+        parameters: {
+            query?: {
+                unread?: boolean;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_api_v1_workspaces__workspace_id__notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_api_v1_workspaces__workspace_id__notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_read_api_v1_workspaces__workspace_id__notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_api_v1_public_approval_view_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicViewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_v1_public_approval_decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicDecideRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicReceipt"];
                 };
             };
             /** @description Validation Error */

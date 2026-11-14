@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -27,7 +27,7 @@ from app.core.rate_limit import workspace_rate_limit
 from app.core.security import compute_content_hash, post_content_hash, resolve_platform_content
 from app.db.session import get_db
 from app.models import (
-    ApprovalAction, ApprovalLog, AuditAction, Brand, JobStatus, OperationType,
+    ApprovalAction, ApprovalLog, AuditAction, Brand, JobStatus, NotificationType, OperationType,
     Post, PostStatus, PublishJob, SocialAccount, UsageLog, User, Workspace,
 )
 from app.schemas.schemas import (
@@ -36,6 +36,9 @@ from app.schemas.schemas import (
     PublishNowRequest, RejectRequest, RetryRequest, ScheduleRequest, ScheduleResponse,
     ValidateRequest, ValidateResponse,
 )
+from app.schemas.approvals import NewLinkResponse, ReviewerChoice, SubmitResponse
+from app.services import approvals as reviewers
+from app.services.approval_links import create_link
 from app.services.audit import record_audit_event
 from app.services.features import (
     PLATFORM_FEATURE, assert_enabled, enforce_limit, feature_disabled_error, require_feature,
@@ -91,6 +94,8 @@ def post_schema(post: Post) -> PostResponse:
         published_at=post.published_at, publish_result=post.publish_result,
         retry_count=post.retry_count, created_at=post.created_at,
         updated_at=post.updated_at, media=[media_schema(m) for m in post.media],
+        assigned_approver_id=post.assigned_approver_id, assigned_contact_id=post.assigned_contact_id,
+        assigned_name=post.assigned_name,
     )
 
 
@@ -145,6 +150,8 @@ async def list_workspace_posts(
     workspace_id: UUID,
     status_filter: Optional[PostStatus] = Query(None, alias="status"),
     brand_id: Optional[UUID] = Query(None),
+    assigned_to: Optional[str] = Query(None, pattern="^me$",
+                                       description="`me`: posts waiting for MY approval"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -162,6 +169,10 @@ async def list_workspace_posts(
     if brand_id:
         base = base.where(Post.brand_id == brand_id)
         count_q = count_q.where(Post.brand_id == brand_id)
+    if assigned_to == "me":
+        mine = (Post.assigned_approver_id == user.id, Post.status == PostStatus.PENDING_APPROVAL)
+        base = base.where(*mine)
+        count_q = count_q.where(*mine)
 
     total = (await db.execute(count_q)).scalar() or 0
     result = await db.execute(
@@ -298,10 +309,14 @@ async def delete_post(post_id: UUID, request: Request,
 
 
 # ── Approval workflow ─────────────────────────────────────────────────
-@router.post("/posts/{post_id}/submit", response_model=PostResponse)
+@router.post("/posts/{post_id}/submit", response_model=SubmitResponse)
 async def submit_for_approval(post_id: UUID, request: Request,
+                              req: Optional[ReviewerChoice] = Body(None),
                               db: AsyncSession = Depends(get_db),
                               user: User = Depends(get_current_user)):
+    """Send a draft for review. Optionally ask a specific manager or saved
+    client contact (D2); a contact gets a no-login link, returned ONCE."""
+    req = req or ReviewerChoice()
     post = await get_post_access(post_id, db, user)
 
     if post.status != PostStatus.DRAFT:
@@ -313,21 +328,47 @@ async def submit_for_approval(post_id: UUID, request: Request,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Add a caption before submitting for approval.")
 
+    member = await get_post_membership(post, db, user)
+    brand = await db.get(Brand, post.brand_id)
+    workspace = await db.get(Workspace, member.workspace_id)
+    assignee, contact = await reviewers.resolve_requested_assignee(
+        db, post=post, brand=brand, workspace=workspace,
+        user_id=req.assign_to_user_id, contact_id=req.assign_to_contact_id,
+    )
+
     post.status = PostStatus.PENDING_APPROVAL
     post.content_hash = current_hash(post)
-    db.add(ApprovalLog(post_id=post.id, user_id=user.id,
-                       action=ApprovalAction.SUBMITTED,
-                       content_hash_at_action=post.content_hash))
+    reviewers.set_assignee(post, assignee)
+    db.add(reviewers.snapshot(ApprovalLog(post_id=post.id, user_id=user.id,
+                                          action=ApprovalAction.SUBMITTED,
+                                          content_hash_at_action=post.content_hash), assignee))
 
-    member = await get_post_membership(post, db, user)
     record_audit_event(
         db, action=AuditAction.SUBMIT, entity_type="Post", entity_id=post.id,
         workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
         user_name=user.full_name, ip_address=client_ip(request),
+        changes={"after": {"assigned_to": assignee.name or reviewers.ANY_MANAGER}},
     )
+    new_link = None
+    if contact is not None:
+        created = await create_link(
+            db, post=post, brand=brand, workspace=workspace, member=member, user=user, contact=contact,
+            recipient_name=None, recipient_contact=None, expires_in_minutes=req.expires_in_minutes,
+            ip_address=client_ip(request),
+        )
+        new_link = NewLinkResponse(
+            id=created.link.id, url=created.url, recipient_name=contact.name,
+            recipient_phone=contact.phone, recipient_email=contact.email,
+            expires_at=created.link.expires_at, expiry_minutes=created.link.expiry_minutes,
+        )
+    elif assignee.user_id:
+        reviewers.notify(db, workspace_id=member.workspace_id, user_ids=[assignee.user_id],
+                         type=NotificationType.ASSIGNED, post_id=post.id, actor_name=user.full_name,
+                         exclude=user.id,
+                         message=f"{user.full_name} asked you to approve {reviewers.post_label(post)}.")
     await db.commit()
     await db.refresh(post)
-    return post_schema(post)
+    return SubmitResponse(**post_schema(post).model_dump(), approval_link=new_link)
 
 
 @router.post("/posts/{post_id}/withdraw", response_model=PostResponse)
@@ -345,10 +386,12 @@ async def withdraw_submission(post_id: UUID, request: Request,
                             detail="Only the author or a workspace admin can withdraw this post.")
 
     post.status = PostStatus.DRAFT
-    db.add(ApprovalLog(post_id=post.id, user_id=user.id,
-                       action=ApprovalAction.INVALIDATED,
-                       content_hash_at_action=post.content_hash,
-                       rejection_reason="Withdrawn by the author before review."))
+    db.add(reviewers.snapshot(ApprovalLog(post_id=post.id, user_id=user.id,
+                                          action=ApprovalAction.INVALIDATED,
+                                          content_hash_at_action=post.content_hash,
+                                          rejection_reason="Withdrawn by the author before review."),
+                              reviewers.current_assignee(post)))
+    reviewers.clear_assignee(post)
     record_audit_event(
         db, action=AuditAction.UPDATE, entity_type="Post", entity_id=post.id,
         workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
@@ -401,15 +444,27 @@ async def approve_post(post_id: UUID, request: Request,
             detail="Post content changed since submission. It must be resubmitted for approval.",
         )
 
+    assignee = reviewers.current_assignee(post)
+    by_assignee = reviewers.acted_by_assignee(assignee, user_id=user.id)
     post.status = PostStatus.APPROVED
-    db.add(ApprovalLog(post_id=post.id, user_id=user.id,
-                       action=ApprovalAction.APPROVED,
-                       content_hash_at_action=post.content_hash))
+    reviewers.clear_assignee(post)
+    log = reviewers.snapshot(ApprovalLog(post_id=post.id, user_id=user.id,
+                                         action=ApprovalAction.APPROVED,
+                                         content_hash_at_action=post.content_hash), assignee)
+    log.acted_by_assignee = by_assignee
+    db.add(log)
     record_audit_event(
         db, action=AuditAction.APPROVE, entity_type="Post", entity_id=post.id,
         workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
         user_name=user.full_name, ip_address=client_ip(request),
+        changes={"after": {"assigned_to": assignee.name, "approved_by": user.full_name,
+                           "acted_by_assignee": by_assignee}},
     )
+    reviewers.notify(db, workspace_id=member.workspace_id, user_ids=[post.created_by, assignee.user_id],
+                     type=NotificationType.MANAGER_APPROVED, post_id=post.id, actor_name=user.full_name,
+                     exclude=user.id,
+                     message=f"{user.full_name} approved {reviewers.post_label(post)}"
+                             + (f" on {assignee.name}'s behalf." if by_assignee is False else "."))
     await db.commit()
     await db.refresh(post)
     return post_schema(post)
@@ -431,17 +486,28 @@ async def reject_post(post_id: UUID, req: RejectRequest, request: Request,
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Only workspace owners and admins can reject posts.")
 
+    assignee = reviewers.current_assignee(post)
+    by_assignee = reviewers.acted_by_assignee(assignee, user_id=user.id)
     post.status = PostStatus.DRAFT
-    db.add(ApprovalLog(post_id=post.id, user_id=user.id,
-                       action=ApprovalAction.REJECTED,
-                       content_hash_at_action=post.content_hash,
-                       rejection_reason=req.reason))
+    reviewers.clear_assignee(post)
+    log = reviewers.snapshot(ApprovalLog(post_id=post.id, user_id=user.id,
+                                         action=ApprovalAction.REJECTED,
+                                         content_hash_at_action=post.content_hash,
+                                         rejection_reason=req.reason), assignee)
+    log.acted_by_assignee = by_assignee
+    db.add(log)
     record_audit_event(
         db, action=AuditAction.REJECT, entity_type="Post", entity_id=post.id,
         workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
-        user_name=user.full_name, changes={"after": {"reason": req.reason[:200]}},
+        user_name=user.full_name,
+        changes={"after": {"reason": req.reason[:200], "assigned_to": assignee.name,
+                           "acted_by_assignee": by_assignee}},
         ip_address=client_ip(request),
     )
+    reviewers.notify(db, workspace_id=member.workspace_id, user_ids=[post.created_by, assignee.user_id],
+                     type=NotificationType.MANAGER_REJECTED, post_id=post.id, actor_name=user.full_name,
+                     exclude=user.id,
+                     message=f"{user.full_name} asked for changes to {reviewers.post_label(post)}.")
     await db.commit()
     await db.refresh(post)
     return post_schema(post)

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileCheck, ShieldCheck, Stamp, Undo2 } from "lucide-react";
+import { FileCheck, ShieldCheck, Stamp, Undo2, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 import { ApprovalCertificate, ApprovalSeal, shortHash } from "./Seal";
 
-const ACTION_ORDER: Record<string, number> = { submitted: 0, rejected: 1, approved: 1, invalidated: 2 };
+const ACTION_ORDER: Record<string, number> = { submitted: 0, reassigned: 1, rejected: 2, approved: 2, invalidated: 3 };
 
 /** Statuses in which the latest approval still stands. */
 const APPROVAL_HOLDS = ["approved", "scheduled", "publishing", "published", "partially_published", "failed"];
@@ -29,12 +29,21 @@ export function usePostHistory(postId: string | undefined) {
 
 function Entry({ log, who, currentHash }: { log: ApprovalLog; who: string; currentHash: string | null | undefined }) {
   const hash = log.content_hash_at_action;
+  // "on Priya's behalf": someone other than the assigned reviewer decided (D3).
+  const onBehalf = log.acted_by_assignee === false && log.assigned_name ? ` on ${log.assigned_name}’s behalf` : "";
+  const to = log.assigned_name ? ` to ${log.assigned_name}` : "";
   const look = {
-    submitted: { icon: FileCheck, ring: "border-primary/40 bg-info-soft text-info", text: `${who} sent it for approval` },
-    approved: { icon: ShieldCheck, ring: "border-success-border bg-success-soft text-success", text: `${who} approved it` },
-    rejected: { icon: Undo2, ring: "border-warning-border bg-warning-soft text-warning", text: `${who} asked for changes` },
+    submitted: { icon: FileCheck, ring: "border-primary/40 bg-info-soft text-info", text: `${who} sent it for approval${to}` },
+    approved: { icon: ShieldCheck, ring: "border-success-border bg-success-soft text-success", text: `${who} approved it${onBehalf}` },
+    rejected: { icon: Undo2, ring: "border-warning-border bg-warning-soft text-warning", text: `${who} asked for changes${onBehalf}` },
     invalidated: { icon: Undo2, ring: "border-dashed bg-surface-subtle text-muted-foreground", text: "Back to draft after an edit" },
+    reassigned: {
+      icon: Users,
+      ring: "border-dashed bg-surface-subtle text-muted-foreground",
+      text: log.assigned_name ? `Reviewer changed to ${log.assigned_name}` : "Reviewer changed to any manager",
+    },
   }[log.action] ?? { icon: FileCheck, ring: "bg-surface-subtle text-muted-foreground", text: log.action };
+  const isNote = log.action === "reassigned";
   const Icon = look.icon;
   return (
     <li className="relative flex list-none gap-4">
@@ -48,12 +57,13 @@ function Entry({ log, who, currentHash }: { log: ApprovalLog; who: string; curre
             {formatDateTime(log.created_at)}
           </time>
         </div>
-        {log.rejection_reason && (
+        {log.rejection_reason && isNote && <p className="m-0 mt-1 text-xs text-muted-foreground">{log.rejection_reason}</p>}
+        {log.rejection_reason && !isNote && (
           <blockquote className="m-0 mt-2 border-l-2 border-warning-border pl-3 text-sm leading-5 text-secondary-foreground">
             {log.rejection_reason}
           </blockquote>
         )}
-        {hash && log.action !== "rejected" && (
+        {hash && log.action !== "rejected" && !isNote && (
           <p
             className={cn(
               "m-0 mt-1 flex items-center gap-1 font-mono text-xs",
@@ -100,12 +110,18 @@ export function ApprovalRecord({
 
   if (!logs.length && !waiting) return null;
 
-  const member = (userId: string) => members.data?.find((m) => m.user_id === userId);
-  const nameOf = (userId: string) => member(userId)?.full_name ?? "Someone";
+  const member = (userId: string | null | undefined) => (userId ? members.data?.find((m) => m.user_id === userId) : undefined);
+  /** A team member, a client acting through a link, or the system (fall-back). */
+  const nameOf = (log: ApprovalLog) => {
+    if (log.user_id) return member(log.user_id)?.full_name ?? "Someone";
+    if (log.approval_link_id) return `${log.actor_name ?? "The client"} (client, via link)`;
+    return log.actor_name ?? "System";
+  };
   const withRole = (log: ApprovalLog | undefined) => {
     if (!log) return "—";
+    if (!log.user_id) return nameOf(log);
     const r = member(log.user_id)?.role;
-    return `${nameOf(log.user_id)}${r ? `, ${ROLE_LABEL[r] ?? r}` : ""}`;
+    return `${nameOf(log)}${r ? `, ${ROLE_LABEL[r] ?? r}` : ""}`;
   };
 
   return (
@@ -133,14 +149,16 @@ export function ApprovalRecord({
         {[...logs]
           .sort((a, b) => a.created_at.localeCompare(b.created_at) || (ACTION_ORDER[a.action] ?? 3) - (ACTION_ORDER[b.action] ?? 3))
           .map((log) => (
-          <Entry key={log.id} log={log} who={nameOf(log.user_id)} currentHash={post.content_hash} />
+          <Entry key={log.id} log={log} who={nameOf(log)} currentHash={post.content_hash} />
         ))}
         {post.status === "pending_approval" && (
           <li className="relative flex list-none items-center gap-4">
             <span aria-hidden="true" className="relative z-10 grid size-6 flex-none place-items-center rounded-full border border-dashed bg-card">
               <span className="size-1.5 rounded-full bg-amber-400" />
             </span>
-            <p className="m-0 text-sm text-muted-foreground">Waiting for an owner or admin to approve</p>
+            <p className="m-0 text-sm text-muted-foreground">
+              {post.assigned_name ? `Waiting for ${post.assigned_name}. Any manager can approve.` : "Waiting for an owner or manager to approve"}
+            </p>
           </li>
         )}
       </ol>

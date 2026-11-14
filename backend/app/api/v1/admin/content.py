@@ -99,7 +99,11 @@ async def get_post(post_id: UUID, request: Request,
     detail = AdminPostDetail(
         workspace_id=workspace_id, brand_name=brand_name, author_email=author_email,
         post=post_schema(post),
-        history=[ApprovalLogResponse.model_validate(h) for h in history.scalars().all()],
+        # D8: the super admin never sees who a client is — only that a client acted.
+        history=[ApprovalLogResponse.model_validate(h).model_copy(update={
+                     "actor_name": "Client (via link)" if h.approval_link_id else h.actor_name,
+                     "assigned_name": "Client" if h.assigned_contact_id else h.assigned_name})
+                 for h in history.scalars().all()],
         jobs=[JobResponse.model_validate(j) for j in jobs.scalars().all()],
     )
     admin_audit(db, admin, request, action=AuditAction.VIEW, entity_type="Post", entity_id=post_id,

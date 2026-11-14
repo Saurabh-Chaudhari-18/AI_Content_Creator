@@ -26,6 +26,8 @@ import { humanize, initials } from "@/lib/format";
 import { keys, useMyRole, useTemplates } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
 
+import { BrandContactsDialog } from "./BrandContactsDialog";
+
 const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "hi", label: "Hindi" },
@@ -54,6 +56,7 @@ export function BrandsPage() {
   const role = useMyRole();
   const isAdmin = role === "owner" || role === "admin";
   const [editing, setEditing] = useState<Brand | "new" | null>(null);
+  const [contactsOf, setContactsOf] = useState<Brand | null>(null);
   const [toRemove, setToRemove] = useState<Brand | null>(null);
   const qc = useQueryClient();
 
@@ -112,6 +115,9 @@ export function BrandsPage() {
               <button type="button" className="font-semibold text-accent-foreground" onClick={() => setEditing(b)}>
                 Edit
               </button>
+              <button type="button" className="font-semibold text-accent-foreground" onClick={() => setContactsOf(b)}>
+                Client contacts
+              </button>
               {isAdmin && (
                 <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setToRemove(b)}>
                   Remove
@@ -122,6 +128,7 @@ export function BrandsPage() {
         ))
       )}
 
+      {contactsOf && <BrandContactsDialog brand={contactsOf} canEdit={isAdmin} onClose={() => setContactsOf(null)} />}
       {editing && <BrandDialog brand={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
 
       <AlertDialog open={!!toRemove} onOpenChange={(o) => !o && setToRemove(null)}>

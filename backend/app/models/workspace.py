@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKey, String, Text,
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text,
     UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -37,6 +37,9 @@ class Workspace(Base):
                     default=WorkspaceStatus.ACTIVE, server_default=WorkspaceStatus.ACTIVE.value)
     suspended_at = Column(DateTime(timezone=True), nullable=True)
     suspended_reason = Column(Text, nullable=True)
+    # Agency's default client-link lifetime in minutes. NULL = platform
+    # default. Always clamped into the platform min/max when a link is made.
+    approval_link_default_minutes = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

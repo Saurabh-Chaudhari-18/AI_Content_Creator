@@ -27,9 +27,32 @@ export function OverviewPage() {
             <div className="reading"><dt>Logins</dt><dd>{num(o.users_total)}</dd><p className="sub"><span className="mono">{num(o.users_signed_in_last_30_days)}</span> signed in, 30 days</p></div>
             <div className="reading"><dt>Published, 30 days</dt><dd>{num(o.posts_published_last_30_days)}</dd><p className="sub">of <span className="mono">{num(o.posts_created_last_30_days)}</span> created</p></div>
             <div className="reading"><dt>Failed publishing jobs</dt><dd className={o.jobs_failed ? "is-bad" : undefined}>{num(o.jobs_failed)}</dd><p className="sub"><span className="mono">{o.jobs_needing_review}</span> waiting for review</p></div>
-            <div className="reading"><dt>Open alerts</dt><dd>{num(o.open_alerts)}</dd><p className="sub">{o.open_alerts ? "From the nightly check" : "The nightly check is not built yet"}</p></div>
+            <div className="reading"><dt>Open alerts</dt><dd>{num(o.open_alerts)}</dd><p className="sub">{o.open_alerts ? "Usage and client-link checks" : "Nothing flagged"}</p></div>
           </dl>
         )}
+      </Region>
+
+      <Region q={overview} what="client approvals" rows={1}>
+        {(o) => {
+          const a = o.client_approvals;
+          if (!a) return null;
+          const answered = a.client_approved + a.client_changes_requested;
+          return (
+            <section className="panel" aria-labelledby="h-client">
+              <div className="panel__head">
+                <h2 id="h-client">Client approvals</h2>
+                <p>Links sent to clients, last {a.window_days} days. Counts only: no client names or contact details.</p>
+              </div>
+              <dl className="readings">
+                <div className="reading"><dt>Workspaces using links</dt><dd>{num(a.workspaces_using_links ?? 0)}</dd><p className="sub">of <span className="mono">{num(o.workspaces_total)}</span></p></div>
+                <div className="reading"><dt>Links sent</dt><dd>{num(a.links_created)}</dd><p className="sub"><span className="mono">{num(a.links_opened)}</span> opened, <span className="mono">{num(a.links_expired_unanswered)}</span> expired unanswered</p></div>
+                <div className="reading"><dt>Client answers</dt><dd>{num(answered)}</dd><p className="sub"><span className="mono">{num(a.client_approved)}</span> approved, <span className="mono">{num(a.client_changes_requested)}</span> changes</p></div>
+                <div className="reading"><dt>Median client reply</dt><dd>{a.median_client_response_minutes == null ? "—" : a.median_client_response_minutes < 120 ? `${Math.round(a.median_client_response_minutes)} min` : `${(a.median_client_response_minutes / 60).toFixed(1)} h`}</dd><p className="sub">from link sent to answer</p></div>
+                <div className="reading"><dt>Approved by</dt><dd>{num(a.approvals_by_client)} / {num(a.approvals_by_manager)}</dd><p className="sub">clients / managers{a.on_behalf_percent != null ? `, ${a.on_behalf_percent}% on someone’s behalf` : ""}</p></div>
+              </dl>
+            </section>
+          );
+        }}
       </Region>
 
       <div className="grid-2">

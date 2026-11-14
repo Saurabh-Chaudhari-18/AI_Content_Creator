@@ -9,6 +9,7 @@ celery_app = Celery(
         "app.workers.tasks.publish",
         "app.workers.tasks.token_refresh",
         "app.workers.tasks.cleanup",
+        "app.workers.tasks.approvals",
     ],
 )
 
@@ -43,6 +44,23 @@ celery_app.conf.update(
         "cleanup-stale-jobs": {
             "task": "app.workers.tasks.cleanup.cleanup_stale_jobs",
             "schedule": 3600.0,
+        },
+        # ── Client approval links (docs/client_approval_link_plan.md §4.6) ──
+        "notify-expired-approval-links": {
+            "task": "app.workers.tasks.approvals.notify_expired_links",
+            "schedule": 60.0,   # a 15-minute link is reported promptly
+        },
+        "release-stale-assignments": {
+            "task": "app.workers.tasks.approvals.release_stale_assignments",
+            "schedule": 60.0,
+        },
+        "scan-approval-link-abuse": {
+            "task": "app.workers.tasks.approvals.scan_approval_link_abuse",
+            "schedule": 15 * 60.0,
+        },
+        "cleanup-notifications": {
+            "task": "app.workers.tasks.approvals.cleanup_notifications",
+            "schedule": 24 * 3600.0,
         },
     },
 )

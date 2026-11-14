@@ -20,6 +20,7 @@ from app.schemas.schemas import (
     AddMemberRequest, MemberResponse, MessageResponse, UsageSummaryResponse,
     WorkspaceCreate, WorkspaceFeature, WorkspaceFeaturesResponse, WorkspaceResponse, WorkspaceUpdate,
 )
+from app.services.approval_links import describe_minutes, expiry_bounds
 from app.services.audit import record_audit_event
 from app.services import accounts
 from app.services.features import require_feature, resolve_features
@@ -90,6 +91,21 @@ async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Re
         before["allow_self_approval"] = workspace.allow_self_approval
         workspace.allow_self_approval = req.allow_self_approval
         after["allow_self_approval"] = workspace.allow_self_approval
+    if req.approval_link_default_minutes is not None:
+        # D5: the agency default must sit inside the platform range. 0 = follow
+        # the platform default again.
+        minutes = req.approval_link_default_minutes or None
+        if minutes is not None:
+            bounds = await expiry_bounds(db)
+            if not bounds.minimum <= minutes <= bounds.maximum:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Choose between {describe_minutes(bounds.minimum)} and "
+                           f"{describe_minutes(bounds.maximum)}.",
+                )
+        before["approval_link_default_minutes"] = workspace.approval_link_default_minutes
+        workspace.approval_link_default_minutes = minutes
+        after["approval_link_default_minutes"] = minutes
     if after:
         record_audit_event(
             db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,

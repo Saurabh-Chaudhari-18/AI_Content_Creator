@@ -45,6 +45,9 @@ class AdminAlertType(str, enum.Enum):
     USAGE_SPIKE = "usage_spike"
     REPEAT_SIGNUPS = "repeat_signups"
     HIGH_FAILURE_RATE = "high_failure_rate"
+    # Client approval links (0007)
+    LINK_GUESSING = "link_guessing"          # many invalid link tokens from one IP
+    LINK_VOLUME_SPIKE = "link_volume_spike"  # one workspace creating unusually many links
 
 
 class AlertSeverity(str, enum.Enum):
@@ -83,6 +86,24 @@ class ApprovalAction(str, enum.Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
     INVALIDATED = "invalidated"
+    # The assignee changed while pending (by a person, or by the system when
+    # the assignee lost approval rights). Added in 0007.
+    REASSIGNED = "reassigned"
+
+
+class ApprovalLinkDecision(str, enum.Enum):
+    APPROVED = "approved"
+    CHANGES_REQUESTED = "changes_requested"
+
+
+class NotificationType(str, enum.Enum):
+    ASSIGNED = "assigned"
+    CLIENT_APPROVED = "client_approved"
+    CLIENT_CHANGES_REQUESTED = "client_changes_requested"
+    MANAGER_APPROVED = "manager_approved"
+    MANAGER_REJECTED = "manager_rejected"
+    LINK_EXPIRED = "link_expired"
+    ASSIGNMENT_RELEASED = "assignment_released"
 
 
 class SocialPlatform(str, enum.Enum):
@@ -146,3 +167,8 @@ class AuditAction(str, enum.Enum):
     SETUP_LINK = "SETUP_LINK"
     FORCE_LOGOUT = "FORCE_LOGOUT"
     ALERT_UPDATE = "ALERT_UPDATE"
+    # Approver picker & client approval links — added in 0007.
+    SHARE_LINK = "SHARE_LINK"
+    REVOKE_LINK = "REVOKE_LINK"
+    ASSIGN = "ASSIGN"
+    CONTACT_CHANGE = "CONTACT_CHANGE"

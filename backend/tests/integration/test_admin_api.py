@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.core.features import FEATURES
+
 from .conftest import Actor, register, run_job
 from .test_plan_features import assert_blocked, features_of, new_brand, new_post, set_plan
 from .test_publishing import approved_post, make_account, post_status, publish_now
@@ -440,7 +442,7 @@ def test_global_switch_turns_a_feature_off_for_everyone(api, admin):
     customer = register(api)
     url = f"{ADMIN}/features/usage_export"
     keys = [f["key"] for f in api.get(f"{ADMIN}/features", headers=admin.headers).json()]
-    assert "usage_export" in keys and len(keys) == 15
+    assert "usage_export" in keys and len(keys) == len(FEATURES)
     try:
         r = api.patch(url, json={"global_enabled": False, "reason": "export is broken"}, headers=admin.headers)
         assert r.status_code == 200 and r.json()["global_enabled"] is False

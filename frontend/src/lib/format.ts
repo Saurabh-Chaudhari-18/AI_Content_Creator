@@ -60,7 +60,8 @@ export const TONE_DOT: Record<Tone, string> = {
   danger: "bg-red-400",
 };
 
-export const ROLE_LABEL: Record<string, string> = { owner: "Owner", admin: "Admin", member: "Member" };
+/** "admin" is shown as Manager: the people who approve (the role itself is unchanged). */
+export const ROLE_LABEL: Record<string, string> = { owner: "Owner", admin: "Manager", member: "Member" };
 
 const dateTime = new Intl.DateTimeFormat("en-IN", {
   weekday: "short",

@@ -4,6 +4,8 @@ from app.models.enums import (
     AlertSeverity,
     AlertStatus,
     ApprovalAction,
+    ApprovalLinkDecision,
+    NotificationType,
     AuditAction,
     FeatureValueType,
     JobStatus,
@@ -28,6 +30,7 @@ from app.models.platform import (
     AdminAlert, Feature, Plan, PlanFeature, PlatformSetting, UsageDaily,
     UserSetupToken, WorkspaceFeatureOverride,
 )
+from app.models.approval import ApprovalLink, BrandContact, Notification
 
 __all__ = [
     "ApprovalAction", "AuditAction", "JobStatus", "MediaType", "OperationType",
@@ -39,4 +42,5 @@ __all__ = [
     "PlatformRole", "SetupTokenPurpose", "WorkspaceStatus",
     "Plan", "Feature", "PlanFeature", "WorkspaceFeatureOverride", "PlatformSetting",
     "UserSetupToken", "UsageDaily", "AdminAlert",
+    "ApprovalLinkDecision", "NotificationType", "ApprovalLink", "BrandContact", "Notification",
 ]

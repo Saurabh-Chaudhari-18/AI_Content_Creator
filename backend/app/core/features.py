@@ -50,6 +50,15 @@ FEATURES: tuple[FeatureDef, ...] = (
                "Require a second person to approve a post before it is published.", _BOOL, "Content"),
     FeatureDef("max_posts_per_month", "Posts per month",
                "How many posts the workspace can create in a calendar month.", _LIMIT, "Content"),
+    # ── Client approvals (0007) ───────────────────────────────────────
+    FeatureDef("client_approval_links", "Client approval links",
+               "Send a client a no-login link to approve or request changes to a post. "
+               "Switching it off also stops every link already sent.", _BOOL, "Approvals"),
+    FeatureDef("max_client_contacts_per_brand", "Client contacts per brand",
+               "How many client contacts can be saved for each brand.", _LIMIT, "Approvals"),
+    FeatureDef("max_open_approval_links", "Open client links",
+               "How many unexpired, undecided client links the workspace can have at once.",
+               _LIMIT, "Approvals"),
     # ── Workspace ─────────────────────────────────────────────────────
     FeatureDef("max_brands", "Brands",
                "How many brands the workspace can manage.", _LIMIT, "Workspace"),

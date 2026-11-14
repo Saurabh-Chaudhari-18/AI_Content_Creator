@@ -23,12 +23,13 @@ from app.models import (
     Workspace, WorkspaceFeatureOverride, WorkspaceMember, WorkspaceRole, WorkspaceStatus,
 )
 from app.schemas.admin import (
-    AdminMember, AdminMemberAdd, AdminMemberRole, AdminWorkspace, AdminWorkspaceCreate,
+    AdminMember, AdminMemberAdd, AdminMemberRole, AdminWorkspace, AdminWorkspaceCreate, ApprovalStats,
     AdminWorkspaceDetail, AdminWorkspaceFeature, AdminWorkspaceFeatures, AdminWorkspaceList,
     AdminWorkspaceUpdate, FeatureOverride, FeatureOverrideIn, Reasoned, TransferOwnership,
 )
 from app.schemas.schemas import MessageResponse
 from app.services import accounts
+from app.services.approval_stats import approval_stats
 from app.services.features import resolve_features
 
 router = APIRouter(prefix="/workspaces")
@@ -72,6 +73,7 @@ async def _detail(db: AsyncSession, workspace_id: UUID) -> AdminWorkspaceDetail:
             Brand.workspace_id == workspace_id)),
         social_account_count=await count(select(func.count(SocialAccount.id)).where(
             SocialAccount.workspace_id == workspace_id, SocialAccount.is_active.is_(True))),
+        approvals=ApprovalStats(**await approval_stats(db, workspace_id)),
     )
 
 

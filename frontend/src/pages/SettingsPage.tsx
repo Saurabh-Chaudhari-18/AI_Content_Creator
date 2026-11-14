@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { describeMinutes, useLinkOptions } from "@/lib/approvals";
 import { api, ApiError, type UsageSummary, type Workspace } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBytes, formatDate, initials, ROLE_LABEL } from "@/lib/format";
@@ -30,14 +31,16 @@ export function SettingsPage() {
   const isOwner = role === "owner";
   const isAdmin = isOwner || role === "admin";
   const members = useMembers();
+  const linkOptions = useLinkOptions();
 
   const onError = (e: unknown) => toast.error(e instanceof ApiError ? e.message : "Something went wrong.");
   const updateWorkspace = useMutation({
-    mutationFn: (body: { name?: string; allow_self_approval?: boolean }) =>
+    mutationFn: (body: { name?: string; allow_self_approval?: boolean; approval_link_default_minutes?: number }) =>
       api<Workspace>(`/workspaces/${workspace!.id}`, { method: "PATCH", body }),
     onSuccess: () => {
       toast.success("Saved.");
       qc.invalidateQueries({ queryKey: keys.workspaces() });
+      qc.invalidateQueries({ queryKey: ["approval-link-options"] });
     },
     onError,
   });
@@ -113,6 +116,35 @@ export function SettingsPage() {
             disabled={!isOwner || updateWorkspace.isPending}
             onCheckedChange={(v) => updateWorkspace.mutate({ allow_self_approval: v })}
           />
+        </div>
+
+        <div className="flex flex-wrap items-start justify-between gap-4 rounded-[12px] bg-muted px-4 py-3.5">
+          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
+            <Label htmlFor="link-default" className="font-semibold">
+              Client links expire after
+            </Label>
+            <span className="text-[13px] text-muted-foreground">
+              The default when you share a post with a client. Members can choose a shorter time, never a longer one. Owners and managers
+              can change it.
+            </span>
+          </div>
+          <Select
+            value={String(workspace?.approval_link_default_minutes ?? 0)}
+            disabled={!isAdmin || updateWorkspace.isPending || !linkOptions.data}
+            onValueChange={(v) => updateWorkspace.mutate({ approval_link_default_minutes: Number(v) })}
+          >
+            <SelectTrigger id="link-default" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Platform default</SelectItem>
+              {(linkOptions.data?.presets ?? []).map((m) => (
+                <SelectItem key={m} value={String(m)}>
+                  {describeMinutes(m)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </Tile>
 

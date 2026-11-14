@@ -104,6 +104,22 @@ export function WorkspaceDetailPage() {
         <div><dt>Plan</dt><dd>{w.plan_name} <span className="mono small cool">{w.plan_key}</span></dd></div>
         <div><dt>Content</dt><dd><span className="mono">{w.brand_count}</span> {w.brand_count === 1 ? "brand" : "brands"}, <span className="mono">{num(w.post_count)}</span> posts, <span className="mono">{w.social_account_count}</span> social accounts</dd></div>
         <div><dt>Created</dt><dd className="mono cool">{fmtDate(w.created_at)}</dd></div>
+        {w.approvals && (
+          <div>
+            <dt>Client approvals, {w.approvals.window_days} days</dt>
+            <dd>
+              <span className="mono">{num(w.approvals.links_created)}</span> links sent → <span className="mono">{num(w.approvals.links_opened)}</span> opened →{" "}
+              <span className="mono">{num(w.approvals.client_approved)}</span> approved, <span className="mono">{num(w.approvals.client_changes_requested)}</span> changes,{" "}
+              <span className="mono">{num(w.approvals.links_expired_unanswered)}</span> expired
+              <br />
+              <span className="small muted">
+                Median reply {w.approvals.median_client_response_minutes == null ? "—" : `${Math.round(w.approvals.median_client_response_minutes)} min`} ·{" "}
+                {w.approvals.on_behalf_percent == null ? "no assigned approvals" : `${w.approvals.on_behalf_percent}% approved on someone’s behalf`} ·{" "}
+                <span className="mono">{w.approvals.saved_contacts}</span> saved client contacts
+              </span>
+            </dd>
+          </div>
+        )}
       </dl>
       <nav className="tabs" aria-label="Workspace sections">
         {TABS.map(([k, t]) => (

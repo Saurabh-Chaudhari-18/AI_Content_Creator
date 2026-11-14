@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 import { ApprovalActions, ApprovalRecord, usePostHistory } from "./ApprovalPanel";
+import { ReviewerDialog, ReviewPanel } from "./ReviewerDialogs";
 import { CHAR_LIMIT, HashtagInput, limitState, LimitRing, PlatformMark, PlatformPreview, renderPostText } from "./parts";
 import { JobsPanel, PublishPanel } from "./PublishPanel";
 import { shortHash } from "./Seal";
@@ -231,15 +232,8 @@ export function PostStudioPage() {
     },
     onError,
   });
-  const submit = useMutation({
-    mutationFn: () => api<Post>(`/posts/${id}/submit`, { method: "POST" }),
-    onSuccess: (p) => {
-      toast.success(p.content_hash ? `Sent for approval and sealed ${shortHash(p.content_hash)}.` : "Sent for approval.");
-      invalidate();
-      qc.invalidateQueries({ queryKey: keys.history(id) });
-    },
-    onError,
-  });
+  // Submitting goes through the reviewer picker (docs/client_approval_link_plan.md §5).
+  const [submitOpen, setSubmitOpen] = useState(false);
   const remove = useMutation({
     mutationFn: () => api(`/posts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -412,8 +406,8 @@ export function PostStudioPage() {
           {p && status === "draft" && (
             <Button
               className="btn-depth"
-              onClick={() => submit.mutate()}
-              disabled={dirty || !form.caption.trim() || submit.isPending}
+              onClick={() => setSubmitOpen(true)}
+              disabled={dirty || !form.caption.trim()}
               title={dirty ? "Save your changes first" : !form.caption.trim() ? "Write a caption first" : undefined}
             >
               <FileCheck aria-hidden="true" /> Send for approval
@@ -698,11 +692,13 @@ export function PostStudioPage() {
 
             {showPublish && <PublishPanel post={p} />}
             {showJobs && <JobsPanel post={p} />}
+            {p && <ReviewPanel post={p} brandName={brand?.name ?? "—"} canManage={canManage} />}
             {p && <ApprovalRecord post={p} brandName={brand?.name ?? "—"} imageUrl={firstImage} />}
           </div>
         </section>
       </div>
 
+      {p && <ReviewerDialog post={p} brandName={brand?.name ?? "—"} mode="submit" open={submitOpen} onOpenChange={setSubmitOpen} />}
       <TemplateBrowserDialog open={browseOpen} industry={brand?.industry} onClose={() => setBrowseOpen(false)} onPick={(t) => setFilling(t)} />
       <TemplateFillDialog key={filling?.id ?? "none"} template={filling} brand={brand} onClose={() => setFilling(null)} onUse={applyTemplate} />
 

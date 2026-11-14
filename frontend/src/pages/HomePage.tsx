@@ -11,6 +11,7 @@ import { api, type Post, type UsageSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { brandStyle } from "@/lib/brandColor";
 import { daysUntil, formatDateTime, humanize, initials, platformName } from "@/lib/format";
+import { useMyApprovals } from "@/lib/approvals";
 import { keys, useAccounts, useTemplates, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
@@ -48,6 +49,7 @@ export function HomePage() {
   // One wide read of recent posts drives most tiles; per-status totals stay exact.
   const recent = useWorkspacePosts({ limit: 100 });
   const pending = useWorkspacePosts({ status: "pending_approval", limit: 5 });
+  const mine = useMyApprovals();
   const approved = useWorkspacePosts({ status: "approved", limit: 5 });
   const failed = useWorkspacePosts({ status: "failed", limit: 5 });
   const partial = useWorkspacePosts({ status: "partially_published", limit: 5 });
@@ -214,6 +216,33 @@ export function HomePage() {
         <CountTile to={`/posts?status=published${brandQuery}`} label="published this month" value={recent.isLoading ? undefined : publishedThisMonth} tone={publishedThisMonth ? "success" : "default"} loading={recent.isLoading} />
         <CountTile to={`/posts?status=failed${brandQuery}`} label="didn’t publish" value={(failed.data?.total ?? 0) + (partial.data?.total ?? 0)} tone={(failed.data?.total ?? 0) + (partial.data?.total ?? 0) ? "danger" : "default"} loading={failed.isLoading} />
       </div>
+
+      {/* ── Waiting for my approval (posts assigned to me) ─────────── */}
+      {!!mine.data?.items.length && (
+        <Tile aria-labelledby="mine-h" tone="info" className="gap-1 md:col-span-12">
+          <div className="mb-1 flex items-baseline justify-between gap-3">
+            <TileTitle id="mine-h">Waiting for your approval</TileTitle>
+            <Link to={`/posts?status=pending_approval${brandQuery}`} className="text-[13px] font-semibold text-accent-foreground">
+              All waiting ({pending.data?.total ?? mine.data.total})
+            </Link>
+          </div>
+          <ul className="m-0 flex flex-col p-0">
+            {mine.data.items.map((post) => (
+              <li key={post.id} className="flex list-none flex-wrap items-center gap-3 border-t py-3">
+                <div className="flex min-w-0 flex-1 basis-40 flex-col">
+                  <span className="font-semibold">
+                    {post.title || "Untitled post"} <span className="font-normal text-muted-foreground">· {brandName(post.brand_id)}</span>
+                  </span>
+                  <span className="line-clamp-1 text-[13px] text-muted-foreground">{post.caption || "No caption yet"}</span>
+                </div>
+                <Button asChild size="sm">
+                  <Link to={`/posts/${post.id}`}>Review</Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Tile>
+      )}
 
       {/* ── Needs you / setup ────────────────────────────────────── */}
       {!loadingCore && !setupDone ? (

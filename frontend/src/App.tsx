@@ -18,6 +18,8 @@ const AccountsPage = lazy(() => import("@/pages/AccountsPage").then((m) => ({ de
 const BrandsPage = lazy(() => import("@/pages/BrandsPage").then((m) => ({ default: m.BrandsPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const SetPasswordPage = lazy(() => import("@/pages/auth/SetPasswordPage").then((m) => ({ default: m.SetPasswordPage })));
+// The client approval page is public and tiny: its own chunk.
+const ClientApprovalPage = lazy(() => import("@/pages/ClientApprovalPage").then((m) => ({ default: m.ClientApprovalPage })));
 // The staff console is its own chunk: customers never download it.
 const AdminRoutes = lazy(() => import("@/admin/AdminRoutes"));
 
@@ -73,6 +75,8 @@ export default function App() {
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
       {/* Setup links from the staff console point here; open to anyone holding a link. */}
       <Route path="/set-password" element={<Suspense fallback={<FullPageLoading />}><SetPasswordPage /></Suspense>} />
+      {/* Client approval links (/a#<token>): no sign-in, the token stays in the fragment. */}
+      <Route path="/a" element={<Suspense fallback={<FullPageLoading />}><ClientApprovalPage /></Suspense>} />
       <Route path="/admin/*" element={<RequireStaff><Suspense fallback={<FullPageLoading />}><AdminRoutes /></Suspense></RequireStaff>} />
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={page(<HomePage />)} />

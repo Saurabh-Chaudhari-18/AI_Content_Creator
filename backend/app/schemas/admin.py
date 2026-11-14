@@ -36,6 +36,22 @@ class Paged(BaseModel):
 
 
 # ── Overview ──────────────────────────────────────────────────────────
+class ApprovalStats(BaseModel):
+    """Client-approval funnel over the last `window_days` (counts only)."""
+    window_days: int
+    links_created: int
+    links_opened: int
+    client_approved: int
+    client_changes_requested: int
+    links_expired_unanswered: int
+    median_client_response_minutes: Optional[float] = None
+    approvals_by_client: int
+    approvals_by_manager: int
+    on_behalf_percent: Optional[float] = None
+    saved_contacts: int
+    workspaces_using_links: Optional[int] = None   # overview only
+
+
 class AdminOverview(BaseModel):
     workspaces_total: int
     workspaces_suspended: int
@@ -49,6 +65,7 @@ class AdminOverview(BaseModel):
     jobs_failed: int
     jobs_needing_review: int
     open_alerts: int
+    client_approvals: Optional[ApprovalStats] = None
     database_role: str   # the PostgreSQL role this API runs as — expected: omnipost_admin
 
 
@@ -74,6 +91,7 @@ class AdminWorkspaceDetail(AdminWorkspace):
     brand_count: int
     post_count: int
     social_account_count: int
+    approvals: Optional[ApprovalStats] = None
 
 
 class AdminWorkspaceList(Paged):

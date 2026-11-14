@@ -10,7 +10,8 @@ from app.models import (
     AdminAlert, AlertStatus, JobStatus, OperationType, Plan, Post, PublishJob,
     UsageLog, User, Workspace, WorkspaceStatus,
 )
-from app.schemas.admin import AdminOverview
+from app.schemas.admin import AdminOverview, ApprovalStats
+from app.services.approval_stats import approval_stats
 
 router = APIRouter()
 
@@ -48,5 +49,6 @@ async def overview(db: AsyncSession = Depends(get_admin_db)):
             select(func.count(PublishJob.id)).where(PublishJob.status == JobStatus.NEEDS_REVIEW)),
         open_alerts=await count(
             select(func.count(AdminAlert.id)).where(AdminAlert.status != AlertStatus.RESOLVED)),
+        client_approvals=ApprovalStats(**await approval_stats(db)),
         database_role=await db.scalar(text("SELECT current_user")),
     )
