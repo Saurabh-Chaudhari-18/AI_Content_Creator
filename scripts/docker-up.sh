@@ -7,7 +7,7 @@
 # Creates backend/.env with new secret keys (if missing), then builds and starts the
 # database, Redis, API, worker, scheduler and web app. Demo data is added automatically.
 #   Web app: http://localhost:4173   (another port: WEB_PORT=4174 bash scripts/docker-up.sh)
-#   Stop:    docker compose -f backend/docker-compose.yml --profile full down   (data is kept)
+#   Stop:    docker compose -f backend/docker-compose.yml down   (data is kept)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,7 +27,7 @@ if [ ! -f "$BACKEND/.env" ]; then
 fi
 
 echo "Building and starting (the first time takes a few minutes)..."
-docker compose -f "$BACKEND/docker-compose.yml" --profile full up -d --build
+docker compose -f "$BACKEND/docker-compose.yml" up -d --build
 
 PORT="${WEB_PORT:-4173}"
 READY=no
@@ -38,7 +38,7 @@ done
 if [ "$READY" != yes ]; then
   echo
   echo "The containers started, but the app did not answer on port $PORT within 3 minutes."
-  echo "Check the logs:  docker compose -f backend/docker-compose.yml --profile full logs --tail 50"
+  echo "Check the logs:  docker compose -f backend/docker-compose.yml logs --tail 50"
   echo "If another program uses port $PORT, run:  WEB_PORT=4174 bash scripts/docker-up.sh"
   exit 1
 fi
@@ -46,5 +46,5 @@ fi
 echo
 echo "OmniPost is running: http://localhost:$PORT"
 echo "Sign in with demo@example.com / DemoPassword123!"
-echo "Logs:  docker compose -f backend/docker-compose.yml --profile full logs -f"
-echo "Stop:  docker compose -f backend/docker-compose.yml --profile full down"
+echo "Logs:  docker compose -f backend/docker-compose.yml logs -f"
+echo "Stop:  docker compose -f backend/docker-compose.yml down   (or the stop button on 'omnipost' in Docker Desktop)"

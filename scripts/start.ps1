@@ -22,6 +22,8 @@ if (-not (Test-Path $vpy) -or -not (Test-Path (Join-Path $Frontend "node_modules
 if ($LASTEXITCODE -ne 0) { Write-Host "Docker is not running. Open Docker Desktop and wait for 'Engine running'." -ForegroundColor Red; exit 1 }
 
 Set-Location $Backend
+# If the all-in-Docker app is running, stop its app containers: they use the same ports
+& docker compose stop api worker beat web *> $null
 docker compose up -d postgres redis
 for ($i = 0; $i -lt 30; $i++) {
     & docker compose exec -T postgres pg_isready -U postgres *> $null

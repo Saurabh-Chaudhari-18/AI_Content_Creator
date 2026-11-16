@@ -12,10 +12,13 @@ Tested on Windows 11 with PowerShell, Docker Desktop, Python 3.12.10, Node.js 20
 
 | Way | Use it for | Commands (from the repository root) |
 |---|---|---|
+| **Docker only (one click)** | Running or demoing the project; nothing to install except Docker Desktop | Double-click `start-docker.cmd` (Windows) or `bash scripts/docker-up.sh` (macOS/Linux) |
 | **A. Setup scripts** | The quickest start, and day-to-day development | Once: `scripts\setup.ps1` (Windows) or `bash scripts/setup.sh` (macOS/Linux)<br>Every day: `scripts\start.ps1` or `bash scripts/start.sh` |
 | **B. Step by step** | Understanding every part, or when a script stops | Sections 2–6 below |
 
-Both need the tools from section 2 (Git, Python 3.12, Node 20+, Docker Desktop).
+A and B need the tools from section 2 (Git, Python 3.12, Node 20+, Docker Desktop).
+
+**Docker only.** Open Docker Desktop (wait for *Engine running*), then double-click `start-docker.cmd`. It creates `backend/.env` with new secret keys if it is missing, builds the images, updates the database and adds demo data, then starts the API, worker, scheduler and web app, and opens **http://localhost:4173** (sign in with `demo@example.com` / `DemoPassword123!`). The first run takes a few minutes. Docker Desktop shows everything as one project, **omnipost**: its stop and play buttons stop and start the whole app, and your data is kept. After pulling new code, double-click `start-docker.cmd` again so the images are rebuilt. The same from a terminal, in `backend`: `docker compose up -d --build`, and `docker compose down` to stop.
 
 **A. Setup scripts.** `setup` checks your tools and versions, creates `backend/.env` with new secret keys (it never overwrites an existing one), makes the Python virtual environment, installs everything, starts PostgreSQL and Redis, creates the tables and adds demo data. It's safe to run again. `start` applies any new database changes and starts the API, worker, scheduler and web app (Windows: four windows; macOS/Linux: one terminal, logs in `.logs/`, Ctrl+C stops all). Then open **http://localhost:5173**.
 
@@ -351,7 +354,7 @@ omnipost/
 │   ├── alembic/versions/    database migrations 0001–0006
 │   ├── seeds/               demo data + Smart Templates
 │   ├── tests/               unit + database integration tests
-│   ├── docker-compose.yml   PostgreSQL, Redis, MinIO for local development
+│   ├── docker-compose.yml   Docker project "omnipost": PostgreSQL, Redis, API, worker, scheduler, web app
 │   └── .env.example         settings template
 ├── frontend/
 │   ├── src/
@@ -362,6 +365,7 @@ omnipost/
 │   │   └── index.css        all colours and fonts (design tokens)
 │   └── vite.config.ts       dev server + /api proxy
 ├── scripts/                 setup and start, for Windows (.ps1) and macOS/Linux (.sh)
+├── start-docker.cmd         Windows: double-click to run everything in Docker
 ├── docs/                    project documentation (this file is 07)
 └── .nvmrc, .python-version  pinned Node and Python versions
 ```

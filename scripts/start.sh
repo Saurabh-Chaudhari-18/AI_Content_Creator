@@ -24,6 +24,8 @@ POOL=""
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) POOL="--pool=solo" ;; esac
 
 cd "$BACKEND"
+# If the all-in-Docker app is running, stop its app containers: they use the same ports
+docker compose stop api worker beat web >/dev/null 2>&1 || true
 docker compose up -d postgres redis
 for _ in $(seq 1 30); do
   docker compose exec -T postgres pg_isready -U postgres >/dev/null 2>&1 && break

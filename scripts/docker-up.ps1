@@ -8,7 +8,7 @@
   Creates backend\.env with new secret keys (if missing), then builds and starts the
   database, Redis, API, worker, scheduler and web app. Demo data is added automatically.
   Web app: http://localhost:4173   (another port: set WEB_PORT first, e.g. $env:WEB_PORT = 4174)
-  Stop:    docker compose -f backend\docker-compose.yml --profile full down     (data is kept)
+  Stop:    docker compose -f backend\docker-compose.yml down     (data is kept)
 #>
 $ErrorActionPreference = "Continue"   # every program's exit code is checked explicitly below
 $Root = Split-Path -Parent $PSScriptRoot
@@ -37,7 +37,7 @@ if (-not (Test-Path $envFile)) {
 }
 
 Write-Host "Building and starting (the first time takes a few minutes)..." -ForegroundColor Cyan
-docker compose -f (Join-Path $Backend "docker-compose.yml") --profile full up -d --build
+docker compose -f (Join-Path $Backend "docker-compose.yml") up -d --build
 if ($LASTEXITCODE -ne 0) { Write-Host "Docker could not start the project (see above)." -ForegroundColor Red; exit 1 }
 
 $port = if ($env:WEB_PORT) { $env:WEB_PORT } else { "4173" }
@@ -51,11 +51,11 @@ for ($i = 0; $i -lt 90; $i++) {
 }
 if (-not $ready) {
     Write-Host "`nThe containers started, but the app did not answer on port $port within 3 minutes." -ForegroundColor Yellow
-    Write-Host "Check the logs:  docker compose -f backend\docker-compose.yml --profile full logs --tail 50"
+    Write-Host "Check the logs:  docker compose -f backend\docker-compose.yml logs --tail 50"
     Write-Host "If another program uses port $port, run:  `$env:WEB_PORT = 4174  and start this script again."
     exit 1
 }
 Write-Host "`nOmniPost is running: http://localhost:$port" -ForegroundColor Green
 Write-Host "Sign in with demo@example.com / DemoPassword123!"
-Write-Host "Logs:  docker compose -f backend\docker-compose.yml --profile full logs -f"
-Write-Host "Stop:  docker compose -f backend\docker-compose.yml --profile full down"
+Write-Host "Logs:  docker compose -f backend\docker-compose.yml logs -f"
+Write-Host "Stop:  docker compose -f backend\docker-compose.yml down   (or the stop button on 'omnipost' in Docker Desktop)"

@@ -1,17 +1,23 @@
-# OmniPost — Docker services.
+# OmniPost — Docker services. Docker Desktop shows them as one project: "omnipost".
 #
-# Everyday development (you run the API, worker and web app yourself):
+# Whole project, one command (only Docker needed) — from this backend folder:
+#     docker compose up -d --build
+#     → builds the images, updates the database and adds demo data, then starts the
+#       API, worker, scheduler and web app.  Web app: http://localhost:4173
+# Or double-click start-docker.cmd in the repository root (Windows), or run
+# scripts/docker-up.ps1 / scripts/docker-up.sh — they also create backend/.env.
+# After the first start, the play / stop button on "omnipost" in Docker Desktop
+# starts and stops everything (it does not rebuild after code changes; use --build).
+#
+# Developer mode (you run the API, worker and web app yourself, see scripts/start.*):
 #     docker compose up -d postgres redis
 #
-# Whole project in Docker (only Docker needed), from this backend folder:
-#     docker compose --profile full up -d --build
-#     → web app on http://localhost:4173, API on http://localhost:8000
-#     (from the repository root: docker compose -f backend/docker-compose.yml --profile full up -d --build)
-#
-# backend/.env must exist in both cases (scripts/setup.* or scripts/docker-up.* create it).
+# backend/.env must exist (scripts/setup.* or scripts/docker-up.* create it).
 #
 # A port already taken on your machine? Override it, e.g. WEB_PORT=4174 or POSTGRES_PORT=5433
 # (if you change POSTGRES_PORT or REDIS_PORT for local development, update backend/.env to match).
+
+name: omnipost
 
 x-backend: &backend
   build: .
@@ -69,12 +75,11 @@ services:
     volumes:
       - miniodata:/data
 
-  # ── Whole project in Docker: `--profile full` ──────────────────────
+  # ── The app: API, worker, scheduler, web (all start with `docker compose up`) ──
 
   # One-off: create/upgrade tables, then add demo data (safe to repeat)
   migrate:
     <<: *backend
-    profiles: ["full"]
     command: sh -c "alembic upgrade head && python -m seeds.seed"
     depends_on:
       postgres:
@@ -84,7 +89,6 @@ services:
 
   api:
     <<: *backend
-    profiles: ["full"]
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "${API_PORT:-8000}:8000"
@@ -94,7 +98,6 @@ services:
 
   worker:
     <<: *backend
-    profiles: ["full"]
     command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
     depends_on:
       migrate:
@@ -103,7 +106,6 @@ services:
   # REQUIRED for scheduled publishing — Beat dispatches due jobs every minute.
   beat:
     <<: *backend
-    profiles: ["full"]
     command: celery -A app.workers.celery_app beat --loglevel=info --schedule /tmp/celerybeat-schedule
     depends_on:
       migrate:
@@ -111,7 +113,6 @@ services:
 
   web:
     build: ../frontend
-    profiles: ["full"]
     ports:
       - "${WEB_PORT:-4173}:80"
     depends_on:
