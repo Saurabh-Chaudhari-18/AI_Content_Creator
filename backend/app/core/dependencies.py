@@ -117,14 +117,25 @@ async def get_brand_access(brand_id: UUID, db: AsyncSession, user: User) -> Bran
 
 
 async def get_post_access(post_id: UUID, db: AsyncSession, user: User) -> Post:
-    """Load a post (media eager-loaded) only if the caller is a member of its workspace."""
-    post = await db.scalar(
+    """Load a post (media eager-loaded) only if the caller is a member of its workspace.
+
+    On a request that changes something the post row is locked (FOR UPDATE)
+    until the request commits. Every status check in the routes (approved?
+    pending? scheduled?) then sees the latest committed state: two "Post now"
+    clicks, two tabs, or a manager and a client deciding at once are handled
+    one after the other, and the second is refused instead of publishing
+    twice or overwriting the first decision.
+    """
+    stmt = (
         select(Post)
         .options(selectinload(Post.media))
         .join(Brand, Brand.id == Post.brand_id)
         .join(WorkspaceMember, WorkspaceMember.workspace_id == Brand.workspace_id)
         .where(Post.id == post_id, WorkspaceMember.user_id == user.id)
     )
+    if request_is_write.get():
+        stmt = stmt.with_for_update(of=Post)
+    post = await db.scalar(stmt)
     if post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
     if request_is_write.get():

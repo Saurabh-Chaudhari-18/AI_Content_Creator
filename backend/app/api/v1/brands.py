@@ -6,6 +6,7 @@ import uuid as uuid_mod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.dependencies import (
     client_ip, get_brand_access, get_current_user, get_workspace_member, require_role,
@@ -83,6 +84,11 @@ async def update_brand(brand_id: UUID, req: BrandUpdate, request: Request,
     brand = await get_brand_access(brand_id, db, user)
 
     changed = req.model_dump(exclude_unset=True)
+    if "brand_guidelines" in changed:
+        # The client's keys replace the client's keys; the server's own
+        # "_" keys (the logo's storage key) are kept, never dropped.
+        internal = {k: v for k, v in (brand.brand_guidelines or {}).items() if k.startswith("_")}
+        changed["brand_guidelines"] = {**changed["brand_guidelines"], **internal}
     before = {k: getattr(brand, k) for k in changed}
     for field, value in changed.items():
         setattr(brand, field, value)
@@ -111,9 +117,11 @@ async def upload_brand_logo(brand_id: UUID, request: Request, file: UploadFile =
     data, ext, _mime, _type = await read_validated_upload(file, images_only=True)
     storage_key = f"brands/{brand.id}/logo-{uuid_mod.uuid4().hex}{ext}"
     storage = get_storage()
-    storage.save(storage_key, data)
+    await run_in_threadpool(storage.save, storage_key, data)
 
     old_key = (brand.brand_guidelines or {}).get("_logo_storage_key")
+    if old_key and not str(old_key).startswith(f"brands/{brand.id}/"):
+        old_key = None  # defence in depth: only ever delete this brand's own logo files
     brand.logo_url = storage.display_url(storage_key)
     brand.brand_guidelines = {**(brand.brand_guidelines or {}), "_logo_storage_key": storage_key}
     record_audit_event(
@@ -124,7 +132,7 @@ async def upload_brand_logo(brand_id: UUID, request: Request, file: UploadFile =
     )
     await db.commit()
     if old_key:
-        storage.delete(old_key)
+        await run_in_threadpool(storage.delete, old_key)
     return BrandLogoResponse(brand_id=brand.id, logo_url=brand.logo_url)
 
 

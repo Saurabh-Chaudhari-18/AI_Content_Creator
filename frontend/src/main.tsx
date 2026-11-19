@@ -6,10 +6,13 @@ import { BrowserRouter } from "react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/lib/auth";
+import { initMonitoring } from "@/lib/monitoring";
 import { ThemeProvider } from "@/lib/theme";
 
 import App from "./App";
 import "./index.css";
+
+initMonitoring();
 
 const queryClient = new QueryClient({
   defaultOptions: {

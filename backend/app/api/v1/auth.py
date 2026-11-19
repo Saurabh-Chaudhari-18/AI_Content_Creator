@@ -21,9 +21,9 @@ from app.core.security import (
     create_access_token,
     generate_csrf_token,
     generate_refresh_token,
-    hash_password,
+    hash_password_async,
     hash_refresh_token,
-    verify_password,
+    verify_password_async,
 )
 from app.db.session import get_db
 from app.models import AuditAction, RefreshToken, User, UserSetupToken
@@ -96,7 +96,7 @@ async def register(req: RegisterRequest, request: Request, response: Response,
 
     user = User(
         email=req.email.lower(),
-        password_hash=hash_password(req.password),
+        password_hash=await hash_password_async(req.password),
         full_name=req.full_name,
         is_active=True,
     )
@@ -120,7 +120,7 @@ async def login(req: LoginRequest, request: Request, response: Response,
                 db: AsyncSession = Depends(get_db)):
     user = await db.scalar(select(User).where(User.email == req.email.lower()))
 
-    if not user or not verify_password(req.password, user.password_hash):
+    if not await verify_password_async(req.password, user.password_hash if user else None):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password.",
@@ -159,7 +159,7 @@ async def set_password(req: SetPasswordRequest, request: Request, db: AsyncSessi
     if user is None or not user.is_active:
         raise invalid
 
-    user.password_hash = hash_password(req.password)
+    user.password_hash = await hash_password_async(req.password)
     token.used_at = now
     # Whoever knew the old password, or held a session, is signed out.
     await db.execute(
@@ -185,26 +185,35 @@ async def refresh_access_token(request: Request, response: Response,
     if not raw:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
 
-    record = await db.scalar(
-        select(RefreshToken).where(
+    # ROTATION: consume the old token, issue a new one. A stolen refresh
+    # token dies the moment the legitimate client rotates.
+    # Consumed in ONE statement: two requests with the same cookie (two tabs
+    # waking up together) can't both pass a check and both mint a session —
+    # the second UPDATE waits for the first and then matches nothing.
+    user_id = await db.scalar(
+        update(RefreshToken)
+        .where(
             RefreshToken.token_hash == hash_refresh_token(raw),
             RefreshToken.is_revoked == False,  # noqa: E712
+            RefreshToken.expires_at > datetime.now(timezone.utc),
         )
+        .values(is_revoked=True)
+        .returning(RefreshToken.user_id)
     )
-    if not record or record.expires_at < datetime.now(timezone.utc):
-        _clear_auth_cookies(response)
+    if user_id is None:
+        # No cookie deletion here: when another tab has just rotated this
+        # token, the browser already holds that tab's NEW cookie, and
+        # deleting the cookies would sign every tab out.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked or expired")
 
     # The account must still be active — a deactivated user must not keep
     # minting fresh access tokens from an old refresh token.
-    user = await db.scalar(select(User).where(User.id == record.user_id))
+    user = await db.scalar(select(User).where(User.id == user_id))
     if not user or not user.is_active:
+        await db.commit()  # keep the token consumed
         _clear_auth_cookies(response)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is inactive")
 
-    # ROTATION: consume the old token, issue a new one. A stolen refresh
-    # token dies the moment the legitimate client rotates.
-    record.is_revoked = True
     raw_new, new_record = _new_refresh_record(request, user.id)
     db.add(new_record)
     await db.commit()

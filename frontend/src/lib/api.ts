@@ -127,12 +127,30 @@ async function parse<T>(res: Response): Promise<T> {
 // ── Single-flight refresh ──────────────────────────────────────────────
 let refreshing: Promise<boolean> | null = null;
 
+/** One refresh at a time across ALL open tabs. The refresh cookie is
+ * single-use and shared by every tab: two tabs refreshing together would
+ * send the same cookie, and the second would be refused. With the lock the
+ * second tab waits, then sends the new cookie the first tab received. */
+function acrossTabs<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  return locks ? locks.request("omnipost-auth-refresh", fn) : fn();
+}
+
+const postRefresh = () => rawRequest("/auth/refresh", { method: "POST", csrf: true, noRefresh: true });
+
 /** Exchange the refresh cookie for a new access token. Never throws. */
 export function refreshSession(): Promise<boolean> {
   if (!refreshing) {
     refreshing = (async () => {
       try {
-        const res = await rawRequest("/auth/refresh", { method: "POST", csrf: true, noRefresh: true });
+        let res = await acrossTabs(postRefresh);
+        if (res.status === 401) {
+          // Browsers without the lock (or a tab that raced in just before it):
+          // another tab may have just rotated the cookie. One retry picks up
+          // the new one; a truly expired session gets 401 again.
+          await new Promise((r) => setTimeout(r, 400));
+          res = await acrossTabs(postRefresh);
+        }
         if (!res.ok) {
           setAccessToken(null);
           return false;

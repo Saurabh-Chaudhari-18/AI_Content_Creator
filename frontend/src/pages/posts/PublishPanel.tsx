@@ -70,9 +70,16 @@ export function PublishPanel({ post }: { post: Post }) {
   const publishNow = useMutation({
     mutationFn: () =>
       api<Schemas["ScheduleResponse"]>(`/posts/${post.id}/publish-now`, { method: "POST", body: { social_account_ids: chosen } }),
-    onSuccess: () => done("Sending now. Results appear below in a few seconds."),
+    onSuccess: () => {
+      setConfirmNow(false);
+      done("Sending now. Results appear below in a few seconds.");
+    },
     onError,
   });
+  // Posting is public and can't be undone: ask first, and never let both
+  // buttons fire at once.
+  const [confirmNow, setConfirmNow] = useState(false);
+  const sending = schedule.isPending || publishNow.isPending;
 
   if (accounts.isSuccess && active.length === 0) {
     return (
@@ -86,7 +93,9 @@ export function PublishPanel({ post }: { post: Post }) {
     );
   }
 
-  const inPast = new Date(when).getTime() <= Date.now();
+  const whenMs = new Date(when).getTime();
+  // An emptied date field is "no time", not a valid one.
+  const inPast = !Number.isFinite(whenMs) || whenMs <= Date.now();
 
   return (
     <Tile aria-labelledby="where-h">
@@ -141,19 +150,44 @@ export function PublishPanel({ post }: { post: Post }) {
       <Button
         size="lg"
         className="mt-1 h-11"
-        disabled={chosen.length === 0 || blocked || inPast || schedule.isPending}
+        disabled={chosen.length === 0 || blocked || inPast || sending}
         onClick={() => schedule.mutate()}
       >
         {schedule.isPending ? "Scheduling…" : "Schedule post"}
       </Button>
       <Button
         variant="outline"
-        disabled={chosen.length === 0 || blocked || publishNow.isPending}
-        onClick={() => publishNow.mutate()}
+        disabled={chosen.length === 0 || blocked || sending}
+        onClick={() => setConfirmNow(true)}
       >
         {publishNow.isPending ? "Sending…" : "Post right now"}
       </Button>
       {inPast && <span className="text-xs text-danger">Pick a time in the future.</span>}
+
+      <AlertDialog open={confirmNow} onOpenChange={(open) => !publishNow.isPending && setConfirmNow(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Post it now?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This goes out publicly right away on{" "}
+              {active.filter((a) => chosen.includes(a.id)).map((a) => `${platformName(a.platform)} · ${a.account_name}`).join(", ")}.
+              It can’t be taken back from here.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={publishNow.isPending}>Not yet</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={publishNow.isPending}
+              onClick={(e) => {
+                e.preventDefault(); // keep the dialog open until the request settles
+                publishNow.mutate();
+              }}
+            >
+              {publishNow.isPending ? "Sending…" : "Post now"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {chosen.length > 0 && blocked && check.isSuccess && (
         <span className="text-xs text-danger">Fix the problems above, or untick that account.</span>
       )}

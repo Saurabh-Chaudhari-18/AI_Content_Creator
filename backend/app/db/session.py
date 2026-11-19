@@ -18,14 +18,23 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.config import settings
 
 
+def _api_server_settings() -> dict[str, str]:
+    """Per-connection limits for request handlers (asyncpg wants strings)."""
+    return {
+        "statement_timeout": str(settings.DB_STATEMENT_TIMEOUT_MS),
+        "idle_in_transaction_session_timeout": str(settings.DB_IDLE_IN_TRANSACTION_TIMEOUT_MS),
+    }
+
+
 @lru_cache
 def get_async_engine():
     return create_async_engine(
         settings.DATABASE_URL,
         echo=False,
         pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        connect_args={"server_settings": _api_server_settings()},
         # Production: enforce TLS at the DSN level (?ssl=verify-full)
     )
 
@@ -54,9 +63,9 @@ def get_admin_async_engine():
         settings.ADMIN_DATABASE_URL or settings.DATABASE_URL,
         echo=False,
         pool_pre_ping=True,
-        pool_size=3,
-        max_overflow=5,
-        connect_args={"server_settings": {"role": ADMIN_DB_ROLE}},
+        pool_size=2,
+        max_overflow=3,
+        connect_args={"server_settings": {"role": ADMIN_DB_ROLE, **_api_server_settings()}},
     )
 
 
@@ -73,12 +82,15 @@ async def get_admin_db() -> AsyncGenerator[AsyncSession, None]:
 
 @lru_cache
 def get_sync_engine():
+    # Workers: a per-query limit only. No idle-in-transaction limit, because
+    # a publish can wait minutes on Instagram while its session is open.
     return create_engine(
         settings.sync_database_url,
         echo=False,
         pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        connect_args={"options": f"-c statement_timeout={settings.WORKER_STATEMENT_TIMEOUT_MS}"},
     )
 
 
