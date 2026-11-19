@@ -172,9 +172,16 @@ export function SettingsPage() {
         <TileTitle id="members-h">Team</TileTitle>
         {members.isLoading ? (
           <Skeleton className="h-24" />
+        ) : members.isError ? (
+          <p className="m-0 text-danger" role="alert">
+            Couldn’t load the team.{" "}
+            <button type="button" className="font-semibold underline" onClick={() => members.refetch()}>
+              Try again
+            </button>
+          </p>
         ) : (
           <ul className="m-0 flex flex-col p-0">
-            {members.data!.map((m) => (
+            {(members.data ?? []).map((m) => (
               <li key={m.id} className="flex list-none flex-wrap items-center gap-3 border-t py-3">
                 <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-secondary text-[13px] font-semibold text-secondary-foreground">
                   {initials(m.full_name)}

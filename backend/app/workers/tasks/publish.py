@@ -22,10 +22,11 @@ Design (see docs/architecture):
 """
 import logging
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
+import random
+from uuid import UUID, uuid4
 
 from app.workers.celery_app import celery_app
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
 from app.core.security import post_content_hash, resolve_platform_content
@@ -45,12 +46,44 @@ _TERMINAL = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStat
 IN_PROGRESS_GRACE = timedelta(minutes=15)  # platform calls take seconds; 15 min = a dead worker
 
 
+# A queued job whose task message was sent this long after it was due and
+# still has not started is presumed lost (broker restart, failed enqueue) and
+# is dispatched again. A duplicate delivery is harmless: the task's row lock
+# and status guards let exactly one delivery publish.
+DISPATCH_STALE_AFTER = timedelta(minutes=15)
+
+
 @celery_app.task(name="app.workers.tasks.publish.dispatch_due_jobs")
 def dispatch_due_jobs():
-    """Beat task: dispatch every due, not-yet-dispatched job."""
+    """Beat task: dispatch every due, not-yet-dispatched job.
+
+    Claim first, enqueue second. The task ids are COMMITTED (and the row
+    locks released) before any message is sent. Enqueueing while the rows
+    were still locked let a fast worker find its job locked and exit,
+    leaving it queued-with-a-task-id forever — a post that never went out.
+    """
     now = datetime.now(timezone.utc)
-    dispatched = 0
     with worker_session() as db:
+        # Re-arm jobs whose message was lost: queued, dispatched, and well
+        # past due. Rows a task is working on right now are locked and skipped.
+        stale_ids = db.execute(
+            select(PublishJob.id)
+            .where(
+                PublishJob.status == JobStatus.QUEUED,
+                PublishJob.celery_task_id.is_not(None),
+                PublishJob.scheduled_for.is_not(None),
+                PublishJob.scheduled_for <= now - DISPATCH_STALE_AFTER,
+            )
+            .with_for_update(skip_locked=True)
+            .limit(100)
+        ).scalars().all()
+        if stale_ids:
+            db.execute(
+                update(PublishJob).where(PublishJob.id.in_(stale_ids)).values(celery_task_id=None)
+                .execution_options(synchronize_session=False)
+            )
+            logger.warning(f"[Dispatcher] re-dispatching {len(stale_ids)} job(s) whose task never started")
+
         due = db.execute(
             select(PublishJob)
             .where(
@@ -63,10 +96,19 @@ def dispatch_due_jobs():
             .limit(100)
         ).scalars().all()
 
+        claimed: list[tuple[str, str]] = []
         for job in due:
-            result = publish_post_task.apply_async(kwargs={"job_id": str(job.id)})
-            job.celery_task_id = result.id
+            job.celery_task_id = uuid4().hex
+            claimed.append((str(job.id), job.celery_task_id))
+    # Committed: the rows are unlocked and carry their task ids.
+
+    dispatched = 0
+    for job_id, task_id in claimed:
+        try:
+            publish_post_task.apply_async(kwargs={"job_id": job_id}, task_id=task_id)
             dispatched += 1
+        except Exception:  # noqa: BLE001 — the stale sweep above re-dispatches it
+            logger.exception(f"[Dispatcher] could not enqueue job {job_id}; it will be retried")
 
     if dispatched:
         logger.info(f"[Dispatcher] dispatched {dispatched} job(s)")
@@ -125,15 +167,21 @@ def _retry_or_fail(task, db, job: PublishJob, exc: Exception):
         logger.error(f"[Publish] job {job.id} failed after max retries: {exc}")
         return {"status": "failed", "error": str(exc)}
 
+    # Exponential backoff with jitter: ~1, 2, 4 minutes, capped at 15. (A
+    # manual task.retry() ignores the decorator's retry_backoff settings.)
+    countdown = int(min(900, 60 * 2 ** task.request.retries) * random.uniform(0.75, 1.0))
     job.status = JobStatus.QUEUED  # keep celery_task_id set — the Beat scan must not double-dispatch
     job.error_message = str(exc)
+    # Due again when the retry is: the stale-dispatch sweep measures from
+    # here, so a pending retry is never mistaken for a lost message.
+    job.scheduled_for = datetime.now(timezone.utc) + timedelta(seconds=countdown)
     post = db.get(Post, job.post_id)
     if post and post.status == PostStatus.PUBLISHING:
         post.status = PostStatus.SCHEDULED
         post.retry_count += 1
     db.commit()
-    logger.warning(f"[Publish] job {job.id} temporary failure: {exc}. Retrying…")
-    raise task.retry(exc=exc)
+    logger.warning(f"[Publish] job {job.id} temporary failure: {exc}. Retrying in {countdown}s…")
+    raise task.retry(exc=exc, countdown=countdown)
 
 
 @celery_app.task(

@@ -21,9 +21,9 @@ from app.core.security import (
     create_access_token,
     generate_csrf_token,
     generate_refresh_token,
-    hash_password,
+    hash_password_async,
     hash_refresh_token,
-    verify_password,
+    verify_password_async,
 )
 from app.db.session import get_db
 from app.models import AuditAction, RefreshToken, User, UserSetupToken
@@ -96,7 +96,7 @@ async def register(req: RegisterRequest, request: Request, response: Response,
 
     user = User(
         email=req.email.lower(),
-        password_hash=hash_password(req.password),
+        password_hash=await hash_password_async(req.password),
         full_name=req.full_name,
         is_active=True,
     )
@@ -120,7 +120,7 @@ async def login(req: LoginRequest, request: Request, response: Response,
                 db: AsyncSession = Depends(get_db)):
     user = await db.scalar(select(User).where(User.email == req.email.lower()))
 
-    if not user or not verify_password(req.password, user.password_hash):
+    if not await verify_password_async(req.password, user.password_hash if user else None):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password.",
@@ -159,7 +159,7 @@ async def set_password(req: SetPasswordRequest, request: Request, db: AsyncSessi
     if user is None or not user.is_active:
         raise invalid
 
-    user.password_hash = hash_password(req.password)
+    user.password_hash = await hash_password_async(req.password)
     token.used_at = now
     # Whoever knew the old password, or held a session, is signed out.
     await db.execute(

@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 
 import { AppShell } from "@/app/AppShell";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 import { WorkspaceProvider } from "@/lib/workspace";
@@ -66,10 +67,22 @@ function RequireStaff({ children }: { children: ReactNode }) {
   return children;
 }
 
-const page = (el: ReactNode) => <Suspense fallback={<PageLoading />}>{el}</Suspense>;
+/** A screen inside the app shell: a crash shows a message there, the navigation keeps working. */
+function Page({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  // Keyed by path: navigating away from a crashed screen clears the error.
+  return (
+    <ErrorBoundary key={pathname}>
+      <Suspense fallback={<PageLoading />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
+}
+
+const page = (el: ReactNode) => <Page>{el}</Page>;
 
 export default function App() {
   return (
+    <ErrorBoundary fullPage>
     <Routes>
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
@@ -93,5 +106,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ErrorBoundary>
   );
 }

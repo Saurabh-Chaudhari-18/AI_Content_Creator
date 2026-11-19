@@ -109,8 +109,11 @@ async def facebook_callback(
         expires_in = int(token_data.get("expires_in") or 60 * 24 * 3600)
         fb_user_id = await meta_oauth.fetch_user_id(user_token)
         pages = await meta_oauth.fetch_user_pages(user_token)
-    except Exception:  # noqa: BLE001
-        logger.exception("Facebook OAuth exchange failed")
+    except Exception as exc:  # noqa: BLE001
+        # Never log the exception text or traceback: httpx puts the full
+        # request URL in it, and the token exchange URL carries the app
+        # secret (client_secret) and the one-time code as query parameters.
+        logger.error("Facebook OAuth exchange failed: %s", meta_oauth.describe_error(exc))
         return RedirectResponse(url=f"{frontend}?connected=0&reason=exchange_failed")
 
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)

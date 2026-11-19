@@ -19,6 +19,7 @@ from uuid import UUID
 import filetype
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from PIL import Image
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,7 +94,8 @@ async def read_validated_upload(file: UploadFile, *, images_only: bool = False) 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="File content does not match an allowed media type.")
     if media_type == MediaType.IMAGE:
-        data = _strip_exif(data, ext)
+        # Decoding/re-encoding a large photo is CPU work: off the event loop.
+        data = await run_in_threadpool(_strip_exif, data, ext)
     return data, ext, kind.mime, media_type
 
 
@@ -156,7 +158,7 @@ async def upload_media(
                         message="This upload would go over your plan's media storage limit.")
 
     storage_key = f"media/{uuid_mod.uuid4().hex}{ext}"
-    get_storage().save(storage_key, data)
+    await run_in_threadpool(get_storage().save, storage_key, data)  # S3 upload: blocking I/O
 
     media_id = uuid_mod.uuid4()
     db.add(PostMedia(
@@ -175,7 +177,7 @@ async def upload_media(
     try:
         await db.commit()
     except Exception:
-        get_storage().delete(storage_key)  # don't leave the file behind if the row failed
+        await run_in_threadpool(get_storage().delete, storage_key)  # don't leave the file behind if the row failed
         raise
 
     return MediaUploadResponse(
@@ -225,7 +227,7 @@ async def delete_media(media_id: UUID, db: AsyncSession = Depends(get_db),
     post = await get_post_access(item.post_id, db, user)
     assert_editable(post)
 
-    get_storage().delete(item.storage_key)
+    await run_in_threadpool(get_storage().delete, item.storage_key)
     await db.delete(item)
     await db.flush()
     await db.refresh(post, ["media"])

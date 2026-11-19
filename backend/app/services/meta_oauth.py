@@ -64,6 +64,22 @@ async def consume_oauth_state(state: str) -> tuple[str, str] | None:
     return workspace_id, user_id
 
 
+def describe_error(exc: Exception) -> str:
+    """A log-safe description of a failed Graph API call: the status and
+    Meta's error code/type/message, never the request URL (which carries
+    access tokens or the app secret as query parameters)."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        try:
+            err = exc.response.json().get("error", {})
+        except Exception:  # noqa: BLE001 — non-JSON body
+            err = {}
+        return (f"HTTP {exc.response.status_code} code={err.get('code')} "
+                f"type={err.get('type')} message={str(err.get('message', ''))[:200]!r}")
+    if isinstance(exc, httpx.RequestError):
+        return f"{type(exc).__name__} (no response)"
+    return type(exc).__name__
+
+
 # ── Facebook OAuth exchanges ──────────────────────────────────────────
 def facebook_authorization_url(state: str) -> str:
     # instagram_* scopes are what make the linked IG business account usable

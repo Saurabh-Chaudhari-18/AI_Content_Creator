@@ -8,10 +8,12 @@ import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Any, Optional
 
 import bcrypt
 import jwt
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 
@@ -35,6 +37,28 @@ def verify_password(password: str, password_hash: str) -> bool:
         return bcrypt.checkpw(raw, password_hash.encode("utf-8"))
     except ValueError:
         return False
+
+
+@lru_cache
+def _dummy_hash() -> str:
+    return hash_password(secrets.token_urlsafe(16))
+
+
+# bcrypt deliberately burns ~250 ms of CPU. Called directly inside an async
+# route it stalls the event loop, so every other request waits behind each
+# login. The async versions run it on a worker thread (bcrypt releases the GIL).
+async def hash_password_async(password: str) -> str:
+    return await run_in_threadpool(hash_password, password)
+
+
+async def verify_password_async(password: str, password_hash: str | None) -> bool:
+    """With no account (password_hash None) a throwaway hash is still checked,
+    so "no such email" takes as long as "wrong password" and response timing
+    doesn't reveal which emails are registered."""
+    if password_hash is None:
+        await run_in_threadpool(verify_password, password, _dummy_hash())
+        return False
+    return await run_in_threadpool(verify_password, password, password_hash)
 
 
 # ── JWT access tokens (short-lived, held in memory by the SPA) ────────

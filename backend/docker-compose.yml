@@ -39,7 +39,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_content
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Local machine only: the database is never reachable from your network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -52,7 +53,8 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes   # scheduled jobs survive restarts
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      # Local machine only: Redis has no password and holds the task queue.
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -70,8 +72,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - miniodata:/data
 
@@ -80,7 +82,12 @@ services:
   # One-off: create/upgrade tables, then add demo data (safe to repeat)
   migrate:
     <<: *backend
-    command: sh -c "alembic upgrade head && python -m seeds.seed"
+    environment:
+      <<: *backend-env
+      # Demo logins (incl. a super admin) whose password is in seeds/seed.py.
+      # Fine on your own machine; run with SEED_DEMO=0 anywhere others can reach.
+      SEED_DEMO: ${SEED_DEMO:-1}
+    command: sh -c 'alembic upgrade head && if [ "$$SEED_DEMO" = "1" ]; then python -m seeds.seed; else echo "Demo data skipped (SEED_DEMO=$$SEED_DEMO)"; fi'
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,9 +96,19 @@ services:
 
   api:
     <<: *backend
+    environment:
+      <<: *backend-env
+      # Requests arrive through the web container's nginx, which overwrites
+      # X-Forwarded-For with the real client address (frontend/nginx.conf).
+      # Without this every user shares nginx's address: one person's failed
+      # logins would lock everyone out.
+      TRUST_X_FORWARDED_FOR: "true"
+      TRUSTED_PROXY_COUNT: "1"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "${API_PORT:-8000}:8000"
+      # Local machine only. Other devices (a phone on your Wi-Fi) use the web
+      # app on WEB_PORT, whose nginx forwards /api here with the real client IP.
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:
       migrate:
         condition: service_completed_successfully

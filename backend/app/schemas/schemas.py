@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
@@ -70,6 +71,24 @@ def _clean_hashtags(v: list[str]) -> list[str]:
     if len(out) > HASHTAG_MAX_COUNT:
         raise ValueError(f"At most {HASHTAG_MAX_COUNT} hashtags are allowed")
     return out
+
+GUIDELINES_MAX_BYTES = 20_000  # palette, typography, banned terms: a few KB at most
+
+
+def _clean_guidelines(v):
+    """Brand guidelines are free-form, but keys starting with "_" belong to
+    the server (e.g. `_logo_storage_key`, which the logo upload deletes).
+    They are dropped from client input, never trusted: a client-chosen key
+    would let a member make the server delete any stored file."""
+    if v is None:
+        return None
+    if not isinstance(v, dict):
+        raise ValueError("brand_guidelines must be an object")
+    out = {k: val for k, val in v.items() if not str(k).startswith("_")}
+    if len(json.dumps(out, default=str)) > GUIDELINES_MAX_BYTES:
+        raise ValueError(f"brand_guidelines is too large (max {GUIDELINES_MAX_BYTES:,} bytes)")
+    return out
+
 
 from app.models.enums import OperationType, PlatformRole, SocialPlatform, ThemePreference, WorkspaceRole
 
@@ -231,6 +250,11 @@ class BrandCreate(BaseModel):
             raise ValueError("Brand name cannot be empty")
         return v
 
+    @field_validator("brand_guidelines")
+    @classmethod
+    def clean_guidelines(cls, v):
+        return _clean_guidelines(v)
+
 
 class BrandUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=NAME_MAX)
@@ -245,6 +269,11 @@ class BrandUpdate(BaseModel):
     @classmethod
     def no_null(cls, v, info):
         return _reject_null(v, info.field_name)
+
+    @field_validator("brand_guidelines")
+    @classmethod
+    def clean_guidelines(cls, v):
+        return _clean_guidelines(v)
 
 
 class BrandLogoResponse(BaseModel):
