@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, Circle, ExternalLink, LayoutTemplate } from "
 import { useMemo } from "react";
 import { Link } from "react-router";
 
-import { EmptyState, StatusBadge, TileTitle } from "@/components/common";
+import { EmptyState, InlineLoadError, LoadError, StatusBadge, TileTitle } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -114,6 +114,8 @@ export function HomePage() {
     ...(approved.data?.items ?? []).map((post) => ({ post, action: "Schedule", tone: "success" as const })),
   ].slice(0, 6);
   const attentionLoading = failed.isLoading || pending.isLoading || approved.isLoading;
+  const attentionError = failed.isError || partial.isError || pending.isError || approved.isError;
+  const retryAttention = () => [failed, partial, pending, approved].forEach((q) => q.isError && void q.refetch());
 
   const activeAccounts = (accounts.data ?? []).filter((a) => a.is_active);
   const setup = {
@@ -266,6 +268,8 @@ export function HomePage() {
               <Skeleton className="h-12" />
               <Skeleton className="h-12" />
             </div>
+          ) : attentionError ? (
+            <LoadError what="what needs your attention" onRetry={retryAttention} />
           ) : attention.length === 0 ? (
             <EmptyState title="You’re all caught up">Nothing needs approving, scheduling or fixing right now.</EmptyState>
           ) : (
@@ -300,6 +304,8 @@ export function HomePage() {
         </div>
         {scheduled.isLoading ? (
           <Skeleton className="h-24" />
+        ) : scheduled.isError ? (
+          <InlineLoadError what="the schedule" onRetry={() => void scheduled.refetch()} />
         ) : upcoming.length === 0 ? (
           <p className="m-0 text-muted-foreground">Nothing scheduled in the next 7 days.</p>
         ) : (
@@ -333,6 +339,8 @@ export function HomePage() {
         </div>
         {accounts.isLoading ? (
           <Skeleton className="h-16" />
+        ) : accounts.isError ? (
+          <InlineLoadError what="accounts" onRetry={() => void accounts.refetch()} />
         ) : activeAccounts.length === 0 ? (
           <>
             <p className="m-0 text-muted-foreground">No accounts connected yet.</p>

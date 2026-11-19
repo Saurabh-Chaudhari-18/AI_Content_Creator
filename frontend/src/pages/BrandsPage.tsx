@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState, PageHeader } from "@/components/common";
+import { EmptyState, LoadError, PageHeader } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import {
   AlertDialog,
@@ -52,7 +52,7 @@ function toForm(b?: Brand): BrandForm {
 }
 
 export function BrandsPage() {
-  const { brands, workspace } = useWorkspace();
+  const { brands, brandsError, retryBrands, workspace } = useWorkspace();
   const role = useMyRole();
   const isAdmin = role === "owner" || role === "admin";
   const [editing, setEditing] = useState<Brand | "new" | null>(null);
@@ -79,7 +79,11 @@ export function BrandsPage() {
         />
       </div>
 
-      {brands.length === 0 ? (
+      {brandsError ? (
+        <div className="md:col-span-12">
+          <LoadError what="your brands" onRetry={retryBrands} />
+        </div>
+      ) : brands.length === 0 ? (
         <div className="md:col-span-12">
           <EmptyState title="No brands yet">Add your business, or each client if you’re an agency.</EmptyState>
         </div>

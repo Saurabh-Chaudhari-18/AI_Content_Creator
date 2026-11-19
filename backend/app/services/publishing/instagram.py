@@ -108,7 +108,8 @@ class InstagramAdapter(SocialPublishAdapter):
                 except (httpx.TimeoutException, httpx.NetworkError) as exc:
                     raise UnknownOutcomePublishError(f"Instagram media_publish request dropped: {exc}") from exc
                 if p_resp.status_code != 200:
-                    _classify_meta_error(p_resp.status_code, _safe_error(p_resp), "Instagram publish")
+                    _classify_meta_error(p_resp.status_code, _safe_error(p_resp), "Instagram publish",
+                                         final_write=True)
 
                 media_id = p_resp.json().get("id")
                 return {

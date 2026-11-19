@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { EmptyState, PageHeader, StatusBadge } from "@/components/common";
+import { EmptyState, LoadError, PageHeader, StatusBadge } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -67,7 +67,7 @@ export function NewPostButton({ size = "default" }: { size?: "default" | "lg" })
 }
 
 export function PostsPage() {
-  const { brandName, brands, setBrandId } = useWorkspace();
+  const { brandName, brands, brandsError, retryBrands, setBrandId } = useWorkspace();
   const [params] = useSearchParams();
   const initial = params.get("status") as Post["status"] | null;
   const [filter, setFilter] = useState<Post["status"] | "all">(
@@ -124,6 +124,8 @@ export function PostsPage() {
               <Skeleton key={i} className="h-16" />
             ))}
           </div>
+        ) : posts.isError || brandsError ? (
+          <LoadError what="your posts" onRetry={() => (brandsError ? retryBrands() : void posts.refetch())} />
         ) : brands.length === 0 ? (
           <EmptyState title="Add a brand first">
             Posts belong to a brand. <Link to="/brands" className="font-semibold text-accent-foreground">Create a brand</Link>{" "}

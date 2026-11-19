@@ -753,6 +753,16 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
   };
   const onError = (e: unknown) => toast.error(e instanceof ApiError ? e.message : "Something went wrong.");
 
+  // Adding or removing a photo changes what was approved: the server moves an
+  // approved or scheduled post back to draft (and cancels its schedule).
+  // Ask first, exactly like saving a text change does.
+  const resetsApproval = post?.status === "approved" || post?.status === "scheduled";
+  const [pending, setPending] = useState<{ kind: "add"; file: File } | { kind: "remove"; id: string } | null>(null);
+  const afterChange = (done: string) => {
+    toast.success(resetsApproval ? `${done} It needs approval again.` : done);
+    refresh();
+  };
+
   const upload = useMutation({
     mutationFn: (file: File) => {
       const fd = new FormData();
@@ -760,17 +770,29 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
       fd.append("post_id", post!.id);
       return api(`/media/upload`, { method: "POST", body: fd });
     },
-    onSuccess: () => {
-      toast.success("Photo added.");
-      refresh();
-    },
+    onSuccess: () => afterChange("Photo added."),
     onError,
   });
   const removeMedia = useMutation({
     mutationFn: (mediaId: string) => api(`/media/${mediaId}`, { method: "DELETE" }),
-    onSuccess: refresh,
+    onSuccess: () => afterChange("Photo removed."),
     onError,
   });
+  const busy = upload.isPending || removeMedia.isPending;
+
+  function addFile(file: File) {
+    if (resetsApproval) setPending({ kind: "add", file });
+    else upload.mutate(file);
+  }
+  function removeFile(id: string) {
+    if (resetsApproval) setPending({ kind: "remove", id });
+    else removeMedia.mutate(id);
+  }
+  function confirmPending() {
+    if (pending?.kind === "add") upload.mutate(pending.file);
+    else if (pending?.kind === "remove") removeMedia.mutate(pending.id);
+    setPending(null);
+  }
   const reorder = useMutation({
     mutationFn: (ids: string[]) => api(`/media/reorder`, { method: "PATCH", body: { post_id: post!.id, media_ids: ids } }),
     onSuccess: refresh,
@@ -807,7 +829,7 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
                     <Button variant="ghost" size="icon" className="size-8" aria-label="Move later" disabled={i === media.length - 1 || reorder.isPending} onClick={() => move(i, 1)}>
                       <ArrowRight aria-hidden="true" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="size-8 hover:text-danger" aria-label="Remove photo" onClick={() => removeMedia.mutate(m.id)}>
+                    <Button variant="ghost" size="icon" className="size-8 hover:text-danger" aria-label="Remove photo" disabled={busy} onClick={() => removeFile(m.id)}>
                       <Trash2 aria-hidden="true" />
                     </Button>
                   </div>
@@ -819,7 +841,7 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  disabled={upload.isPending}
+                  disabled={busy}
                   className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-card text-[13px] text-muted-foreground transition-colors duration-150 hover:border-primary/60 hover:text-foreground"
                 >
                   <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -833,7 +855,7 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
                   aria-label="Choose a photo or video"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) upload.mutate(f);
+                    if (f) addFile(f);
                     e.target.value = "";
                   }}
                 />
@@ -844,6 +866,21 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
             JPG, PNG, WEBP or GIF up to 25 MB; MP4, MOV or WEBM up to 100 MB. Location data is removed from photos. Instagram uses the first
             photo; LinkedIn posts text only for now.
           </p>
+          <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{pending?.kind === "add" ? "Add this photo" : "Remove this photo"} and send back for approval?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This post is {post.status === "scheduled" ? "scheduled" : "approved"}. Changing its photos moves it back to draft
+                  {post.status === "scheduled" ? " and cancels the schedule" : ""}. Someone will need to approve it again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep it as it is</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmPending}>{pending?.kind === "add" ? "Add anyway" : "Remove anyway"}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </Section>

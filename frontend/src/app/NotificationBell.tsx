@@ -4,8 +4,7 @@ import { Bell, CheckCheck } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { approvalKeys, useNotifications, useUnreadCount, type AppNotification } from "@/lib/approvals";
 import { formatDateTime } from "@/lib/format";
@@ -58,36 +57,42 @@ export function NotificationBell({ side, className }: { side: "right" | "bottom"
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent side={side} align={side === "right" ? "end" : "end"} className="w-[min(22rem,calc(100vw-2rem))] p-0">
-        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+        {/* Every action is a menu item, so arrow keys reach it and Enter opens it
+            (plain buttons inside a menu can't be reached from the keyboard). */}
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
           <span className="text-sm font-medium">Notifications</span>
-          <Button size="sm" variant="ghost" disabled={!count || markAll.isPending} onClick={() => markAll.mutate()}>
+          <DropdownMenuItem
+            disabled={!count || markAll.isPending}
+            onSelect={(e) => {
+              e.preventDefault(); // keep the list open
+              markAll.mutate();
+            }}
+          >
             <CheckCheck aria-hidden="true" /> Mark all as read
-          </Button>
+          </DropdownMenuItem>
         </div>
-        <ul className="m-0 max-h-[60svh] overflow-y-auto p-0">
-          {list.isLoading && <li className="list-none px-3 py-6 text-center text-sm text-muted-foreground">Loading…</li>}
+        <div className="max-h-[60svh] overflow-y-auto">
+          {list.isLoading && <p className="m-0 px-3 py-6 text-center text-sm text-muted-foreground">Loading…</p>}
           {!list.isLoading && items.length === 0 && (
-            <li className="list-none px-3 py-6 text-center text-sm text-muted-foreground">Nothing yet. Approvals and client answers show up here.</li>
+            <p className="m-0 px-3 py-6 text-center text-sm text-muted-foreground">Nothing yet. Approvals and client answers show up here.</p>
           )}
           {items.map((n) => (
-            <li key={n.id} className="list-none border-b last:border-b-0">
-              <button
-                type="button"
-                onClick={() => openItem(n)}
-                className="flex w-full gap-2 px-3 py-2.5 text-left hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
-              >
-                <span aria-hidden="true" className={cn("mt-1.5 size-2 flex-none rounded-full", n.read_at ? "bg-transparent" : "bg-primary")} />
-                <span className="min-w-0 flex-1">
-                  <span className={cn("block text-sm leading-5", !n.read_at && "font-medium")}>{n.message}</span>
-                  <time dateTime={n.created_at} className="block text-xs text-muted-foreground">
-                    {formatDateTime(n.created_at)}
-                  </time>
-                </span>
-                {!n.read_at && <span className="sr-only">Unread</span>}
-              </button>
-            </li>
+            <DropdownMenuItem
+              key={n.id}
+              onSelect={() => openItem(n)}
+              className="items-start rounded-none border-b px-3 py-2.5 last:border-b-0 focus:bg-surface-hover focus:text-foreground"
+            >
+              <span aria-hidden="true" className={cn("mt-1.5 size-2 flex-none rounded-full", n.read_at ? "bg-transparent" : "bg-primary")} />
+              <span className="min-w-0 flex-1">
+                <span className={cn("block text-sm leading-5", !n.read_at && "font-medium")}>{n.message}</span>
+                <time dateTime={n.created_at} className="block text-xs text-muted-foreground">
+                  {formatDateTime(n.created_at)}
+                </time>
+              </span>
+              {!n.read_at && <span className="sr-only">Unread</span>}
+            </DropdownMenuItem>
           ))}
-        </ul>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

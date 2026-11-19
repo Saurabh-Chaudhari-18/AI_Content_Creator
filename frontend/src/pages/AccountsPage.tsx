@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import { EmptyState, PageHeader, TileTitle } from "@/components/common";
+import { EmptyState, LoadError, PageHeader, TileTitle } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import {
   AlertDialog,
@@ -113,6 +113,10 @@ export function AccountsPage() {
 
       {accounts.isLoading ? (
         [0, 1, 2].map((i) => <Skeleton key={i} className="h-48 md:col-span-4" />)
+      ) : accounts.isError ? (
+        <div className="md:col-span-12">
+          <LoadError what="your connected accounts" onRetry={() => void accounts.refetch()} />
+        </div>
       ) : (accounts.data ?? []).length === 0 ? (
         <div className="md:col-span-12">
           <EmptyState title="No accounts connected">

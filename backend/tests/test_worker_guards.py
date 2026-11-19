@@ -1,5 +1,5 @@
 """publish_post_task guards that do not need a database."""
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from app.core.exceptions import PermanentPublishError, RetryablePublishError, UnknownOutcomePublishError
 from app.workers.tasks.publish import IN_PROGRESS_GRACE

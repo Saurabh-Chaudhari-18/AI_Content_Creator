@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 
-import { PageHeader, StatusBadge, TileTitle } from "@/components/common";
+import { InlineLoadError, PageHeader, StatusBadge, TileTitle } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -110,6 +110,8 @@ export function CalendarPage() {
           </div>
         </div>
 
+        {cal.isError && <InlineLoadError what="the calendar" onRetry={() => void cal.refetch()} />}
+
         {/* Phones: a day-by-day agenda, since seven columns don't fit. */}
         <div className="md:hidden">
           {cal.isLoading ? (
@@ -117,7 +119,7 @@ export function CalendarPage() {
               <Skeleton className="h-14" />
               <Skeleton className="h-14" />
             </div>
-          ) : agenda.length === 0 ? (
+          ) : cal.isError ? null : agenda.length === 0 ? (
             <p className="m-0 rounded-xl bg-muted/50 px-4 py-6 text-center text-muted-foreground">Nothing on the calendar in {monthFmt.format(month)}.</p>
           ) : (
             <ol className="m-0 flex flex-col gap-2 p-0">
@@ -209,6 +211,8 @@ export function CalendarPage() {
           <TileTitle id="notyet-h">Not on the calendar yet</TileTitle>
           {unscheduled.isLoading ? (
             <Skeleton className="h-24" />
+          ) : unscheduled.isError ? (
+            <InlineLoadError what="these posts" onRetry={() => void unscheduled.refetch()} />
           ) : notOnCalendar.length === 0 ? (
             <p className="m-0 text-muted-foreground">Everything is scheduled.</p>
           ) : (

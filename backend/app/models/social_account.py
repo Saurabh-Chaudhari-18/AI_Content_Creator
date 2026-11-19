@@ -1,8 +1,8 @@
 import uuid
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Integer,
-    String, Text, UniqueConstraint, func,
+    Boolean, Column, DateTime, ForeignKey, Index, Integer,
+    String, Text, UniqueConstraint, func, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -49,6 +49,11 @@ class PublishJob(Base):
     post.status directly for success/failure (no last-write-wins races).
     """
     __tablename__ = "publish_jobs"
+    __table_args__ = (
+        # Double-post backstop (migration 0008): one live job per post+account.
+        Index("uq_publish_jobs_one_live_per_account", "post_id", "social_account_id", unique=True,
+              postgresql_where=text("status IN ('queued', 'processing')")),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True)

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { EmptyState, PageHeader } from "@/components/common";
+import { EmptyState, LoadError, PageHeader } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +94,10 @@ export function TemplatesPage() {
 
       {templates.isLoading ? (
         [0, 1, 2].map((i) => <Skeleton key={i} className="h-48 md:col-span-4" />)
+      ) : templates.isError ? (
+        <div className="md:col-span-12">
+          <LoadError what="templates" onRetry={() => void templates.refetch()} />
+        </div>
       ) : (templates.data?.items.length ?? 0) === 0 ? (
         <div className="md:col-span-12">
           <EmptyState title="No templates match">Try another industry or search word.</EmptyState>

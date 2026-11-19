@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.models.enums import PlatformRole, SocialPlatform, ThemePreference, WorkspaceRole
+
 
 # ── Shared limits (mirror the VARCHAR widths in the migration) ────────
 NAME_MAX = 255
@@ -89,8 +91,6 @@ def _clean_guidelines(v):
         raise ValueError(f"brand_guidelines is too large (max {GUIDELINES_MAX_BYTES:,} bytes)")
     return out
 
-
-from app.models.enums import OperationType, PlatformRole, SocialPlatform, ThemePreference, WorkspaceRole
 
 
 # ── Auth ──────────────────────────────────────────────────────────────

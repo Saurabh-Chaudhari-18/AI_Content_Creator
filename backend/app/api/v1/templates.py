@@ -5,7 +5,7 @@ every tenant, so an open write endpoint would let any customer inject
 content into every other customer's Post Studio. Content is managed
 through seed data (seeds/seed.py).
 """
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

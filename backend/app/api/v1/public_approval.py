@@ -7,7 +7,6 @@ surface. Every response is `no-store`, `no-referrer`, `noindex`.
 Plan: docs/client_approval_link_plan.md §4.4.
 """
 import logging
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
