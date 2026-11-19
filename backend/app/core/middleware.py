@@ -2,6 +2,7 @@
 import uuid
 from contextvars import ContextVar
 
+import sentry_sdk
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -45,8 +46,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        request_id = (request.headers.get("X-Request-ID") or uuid.uuid4().hex)[:64]
         request.state.request_id = request_id
+        # Ties a Sentry error to the X-Request-ID the browser saw (no-op when off).
+        sentry_sdk.set_tag("request_id", request_id)
         request_is_write.set(request.method not in _READ_METHODS)
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id

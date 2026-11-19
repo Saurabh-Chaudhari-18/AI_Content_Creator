@@ -33,6 +33,17 @@ class Settings(BaseSettings):
     # role, see migration 0006). Empty = connect as DATABASE_URL's user and
     # switch to that role, which needs that user to be a member of it.
     ADMIN_DATABASE_URL: str = ""
+    # Connection pools are PER PROCESS. Budget against Postgres
+    # max_connections (default 100): each API process uses up to
+    # POOL_SIZE + MAX_OVERFLOW (+5 admin); each worker process up to the same.
+    # Default 5 + 10: 3 API processes + 2 worker processes + beat ≈ 100 worst case.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    # A runaway query or a forgotten open transaction must not hold locks
+    # (a post's row lock blocks its "Post now") or connections forever.
+    DB_STATEMENT_TIMEOUT_MS: int = 30_000
+    DB_IDLE_IN_TRANSACTION_TIMEOUT_MS: int = 300_000  # API only; uploads can be slow
+    WORKER_STATEMENT_TIMEOUT_MS: int = 60_000
 
     # --- Redis (Celery broker + rate limiting) ---
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -84,6 +95,11 @@ class Settings(BaseSettings):
 
     # --- Frontend (OAuth callback redirects back here) ---
     FRONTEND_URL: str = "http://localhost:5173"
+
+    # --- Error reporting (Sentry). Empty DSN = off. ---
+    SENTRY_DSN: str = ""
+    SENTRY_ENVIRONMENT: str = ""  # empty = ENVIRONMENT
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0  # performance tracing; errors are always sent
 
     # --- Media storage ---
     # "local" serves from ./uploads for development. "s3" is REQUIRED for real

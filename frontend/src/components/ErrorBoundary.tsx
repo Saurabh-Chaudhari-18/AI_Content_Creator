@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { reportError } from "@/lib/monitoring";
 
 const RELOAD_FLAG = "omnipost:chunk-reload";
 
@@ -50,6 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return;
     }
     console.error("Screen crashed", error, info.componentStack);
+    reportError(error, { componentStack: info.componentStack });
   }
 
   componentDidMount() {

@@ -6,16 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OmniPost</title>
     <meta name="color-scheme" content="dark light" />
-    <script>
-      // Apply the saved theme before the first paint (dark is the default), so reloads never flash light.
-      (function () {
-        var t = "dark";
-        try { t = localStorage.getItem("acc-theme") || "dark"; } catch (e) {}
-        var dark = t === "dark" || (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-        if (dark) document.documentElement.classList.add("dark");
-        document.documentElement.style.colorScheme = dark ? "dark" : "light";
-      })();
-    </script>
+    <!-- Applies the saved theme before the first paint. Blocking on purpose; see the file. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

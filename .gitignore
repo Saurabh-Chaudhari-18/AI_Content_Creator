@@ -27,3 +27,7 @@ dist/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Production deploy: secrets and database dumps stay on the server
+deploy/.env
+deploy/backups/

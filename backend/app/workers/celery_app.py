@@ -1,6 +1,11 @@
 from celery import Celery
 
 from app.config import settings
+from app.core.observability import init_error_reporting
+
+# Failed tasks (a publish that crashed, a token refresh that broke) are
+# reported with the task name; Sentry's Celery integration is automatic.
+init_error_reporting("worker")
 
 celery_app = Celery(
     "ai_content_creator",
@@ -10,6 +15,7 @@ celery_app = Celery(
         "app.workers.tasks.token_refresh",
         "app.workers.tasks.cleanup",
         "app.workers.tasks.approvals",
+        "app.workers.tasks.monitoring",
     ],
 )
 
@@ -61,6 +67,11 @@ celery_app.conf.update(
         "cleanup-notifications": {
             "task": "app.workers.tasks.approvals.cleanup_notifications",
             "schedule": 24 * 3600.0,
+        },
+        # Overdue or failing posts → an ERROR log → a Sentry alert.
+        "check-publishing-health": {
+            "task": "app.workers.tasks.monitoring.check_publishing_health",
+            "schedule": 5 * 60.0,
         },
     },
 )

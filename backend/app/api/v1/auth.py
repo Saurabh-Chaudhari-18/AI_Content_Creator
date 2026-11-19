@@ -185,26 +185,35 @@ async def refresh_access_token(request: Request, response: Response,
     if not raw:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
 
-    record = await db.scalar(
-        select(RefreshToken).where(
+    # ROTATION: consume the old token, issue a new one. A stolen refresh
+    # token dies the moment the legitimate client rotates.
+    # Consumed in ONE statement: two requests with the same cookie (two tabs
+    # waking up together) can't both pass a check and both mint a session —
+    # the second UPDATE waits for the first and then matches nothing.
+    user_id = await db.scalar(
+        update(RefreshToken)
+        .where(
             RefreshToken.token_hash == hash_refresh_token(raw),
             RefreshToken.is_revoked == False,  # noqa: E712
+            RefreshToken.expires_at > datetime.now(timezone.utc),
         )
+        .values(is_revoked=True)
+        .returning(RefreshToken.user_id)
     )
-    if not record or record.expires_at < datetime.now(timezone.utc):
-        _clear_auth_cookies(response)
+    if user_id is None:
+        # No cookie deletion here: when another tab has just rotated this
+        # token, the browser already holds that tab's NEW cookie, and
+        # deleting the cookies would sign every tab out.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked or expired")
 
     # The account must still be active — a deactivated user must not keep
     # minting fresh access tokens from an old refresh token.
-    user = await db.scalar(select(User).where(User.id == record.user_id))
+    user = await db.scalar(select(User).where(User.id == user_id))
     if not user or not user.is_active:
+        await db.commit()  # keep the token consumed
         _clear_auth_cookies(response)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is inactive")
 
-    # ROTATION: consume the old token, issue a new one. A stolen refresh
-    # token dies the moment the legitimate client rotates.
-    record.is_revoked = True
     raw_new, new_record = _new_refresh_record(request, user.id)
     db.add(new_record)
     await db.commit()

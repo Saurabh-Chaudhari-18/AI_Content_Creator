@@ -1,0 +1,19 @@
+# HTTPS in front of the whole app. Caddy gets and renews the TLS
+# certificate from Let's Encrypt automatically: DOMAIN must point at this
+# server and ports 80 and 443 must be open.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Browsers only ever use HTTPS for this site from now on (HSTS).
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header -Server
+
+	# Uploads: 100 MB videos plus form overhead (matches nginx).
+	request_body {
+		max_size 110MB
+	}
+
+	# Caddy replaces any X-Forwarded-For a visitor sends with their real
+	# address; nginx in the web container reads it (nginx-real-ip.conf).
+	reverse_proxy web:80
+}

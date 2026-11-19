@@ -13,6 +13,7 @@ from sqlalchemy.exc import DataError, IntegrityError
 from app.api.v1.router import api_v1_router
 from app.config import settings
 from app.core.middleware import RequestIDMiddleware, SecurityHeadersMiddleware
+from app.core.observability import init_error_reporting
 from app.services.features import PLAN_FEATURE_HEADER, PLAN_RESTRICTION_HEADER
 from app.services.storage import LOCAL_UPLOAD_DIR
 
@@ -72,6 +73,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    init_error_reporting("api")
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,

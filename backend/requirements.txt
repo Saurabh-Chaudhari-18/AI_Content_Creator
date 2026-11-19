@@ -30,6 +30,9 @@ redis==6.4.0
 # --- HTTP client (platform adapters, OAuth) ---
 httpx==0.27.2
 
+# --- Error reporting (on only when SENTRY_DSN is set) ---
+sentry-sdk[fastapi,celery]==2.74.0
+
 # --- Media pipeline ---
 Pillow==13.0.0
 filetype==1.2.0
