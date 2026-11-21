@@ -90,7 +90,8 @@ export function AccountsPage() {
       <Tile className="flex-row flex-wrap items-center justify-between gap-4 md:col-span-12">
         <PageHeader
           eyebrow="Posts go out through these"
-          title="Your social accounts"
+          title="Social Accounts"
+          accent={accounts.data ? `${accounts.data.filter((a) => a.is_active).length} connected` : undefined}
           actions={
             isAdmin ? (
               <>
