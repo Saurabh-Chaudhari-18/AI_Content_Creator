@@ -197,11 +197,14 @@ export function ApprovalActions({
   canApprove,
   canManage,
   approveBlockedReason,
+  size = "default",
 }: {
   post: Post;
   canApprove: boolean;
   canManage: boolean;
   approveBlockedReason: string | null;
+  /** "lg" in the Approval Studio card, where these are the page's main buttons. */
+  size?: "default" | "lg";
 }) {
   const qc = useQueryClient();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -249,16 +252,16 @@ export function ApprovalActions({
     <div className="flex flex-wrap items-center gap-2">
       {!canApprove && approveBlockedReason && <span className="text-[13px] text-muted-foreground">{approveBlockedReason}</span>}
       {canManage && (
-        <Button variant="outline" onClick={() => withdraw.mutate()} disabled={withdraw.isPending}>
+        <Button variant="outline" size={size} onClick={() => withdraw.mutate()} disabled={withdraw.isPending}>
           <Undo2 aria-hidden="true" /> Withdraw to edit
         </Button>
       )}
       {canApprove && (
         <>
-          <Button variant="outline" onClick={() => setRejectOpen(true)}>
+          <Button variant="outline" size={size} onClick={() => setRejectOpen(true)}>
             Request changes
           </Button>
-          <Button className="btn-depth" onClick={() => approve.mutate()} disabled={approve.isPending}>
+          <Button className="btn-depth" size={size} onClick={() => approve.mutate()} disabled={approve.isPending}>
             <ShieldCheck aria-hidden="true" /> {approve.isPending ? "Approving…" : "Approve"}
           </Button>
         </>
