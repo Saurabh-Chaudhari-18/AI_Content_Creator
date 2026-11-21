@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#0B0F17}
+*{box-sizing:border-box}
+a{color:#A5B4FC}a:hover{color:#C7D2FE}
+button{font:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1000px; display: flex; flex-wrap: wrap; align-items: stretch; background: #0B0F17; color: #E8ECF4; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<nav aria-label="Main" style="flex: 1 1 252px; max-width: 100%; background: #0E131D; border-right: 1px solid #1C2537; padding: 22px 16px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 34px; height: 34px; border-radius: 10px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z"></path></svg>
+</div>
+<span style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em">OmniPost</span>
+</div>
+<button type="button" aria-label="Switch brand. Showing all brands" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 8px 12px; border: 1px solid #2A354B; border-radius: 12px; background: #131A26; color: #E8ECF4; text-align: left">
+<span style="display: flex; flex: none">
+<span style="width: 26px; height: 26px; border-radius: 8px; background: #FB923C; color: #1A0E05; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #131A26">FG</span>
+<span style="width: 26px; height: 26px; margin-left: -8px; border-radius: 8px; background: #2DD4BF; color: #042F2A; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #131A26">AC</span>
+</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 12px; color: #A3AEC2">Showing</span><span style="font-weight: 700">All brands</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3AEC2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+</button>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="#home" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+<a href="#review" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11 3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+<span style="flex: 1">To approve</span>
+<span style="min-width: 24px; height: 22px; padding: 0 7px; border-radius: 11px; background: rgba(245,158,11,0.16); color: #FCD34D; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span></a>
+<a href="#posts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>All posts</a>
+<a href="#calendar" aria-current="page" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #1B2536; color: #FFFFFF; text-decoration: none; font-weight: 700">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>Calendar</a>
+<a href="#templates" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>Templates</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="padding: 0 12px 6px; font-size: 12px; font-weight: 600; color: #8C97AD">Workspace</span>
+<a href="#accounts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+<span style="flex: 1">Social accounts</span>
+<span role="img" aria-label="1 needs attention" style="width: 9px; height: 9px; border-radius: 5px; background: #F87171"></span></a>
+<a href="#brands" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9 4.5 4h15L21 9"></path><path d="M3 9v11h18V9"></path><path d="M3 9h18"></path><path d="M9 20v-6h6v6"></path></svg>Brands</a>
+<a href="#settings" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Settings</a>
+</div>
+<div style="flex: 1"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: #131A26; border: 1px solid #1C2537">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 18px; background: #312E81; color: #E0E7FF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">DB</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 700; font-size: 14px">Demo Business</span><span style="font-size: 12px; color: #A3AEC2">Owner · Demo Agency</span></span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 24px 32px 32px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em">16 – 22 November</h1>
+<div style="display: flex; gap: 6px">
+<button type="button" aria-label="Previous week" style="width: 40px; height: 40px; border: 1px solid #2A354B; border-radius: 10px; background: #111722; color: #C3CBDA; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+<button type="button" style="height: 40px; padding: 0 14px; border: 1px solid #2A354B; border-radius: 10px; background: #111722; color: #E8ECF4; font-weight: 600">Today</button>
+<button type="button" aria-label="Next week" style="width: 40px; height: 40px; border: 1px solid #2A354B; border-radius: 10px; background: #111722; color: #C3CBDA; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+</div>
+<span style="flex: 1"></span>
+<div style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #111722; border: 1px solid #1F2A3D">
+<button type="button" aria-pressed="true" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: #2A354B; color: #FFFFFF; font-weight: 700; font-size: 14px">Week</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; color: #C3CBDA; font-weight: 600; font-size: 14px">Month</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; color: #C3CBDA; font-weight: 600; font-size: 14px">List</button>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: {{accent}}; color: #FFFFFF; font-weight: 700">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>New post</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<aside aria-labelledby="p-ready" style="flex: 1 1 250px; max-width: 100%; display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: #111722; border: 1px solid #1F2A3D">
+<div>
+<h2 id="p-ready" style="margin: 0; font-size: 16px; font-weight: 700">Ready to schedule</h2>
+<p style="margin: 2px 0 0; font-size: 13px; color: #A3AEC2">Approved with no date yet. Drag onto a day, or pick a time.</p>
+</div>
+<sc-for list="{{ready}}" as="r" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 14px; background: #151D2A; border: 1px solid #232E42">
+<div role="img" aria-label="Post photo" style="height: 72px; border-radius: 10px; background: {{r.bg}}"></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 2px">
+<span style="font-weight: 700; font-size: 14px">{{r.title}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #A3AEC2"><span style="width: 8px; height: 8px; border-radius: 4px; background: {{r.dot}}"></span>{{r.brand}} · {{r.channels}}</span>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border: 1px solid #33415C; border-radius: 10px; background: transparent; color: #E8ECF4; font-weight: 600; font-size: 13px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Pick a time</button>
+</div>
+</sc-for>
+</aside>
+
+<section aria-label="Week of 16 November" style="flex: 999 1 640px; min-width: 0; border-radius: 18px; background: #111722; border: 1px solid #1F2A3D; overflow-x: auto">
+<div style="min-width: 860px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr))">
+<sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; gap: 8px; min-height: 720px; padding: 12px 8px; border-right: 1px solid #1C2537; background: {{day.bg}}">
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 10px; border-bottom: 1px solid #1C2537">
+<span style="font-size: 13px; font-weight: 600; color: #A3AEC2">{{day.name}}</span>
+<sc-if value="{{day.today}}" hint-placeholder-val="{{false}}">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: {{accent}}; color: #FFFFFF; font-weight: 800; display: flex; align-items: center; justify-content: center">{{day.num}}</span>
+<span style="font-size: 12px; font-weight: 700; color: #A5B4FC">Today</span>
+</sc-if>
+<sc-if value="{{day.notToday}}" hint-placeholder-val="{{true}}">
+<span style="height: 32px; font-weight: 800; font-size: 17px; display: flex; align-items: center; color: {{day.numColor}}">{{day.num}}</span>
+</sc-if>
+</div>
+<sc-for list="{{day.posts}}" as="p" hint-placeholder-count="1">
+<a href="#open-post" style="display: flex; flex-direction: column; gap: 6px; padding: 6px 6px 10px; border-radius: 12px; background: #151D2A; border: 1px solid {{p.border}}; color: #E8ECF4; text-decoration: none; opacity: {{p.opacity}}">
+<div role="img" aria-label="Post photo" style="height: 54px; border-radius: 8px; background: {{p.bg}}"></div>
+<span style="display: flex; align-items: center; gap: 6px; padding: 0 4px; font-size: 12px; color: #C3CBDA; font-weight: 600"><span style="width: 8px; height: 8px; flex: none; border-radius: 4px; background: {{p.dot}}"></span>{{p.time}}</span>
+<span style="padding: 0 4px; font-weight: 700; font-size: 13px; line-height: 1.3">{{p.title}}</span>
+<span style="margin: 0 4px; align-self: flex-start; height: 22px; padding: 0 8px; border-radius: 11px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; background: {{p.sbg}}; color: {{p.sfg}}">{{p.status}}</span>
+</a>
+</sc-for>
+<sc-if value="{{day.canAdd}}" hint-placeholder-val="{{true}}">
+<button type="button" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 1.5px dashed #2A354B; border-radius: 12px; background: transparent; color: #A3AEC2; font-size: 13px; font-weight: 600">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Add</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: #C3CBDA">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #FB923C"></span>FitZone Gym</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #2DD4BF"></span>Aura Coffee</span>
+<span style="flex: 1"></span>
+<span>Past posts are dimmed · Times in India time (IST)</span>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#4F46E5","options":["#4F46E5","#7C3AED","#EA580C","#0F766E"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const FZ = '#FB923C', AC = '#2DD4BF';
+    const G = {
+      sun: 'linear-gradient(160deg, #FCD34D 0%, #EA580C 55%, #431407 100%)',
+      slate: 'linear-gradient(160deg, #94A3B8 0%, #334155 60%, #0F172A 100%)',
+      teal: 'linear-gradient(160deg, #5EEAD4 0%, #0F766E 60%, #042F2A 100%)',
+      coffee: 'linear-gradient(160deg, #D6A35C 0%, #7C4A12 60%, #2A1705 100%)',
+      rose: 'linear-gradient(160deg, #F472B6 0%, #9D174D 60%, #3B0A20 100%)',
+      blue: 'linear-gradient(160deg, #60A5FA 0%, #1E3A8A 60%, #0B1530 100%)',
+      violet: 'linear-gradient(160deg, #A78BFA 0%, #6D28D9 55%, #2E1065 100%)',
+      green: 'linear-gradient(160deg, #86EFAC 0%, #15803D 60%, #052E16 100%)'
+    };
+    const S = {
+      posted: { status: 'Posted', sbg: 'rgba(16,185,129,0.16)', sfg: '#6EE7B7', border: '#232E42', opacity: '0.72' },
+      scheduled: { status: 'Scheduled', sbg: 'rgba(59,130,246,0.16)', sfg: '#93C5FD', border: '#232E42', opacity: '1' },
+      fix: { status: 'Needs a fix', sbg: 'rgba(239,68,68,0.16)', sfg: '#FCA5A5', border: 'rgba(248,113,113,0.55)', opacity: '1' }
+    };
+    const post = (time, title, dot, bg, s) => ({ time, title, dot, bg, ...S[s] });
+    const days = [
+      { name: 'Mon', num: '16', posts: [post('9:00 AM', 'Monday motivation', FZ, G.slate, 'posted')] },
+      { name: 'Tue', num: '17', posts: [post('8:00 AM', 'Cold brew is back', AC, G.coffee, 'posted')] },
+      { name: 'Wed', num: '18', posts: [post('9:00 AM', 'Wednesday workout tip', FZ, G.slate, 'posted'), post('6:00 PM', 'Latte art evening', AC, G.coffee, 'posted')] },
+      { name: 'Thu', num: '19', posts: [post('12:30 PM', 'Healthy lunch bowl', AC, G.green, 'posted')] },
+      { name: 'Fri', num: '20', posts: [] },
+      { name: 'Sat', num: '21', today: true, posts: [post('7:00 AM', 'Saturday bootcamp', FZ, G.sun, 'posted'), post('4:00 PM', 'Weekend pastry box', AC, G.rose, 'scheduled')] },
+      { name: 'Sun', num: '22', posts: [post('10:30 AM', 'Community drop-in', FZ, G.blue, 'fix'), post('6:00 PM', 'Sunday slow brew', AC, G.coffee, 'scheduled')] }
+    ].map((d, i) => ({ ...d, today: !!d.today, notToday: !d.today, canAdd: i >= 5, bg: d.today ? 'rgba(99,102,241,0.07)' : 'transparent', numColor: i < 5 ? '#8C97AD' : '#E8ECF4' }));
+    const ready = [
+      { title: 'New-member welcome offer', brand: 'FitZone Gym', dot: FZ, channels: 'IG + FB', bg: G.violet },
+      { title: 'Festive menu teaser', brand: 'Aura Coffee', dot: AC, channels: 'Instagram', bg: G.teal }
+    ];
+    return { accent: this.props.accent ?? '#4F46E5', days, ready };
+  }
+}
+</script>
+</body>
+</html>

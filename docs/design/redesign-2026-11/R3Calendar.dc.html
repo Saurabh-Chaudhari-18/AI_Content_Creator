@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Posting Calendar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+.th{--bg:#120D0A;--side:#17110D;--sunk:#1A130F;--panel:#1D1511;--panel2:#221913;--panel3:#2A1F18;--line:#2C2119;--bd1:#33261D;--bd2:#3A2B21;--bd3:#4A3727;--bd4:#5A4433;--tx:#F4EADF;--tx2:#D9CBBB;--mut:#BFAE9B;--sub:#9C8A77;--ac:#EE8F35;--ac-tx:#F5A65B;--ac-lab:#F0A04F;--ac-pill:#F5B371;--ac-hi:#FBC48C;--ac-soft:#F5C89A;--g1:#F6A24A;--g2:#E2802A;--rim:#B8601E;--on-ac:#1F1208;--inv-bg:#F4EADF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A08F;--bad2:#DC5A3C;--bad-dk:#9E3E2A;--bad-tx:#F3C3B8;--info:#B5C9EE;--info2:#9DB8E8;--on-inv:#1F1208}
+.th[data-theme="obsidian"]{--bg:#0B0F17;--side:#111722;--sunk:#0E131D;--panel:#151D2A;--panel2:#1B2536;--panel3:#212E44;--line:#1C2537;--bd1:#232E42;--bd2:#27334A;--bd3:#2B3850;--bd4:#3A4864;--tx:#E8ECF4;--tx2:#C3CBDA;--mut:#A3AEC2;--sub:#8B97AD;--ac:#6366F1;--ac-tx:#A5B4FC;--ac-lab:#818CF8;--ac-pill:#C7D2FE;--ac-hi:#E0E7FF;--ac-soft:#C7D2FE;--g1:#6366F1;--g2:#4F46E5;--rim:#3730A3;--on-ac:#FFFFFF;--inv-bg:#E8ECF4;--ok:#34D399;--ok-tx:#6EE7B7;--bad:#F87171;--bad2:#E5484D;--bad-dk:#9B2C2F;--bad-tx:#FCA5A5;--info:#93C5FD;--info2:#60A5FA;--on-inv:#0B0F17}
+.th[data-theme="daylight"]{--bg:#F5F7FA;--side:#FFFFFF;--sunk:#EEF1F6;--panel:#FFFFFF;--panel2:#F6F8FB;--panel3:#EEF1F6;--line:#E9EDF3;--bd1:#E3E7EE;--bd2:#DCE1EA;--bd3:#D5DBE5;--bd4:#B8C1CF;--tx:#111827;--tx2:#374151;--mut:#4B5565;--sub:#6B7280;--ac:#4F46E5;--ac-tx:#4338CA;--ac-lab:#4F46E5;--ac-pill:#3730A3;--ac-hi:#312E81;--ac-soft:#3730A3;--g1:#5B54EA;--g2:#4338CA;--rim:#4F46E5;--on-ac:#FFFFFF;--inv-bg:#111827;--ok:#059669;--ok-tx:#047857;--bad:#DC2626;--bad2:#DC2626;--bad-dk:#991B1B;--bad-tx:#991B1B;--info:#1D4ED8;--info2:#3B82F6;--on-inv:#FFFFFF}
+.th[data-theme="amethyst"]{--bg:#110C1A;--side:#150F21;--sunk:#181125;--panel:#1C1429;--panel2:#231933;--panel3:#2C2040;--line:#2A1F3A;--bd1:#31253F;--bd2:#392B4A;--bd3:#4A3860;--bd4:#5C4878;--tx:#F3EEFA;--tx2:#D6CCE6;--mut:#B6A9CB;--sub:#8E7FA6;--ac:#D9A93E;--ac-tx:#E8C46A;--ac-lab:#E2B550;--ac-pill:#EBCB7E;--ac-hi:#F3D995;--ac-soft:#E9D29A;--g1:#EDC66A;--g2:#C9962E;--rim:#8A6418;--on-ac:#1E1405;--inv-bg:#F3EEFA;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A0A8;--bad2:#D9506A;--bad-dk:#8E2A44;--bad-tx:#F6C2CC;--info:#BFC8F2;--info2:#A0AEEA;--on-inv:#1E1405}
+.th[data-theme="sapphire"]{--bg:#0A0F1E;--side:#0D1427;--sunk:#0F172C;--panel:#121B32;--panel2:#17223D;--panel3:#1D2A4A;--line:#1C2843;--bd1:#22304F;--bd2:#293A5E;--bd3:#364B76;--bd4:#465E8E;--tx:#EEF3FC;--tx2:#CAD5EC;--mut:#A6B4D2;--sub:#7C8CB0;--ac:#6FA3FF;--ac-tx:#8DB6FF;--ac-lab:#7FAEFF;--ac-pill:#A3C4FF;--ac-hi:#C2D8FF;--ac-soft:#B8CFFF;--g1:#9CC3FF;--g2:#5E95F2;--rim:#2F5FC4;--on-ac:#08132E;--inv-bg:#EEF3FC;--ok:#7FD8A8;--ok-tx:#A3E6C1;--bad:#F5A3A3;--bad2:#E05A5A;--bad-dk:#9A2F3A;--bad-tx:#F8C6C6;--info:#C9B8F5;--info2:#B09AF0;--on-inv:#08132E}
+.th[data-theme="emerald"]{--bg:#08130F;--side:#0B1813;--sunk:#0D1B16;--panel:#10201A;--panel2:#152821;--panel3:#1B3229;--line:#1A2B24;--bd1:#20352C;--bd2:#273F35;--bd3:#335244;--bd4:#426654;--tx:#EEF6F1;--tx2:#CBDDD3;--mut:#A6BFB2;--sub:#7C978A;--ac:#D8B970;--ac-tx:#E3C987;--ac-lab:#DDBF77;--ac-pill:#E8D39C;--ac-hi:#F0E0B5;--ac-soft:#E6D5A6;--g1:#ECD493;--g2:#C8A552;--rim:#8A6E2A;--on-ac:#1A1405;--inv-bg:#EEF6F1;--ok:#8FD9B0;--ok-tx:#AEE6C6;--bad:#F3A08F;--bad2:#D9553C;--bad-dk:#9A3A28;--bad-tx:#F6C4B8;--info:#B7CAF0;--info2:#98B2EA;--on-inv:#1A1405}
+.th[data-theme="burgundy"]{--bg:#14080C;--side:#1A0B10;--sunk:#1D0D13;--panel:#221016;--panel2:#2A151C;--panel3:#331A23;--line:#2E1820;--bd1:#381E28;--bd2:#422431;--bd3:#573042;--bd4:#6C3E54;--tx:#F8EDEF;--tx2:#E2CDD2;--mut:#C6A9B1;--sub:#9C7F88;--ac:#E8A07E;--ac-tx:#F0B497;--ac-lab:#EBA585;--ac-pill:#F3C0A6;--ac-hi:#F8D3BF;--ac-soft:#F2C9B4;--g1:#F2B595;--g2:#D3845F;--rim:#8E4A30;--on-ac:#24100A;--inv-bg:#F8EDEF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#FF9FA8;--bad2:#E0405A;--bad-dk:#9C2338;--bad-tx:#FFC7CD;--info:#B9C6F0;--info2:#9DAEEA;--on-inv:#24100A}
+.th[data-theme="ivory"]{--bg:#F6F1E7;--side:#EFE7D8;--sunk:#F3ECDF;--panel:#FFFDF8;--panel2:#FAF5EA;--panel3:#F1E8D6;--line:#E4D9C4;--bd1:#E0D3BB;--bd2:#D6C7AB;--bd3:#C2AF8C;--bd4:#A8936C;--tx:#1B2340;--tx2:#33405F;--mut:#4E5B78;--sub:#6D7891;--ac:#1F3A8A;--ac-tx:#1F3A8A;--ac-lab:#7A5A12;--ac-pill:#7A5A12;--ac-hi:#12286A;--ac-soft:#7A5A12;--g1:#2B4DAA;--g2:#1A3079;--rim:#B8902F;--on-ac:#FFFBF2;--inv-bg:#1B2340;--ok:#2E8B57;--ok-tx:#1F6B42;--bad:#C2412D;--bad2:#D9553C;--bad-dk:#9E3E2A;--bad-tx:#8E2A1C;--info:#2F5DB8;--info2:#3D6BC4;--on-inv:#FFFBF2}
+body{margin:0;background:var(--bg)}
+*{box-sizing:border-box}
+a{color:var(--ac-tx)}a:hover{color:var(--ac-hi)}
+button{font:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="th" data-theme="{{theme}}" style="width: 100%; min-height: 1040px; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bg); color: var(--tx); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<div style="flex: 1 1 264px; max-width: 100%; background: var(--side); border-right: 1px solid var(--line)">
+<dc-import name="R3Sidebar" active="calendar" hint-size="100%,1000px"></dc-import>
+</div>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 22px 40px; border-bottom: 1px solid var(--line)">
+<h1 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 34px">Posting Calendar <span style="color: var(--ac-lab); font-style: italic">· 16 – 22 Nov</span></h1>
+<span style="flex: 1"></span>
+<span style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid var(--bd3); background: var(--panel); font-size: 14px; font-weight: 500"><span style="width: 9px; height: 9px; border-radius: 5px; background: var(--ok)"></span>Auto-publish is on</span>
+<a href="R3Compose.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 12px; background: linear-gradient(180deg, var(--g1) 0%, var(--g2) 100%); color: var(--on-ac); text-decoration: none; font-weight: 700; box-shadow: 0 10px 28px color-mix(in srgb, var(--ac) 28%, transparent)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>New post</a>
+</header>
+
+<div style="display: flex; flex-direction: column; gap: 20px; padding: 28px 40px 40px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px">
+<button type="button" aria-label="Previous week" style="width: 44px; height: 44px; border: 1px solid var(--bd3); border-radius: 10px; background: var(--panel); color: var(--tx); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 1px solid var(--bd3); border-radius: 10px; background: var(--panel); color: var(--tx); font-weight: 600">Today</button>
+<button type="button" aria-label="Next week" style="width: 44px; height: 44px; border: 1px solid var(--bd3); border-radius: 10px; background: var(--panel); color: var(--tx); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+<span style="flex: 1"></span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--tx2)"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--ac)"></span>FitZone Gym</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--tx2); margin-right: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #C9A27A"></span>Aura Coffee</span>
+<div style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid var(--bd1); background: var(--panel)">
+<button type="button" aria-pressed="true" style="height: 36px; padding: 0 16px; border: 0; border-radius: 8px; background: linear-gradient(180deg, var(--g1) 0%, var(--g2) 100%); color: var(--on-ac); font-weight: 700; font-size: 14px">Week</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 16px; border: 0; border-radius: 8px; background: transparent; color: var(--tx2); font-weight: 600; font-size: 14px">Month</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 16px; border: 0; border-radius: 8px; background: transparent; color: var(--tx2); font-weight: 600; font-size: 14px">List</button>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<aside aria-labelledby="c3-ready" style="flex: 1 1 260px; max-width: 100%; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 22px; border: 1px solid var(--bd1); background: var(--panel)">
+<div>
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">Approved, no date yet</div>
+<h2 id="c3-ready" style="margin: 2px 0 4px; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 24px">Ready to Schedule</h2>
+<p style="margin: 0; font-size: 13px; color: var(--mut)">Drag one onto a day, or pick a time.</p>
+</div>
+<sc-for list="{{ready}}" as="r" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 16px; border: 1px solid var(--bd1); background: var(--panel2)">
+<div role="img" aria-label="Post photo" style="height: 84px; border-radius: 10px; border: 1px solid var(--bd3); background: {{r.bg}}"></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 2px">
+<span style="font-weight: 700; font-size: 15px">{{r.title}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mut)"><span style="width: 7px; height: 7px; border-radius: 4px; background: {{r.dot}}"></span>{{r.brand}} · {{r.channels}}</span>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; border: 1px solid color-mix(in srgb, var(--ac-lab) 55%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--ac) 10%, transparent); color: var(--ac-hi); font-weight: 700; font-size: 14px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Pick a time</button>
+</div>
+</sc-for>
+</aside>
+
+<section aria-label="Week of 16 November" style="flex: 999 1 640px; min-width: 0; border-radius: 22px; border: 1px solid var(--bd1); background: var(--panel); overflow-x: auto">
+<div style="min-width: 880px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr))">
+<sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; gap: 10px; min-height: 760px; padding: 14px 8px; border-right: 1px solid var(--line); background: {{day.bg}}">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 4px 12px; border-bottom: 1px solid var(--line)">
+<span style="width: 46px; height: 46px; flex: none; border-radius: 8px; border: 1px solid {{day.box}}; background: {{day.boxBg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05"><span style="font-family: 'Playfair Display', Georgia, serif; font-size: 15px; color: {{day.nameFg}}">{{day.name}}</span><span style="font-size: 13px; font-weight: 700; color: {{day.numFg}}">{{day.num}}</span></span>
+<sc-if value="{{day.today}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ac-tx)">Today</span></sc-if>
+</div>
+<sc-for list="{{day.posts}}" as="p" hint-placeholder-count="1">
+<a href="{{p.href}}" style="display: flex; flex-direction: column; gap: 6px; padding: 6px 6px 10px; border-radius: 12px; border: 1px solid {{p.border}}; background: var(--panel2); color: var(--tx); text-decoration: none; opacity: {{p.opacity}}">
+<div role="img" aria-label="Post photo" style="height: 58px; border-radius: 8px; background: {{p.bg}}"></div>
+<span style="display: flex; align-items: center; gap: 6px; padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--tx2)"><span style="width: 7px; height: 7px; flex: none; border-radius: 4px; background: {{p.dot}}"></span>{{p.time}}</span>
+<span style="padding: 0 4px; font-weight: 700; font-size: 13px; line-height: 1.3">{{p.title}}</span>
+<span style="margin: 0 4px; align-self: flex-start; height: 22px; padding: 0 7px; border-radius: 5px; border: 1px solid {{p.sb}}; color: {{p.sfg}}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{p.status}}</span>
+</a>
+</sc-for>
+<sc-if value="{{day.canAdd}}" hint-placeholder-val="{{true}}">
+<a href="R3Compose.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 42px; border: 1.5px dashed var(--bd3); border-radius: 12px; color: var(--mut); text-decoration: none; font-size: 13px; font-weight: 600">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Add post</a>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</div>
+<p style="margin: 0; font-size: 13px; color: var(--mut)">Past posts are dimmed · Times in India time (IST)</p>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["espresso","obsidian","daylight","amethyst","sapphire","emerald","burgundy","ivory"],"default":"espresso"},"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const FZ = 'var(--ac)', AC = '#C9A27A';
+    const g = (a, b, c) => 'linear-gradient(170deg, ' + a + ' 0%, ' + b + ' 50%, ' + c + ' 100%)';
+    const S = {
+      posted: { status: 'Posted', sb: 'color-mix(in srgb, var(--ok) 50%, transparent)', sfg: 'var(--ok-tx)', border: 'var(--bd1)', opacity: '0.7', href: 'R3Posts.dc.html' },
+      sched: { status: 'Scheduled', sb: 'color-mix(in srgb, var(--info2) 50%, transparent)', sfg: 'var(--info)', border: 'var(--bd1)', opacity: '1', href: 'R3Posts.dc.html' },
+      fix: { status: 'Needs a fix', sb: 'color-mix(in srgb, var(--bad) 60%, transparent)', sfg: 'var(--bad)', border: 'color-mix(in srgb, var(--bad) 55%, transparent)', opacity: '1', href: 'R3Accounts.dc.html' }
+    };
+    const post = (time, title, dot, bg, s) => ({ time, title, dot, bg, ...S[s] });
+    const days = [
+      { name: 'Mon', num: '16', posts: [post('9:00 AM', 'Monday motivation', FZ, g('#BFA58A', '#5E4636', '#1A120D'), 'posted')] },
+      { name: 'Tue', num: '17', posts: [post('8:00 AM', 'Cold brew is back', AC, g('#B98A5E', '#5E3A1E', '#1B0F08'), 'posted')] },
+      { name: 'Wed', num: '18', posts: [post('9:00 AM', 'Wednesday workout tip', FZ, g('#C7B29A', '#6E5440', '#1E150F'), 'posted'), post('6:00 PM', 'Latte art evening', AC, g('#E2B98C', '#94592E', '#2B170C'), 'posted')] },
+      { name: 'Thu', num: '19', posts: [post('12:30 PM', 'Healthy lunch bowl', AC, g('#D8C08A', '#7D6A34', '#221C0C'), 'posted')] },
+      { name: 'Fri', num: '20', posts: [] },
+      { name: 'Sat', num: '21', today: true, posts: [post('7:00 AM', 'Saturday bootcamp', FZ, g('#F7C873', '#E07A2A', '#5A2A12'), 'posted'), post('4:00 PM', 'Weekend pastry box', AC, g('#F2C9A0', '#B8643A', '#3A1C10'), 'sched')] },
+      { name: 'Sun', num: '22', posts: [post('10:30 AM', 'Community drop-in', FZ, g('#D9B68C', '#7A4B2A', '#24140B'), 'fix'), post('6:00 PM', 'Sunday slow brew', AC, g('#C99A62', '#6B3F1C', '#1E110A'), 'sched')] }
+    ].map((d, i) => ({
+      ...d, today: !!d.today, canAdd: i >= 5,
+      bg: d.today ? 'color-mix(in srgb, var(--ac) 6%, transparent)' : 'transparent',
+      box: d.today ? 'color-mix(in srgb, var(--ac-lab) 80%, transparent)' : 'var(--bd3)',
+      boxBg: d.today ? 'color-mix(in srgb, var(--ac) 16%, transparent)' : 'var(--panel3)',
+      nameFg: d.today ? 'var(--ac-hi)' : 'var(--ac-lab)',
+      numFg: i < 5 ? 'var(--sub)' : 'var(--tx)'
+    }));
+    const ready = [
+      { title: 'New-member welcome offer', brand: 'FitZone Gym', dot: FZ, channels: 'IG & FB', bg: g('#E8B98A', '#9C5A2E', '#2E1A10') },
+      { title: 'Festive menu teaser', brand: 'Aura Coffee', dot: AC, channels: 'Instagram', bg: g('#D8B48E', '#7E5634', '#261609') }
+    ];
+    return { theme: this.props.theme ?? 'espresso', days, ready };
+  }
+}
+</script>
+</body>
+</html>

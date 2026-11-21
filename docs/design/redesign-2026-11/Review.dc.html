@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review a post</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#0B0F17}
+*{box-sizing:border-box}
+a{color:#A5B4FC}a:hover{color:#C7D2FE}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1060px; display: flex; flex-wrap: wrap; align-items: stretch; background: #0B0F17; color: #E8ECF4; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<nav aria-label="Main" style="flex: 1 1 252px; max-width: 100%; background: #0E131D; border-right: 1px solid #1C2537; padding: 22px 16px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 34px; height: 34px; border-radius: 10px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z"></path></svg>
+</div>
+<span style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em">OmniPost</span>
+</div>
+<button type="button" aria-label="Switch brand. Showing all brands" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 8px 12px; border: 1px solid #2A354B; border-radius: 12px; background: #131A26; color: #E8ECF4; text-align: left">
+<span style="display: flex; flex: none">
+<span style="width: 26px; height: 26px; border-radius: 8px; background: #FB923C; color: #1A0E05; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #131A26">FG</span>
+<span style="width: 26px; height: 26px; margin-left: -8px; border-radius: 8px; background: #2DD4BF; color: #042F2A; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #131A26">AC</span>
+</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 12px; color: #A3AEC2">Showing</span><span style="font-weight: 700">All brands</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3AEC2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+</button>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="#home" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+<a href="#review" aria-current="page" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #1B2536; color: #FFFFFF; text-decoration: none; font-weight: 700">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11 3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+<span style="flex: 1">To approve</span>
+<span style="min-width: 24px; height: 22px; padding: 0 7px; border-radius: 11px; background: rgba(245,158,11,0.16); color: #FCD34D; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span></a>
+<a href="#posts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>All posts</a>
+<a href="#calendar" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>Calendar</a>
+<a href="#templates" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>Templates</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="padding: 0 12px 6px; font-size: 12px; font-weight: 600; color: #8C97AD">Workspace</span>
+<a href="#accounts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+<span style="flex: 1">Social accounts</span>
+<span role="img" aria-label="1 needs attention" style="width: 9px; height: 9px; border-radius: 5px; background: #F87171"></span></a>
+<a href="#brands" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9 4.5 4h15L21 9"></path><path d="M3 9v11h18V9"></path><path d="M3 9h18"></path><path d="M9 20v-6h6v6"></path></svg>Brands</a>
+<a href="#settings" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Settings</a>
+</div>
+<div style="flex: 1"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: #131A26; border: 1px solid #1C2537">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 18px; background: #312E81; color: #E0E7FF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">DB</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 700; font-size: 14px">Demo Business</span><span style="font-size: 12px; color: #A3AEC2">Owner · Demo Agency</span></span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 36px; border-bottom: 1px solid #1C2537">
+<a href="#review" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px 0 8px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 600; font-size: 14px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>To approve</a>
+<span style="flex: 1"></span>
+<span style="font-size: 14px; color: #A3AEC2">Post 1 of 2</span>
+<button type="button" aria-label="Previous post" style="width: 40px; height: 40px; border: 1px solid #2A354B; border-radius: 10px; background: #111722; color: #C3CBDA; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+<button type="button" aria-label="Next post" style="width: 40px; height: 40px; border: 1px solid #2A354B; border-radius: 10px; background: #111722; color: #C3CBDA; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 32px; padding: 28px 36px 40px; align-items: flex-start">
+
+<section aria-label="Preview" style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px; border-radius: 24px; background: #0E131D; border: 1px solid #1C2537">
+<div style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #151D2A">
+<button type="button" aria-pressed="true" style="height: 36px; padding: 0 16px; border: 0; border-radius: 9px; background: #2A354B; color: #FFFFFF; font-weight: 700; font-size: 14px">Instagram</button>
+<button type="button" aria-pressed="false" style="height: 36px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: #C3CBDA; font-weight: 600; font-size: 14px">Facebook</button>
+</div>
+<div style="width: 100%; max-width: 420px; border-radius: 18px; background: #111722; border: 1px solid #232E42; overflow: hidden; box-shadow: 0 30px 80px rgba(245,158,11,0.18)">
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: #FB923C; color: #1A0E05; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">FG</span>
+<span style="display: flex; flex-direction: column; line-height: 1.25"><span style="font-weight: 700; font-size: 14px">fitzonegym</span><span style="font-size: 12px; color: #A3AEC2">FitZone Rooftop</span></span>
+</div>
+<div role="img" aria-label="Post photo: terrace at sunrise with a yoga mat" style="position: relative; width: 100%; aspect-ratio: 4 / 5; background: linear-gradient(180deg, #FCD34D 0%, #F59E0B 28%, #C2410C 55%, #431407 100%); overflow: hidden">
+<svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%" aria-hidden="true"><circle cx="250" cy="190" r="56" fill="rgba(255,247,220,0.75)"></circle><path d="M0 300 C80 270 150 285 220 292 S340 268 400 280 V500 H0Z" fill="rgba(67,20,7,0.45)"></path><path d="M0 360 L400 330 V500 H0Z" fill="rgba(41,14,4,0.65)"></path><path d="M120 420 L300 400 L320 440 L130 465Z" fill="rgba(30,41,59,0.85)"></path><rect x="300" y="350" width="18" height="44" rx="6" fill="rgba(15,23,42,0.9)"></rect></svg>
+</div>
+<p style="margin: 0; padding: 12px 14px 16px; font-size: 14px; line-height: 1.55"><strong>fitzonegym</strong> Sunrise yoga on the terrace, Saturday 7 am. Bring your mat and an open mind, and stay for fresh herbal tea after class. Reserve your spot through the link in our bio. <span style="color: #93C5FD">#FitZoneMorning #TerraceYoga #WeekendWellness</span></p>
+</div>
+</section>
+
+<section aria-labelledby="r-title" style="flex: 1.15 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="height: 28px; padding: 0 12px; border-radius: 14px; background: rgba(245,158,11,0.16); color: #FCD34D; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center">Waiting for you</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 14px; background: rgba(251,146,60,0.14); color: #FDBA74; font-size: 13px; font-weight: 700"><span style="width: 8px; height: 8px; border-radius: 4px; background: #FB923C"></span>FitZone Gym</span>
+</div>
+<h1 id="r-title" style="margin: 0; font-size: 32px; line-height: 1.15; font-weight: 800; letter-spacing: -0.03em">Weekend sunrise yoga</h1>
+<p style="margin: 0; font-size: 14px; color: #A3AEC2">Written by Priya S. · sent for review today at 10:12 AM · <a href="#comments">2 comments</a></p>
+</div>
+
+<div style="background: #111722; border: 1px solid #1F2A3D; border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Caption</h2>
+<button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #A5B4FC; font-weight: 600; font-size: 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Edit</button>
+</div>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #E8ECF4">Sunrise yoga on the terrace, Saturday 7 am. Bring your mat and an open mind, and stay for fresh herbal tea after class. Reserve your spot through the link in our bio.</p>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #1B2536; font-size: 14px; display: inline-flex; align-items: center">#FitZoneMorning</span>
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #1B2536; font-size: 14px; display: inline-flex; align-items: center">#TerraceYoga</span>
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #1B2536; font-size: 14px; display: inline-flex; align-items: center">#WeekendWellness</span>
+<span style="flex: 1"></span>
+<span style="font-size: 13px; color: #A3AEC2">184 / 2,200 characters</span>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<div style="flex: 1 1 240px; min-width: 0; background: #111722; border: 1px solid #1F2A3D; border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Posts to</h2>
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 9px; background: rgba(236,72,153,0.18); color: #F9A8D4; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">IG</span>
+<span style="flex: 1; font-size: 14px; font-weight: 600">@fitzonegym</span>
+<span style="font-size: 13px; font-weight: 600; color: #6EE7B7">Ready</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 9px; background: rgba(59,130,246,0.18); color: #93C5FD; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">FB</span>
+<span style="flex: 1; font-size: 14px; font-weight: 600">FitZone Gym page</span>
+<button type="button" style="height: 32px; padding: 0 12px; border: 1px solid rgba(248,113,113,0.5); border-radius: 8px; background: rgba(239,68,68,0.12); color: #FCA5A5; font-weight: 700; font-size: 13px">Reconnect</button>
+</div>
+</div>
+<div style="flex: 1 1 240px; min-width: 0; background: #111722; border: 1px solid #1F2A3D; border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Goes out</h2>
+<div style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em">Sat 28 Nov · 7:00 AM</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<button type="button" style="height: 32px; padding: 0 12px; border: 1px solid #33415C; border-radius: 16px; background: transparent; color: #C3CBDA; font-size: 13px; font-weight: 600">Change time</button>
+<button type="button" style="height: 32px; padding: 0 12px; border: 1px solid #33415C; border-radius: 16px; background: transparent; color: #C3CBDA; font-size: 13px; font-weight: 600">Post right after approval</button>
+</div>
+<span style="font-size: 12px; color: #A3AEC2">India time (IST)</span>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 18px; background: #151D2A; border: 1px solid #2A354B">
+<div style="flex: 1 1 220px; min-width: 0; font-size: 14px; color: #C3CBDA">Approving schedules it for <strong style="color: #FFFFFF">Sat 28 Nov, 7:00 AM</strong> on Instagram. Facebook joins once it's reconnected.</div>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border: 1px solid #33415C; border-radius: 12px; background: transparent; color: #E8ECF4; font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+Ask for changes</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 52px; padding: 0 24px; border: 0; border-radius: 12px; background: {{accent}}; color: #FFFFFF; font-weight: 800; font-size: 16px; box-shadow: 0 10px 30px rgba(79,70,229,0.35)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>
+Approve and schedule</button>
+</div>
+
+<a href="#next" style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; border: 1px dashed #2A354B; color: #E8ECF4; text-decoration: none">
+<span style="font-size: 13px; color: #A3AEC2; font-weight: 600">Up next</span>
+<div role="img" aria-label="Post photo" style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: linear-gradient(160deg, #A78BFA 0%, #6D28D9 55%, #2E1065 100%)"></div>
+<span style="flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 700; font-size: 14px">Member celebration gift box</span><span style="font-size: 13px; color: #A3AEC2">FitZone Gym · Thu 26 Nov, 5:30 PM</span></span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; color: #A5B4FC">Review next<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></span>
+</a>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#4F46E5","options":["#4F46E5","#7C3AED","#EA580C","#0F766E"]},"$preview":{"width":1440,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#4F46E5' };
+  }
+}
+</script>
+</body>
+</html>

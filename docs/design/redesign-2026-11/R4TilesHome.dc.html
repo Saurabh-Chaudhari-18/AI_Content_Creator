@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home — big buttons</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+.th{--bg:#120D0A;--side:#17110D;--sunk:#1A130F;--panel:#1D1511;--panel2:#221913;--panel3:#2A1F18;--line:#2C2119;--bd1:#33261D;--bd2:#3A2B21;--bd3:#4A3727;--bd4:#5A4433;--tx:#F4EADF;--tx2:#D9CBBB;--mut:#BFAE9B;--sub:#9C8A77;--ac:#EE8F35;--ac-tx:#F5A65B;--ac-lab:#F0A04F;--ac-pill:#F5B371;--ac-hi:#FBC48C;--ac-soft:#F5C89A;--g1:#F6A24A;--g2:#E2802A;--rim:#B8601E;--on-ac:#1F1208;--inv-bg:#F4EADF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A08F;--bad2:#DC5A3C;--bad-dk:#9E3E2A;--bad-tx:#F3C3B8;--info:#B5C9EE;--info2:#9DB8E8;--on-inv:#1F1208}
+.th[data-theme="obsidian"]{--bg:#0B0F17;--side:#111722;--sunk:#0E131D;--panel:#151D2A;--panel2:#1B2536;--panel3:#212E44;--line:#1C2537;--bd1:#232E42;--bd2:#27334A;--bd3:#2B3850;--bd4:#3A4864;--tx:#E8ECF4;--tx2:#C3CBDA;--mut:#A3AEC2;--sub:#8B97AD;--ac:#6366F1;--ac-tx:#A5B4FC;--ac-lab:#818CF8;--ac-pill:#C7D2FE;--ac-hi:#E0E7FF;--ac-soft:#C7D2FE;--g1:#6366F1;--g2:#4F46E5;--rim:#3730A3;--on-ac:#FFFFFF;--inv-bg:#E8ECF4;--ok:#34D399;--ok-tx:#6EE7B7;--bad:#F87171;--bad2:#E5484D;--bad-dk:#9B2C2F;--bad-tx:#FCA5A5;--info:#93C5FD;--info2:#60A5FA;--on-inv:#0B0F17}
+.th[data-theme="daylight"]{--bg:#F5F7FA;--side:#FFFFFF;--sunk:#EEF1F6;--panel:#FFFFFF;--panel2:#F6F8FB;--panel3:#EEF1F6;--line:#E9EDF3;--bd1:#E3E7EE;--bd2:#DCE1EA;--bd3:#D5DBE5;--bd4:#B8C1CF;--tx:#111827;--tx2:#374151;--mut:#4B5565;--sub:#6B7280;--ac:#4F46E5;--ac-tx:#4338CA;--ac-lab:#4F46E5;--ac-pill:#3730A3;--ac-hi:#312E81;--ac-soft:#3730A3;--g1:#5B54EA;--g2:#4338CA;--rim:#4F46E5;--on-ac:#FFFFFF;--inv-bg:#111827;--ok:#059669;--ok-tx:#047857;--bad:#DC2626;--bad2:#DC2626;--bad-dk:#991B1B;--bad-tx:#991B1B;--info:#1D4ED8;--info2:#3B82F6;--on-inv:#FFFFFF}
+.th[data-theme="amethyst"]{--bg:#110C1A;--side:#150F21;--sunk:#181125;--panel:#1C1429;--panel2:#231933;--panel3:#2C2040;--line:#2A1F3A;--bd1:#31253F;--bd2:#392B4A;--bd3:#4A3860;--bd4:#5C4878;--tx:#F3EEFA;--tx2:#D6CCE6;--mut:#B6A9CB;--sub:#8E7FA6;--ac:#D9A93E;--ac-tx:#E8C46A;--ac-lab:#E2B550;--ac-pill:#EBCB7E;--ac-hi:#F3D995;--ac-soft:#E9D29A;--g1:#EDC66A;--g2:#C9962E;--rim:#8A6418;--on-ac:#1E1405;--inv-bg:#F3EEFA;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A0A8;--bad2:#D9506A;--bad-dk:#8E2A44;--bad-tx:#F6C2CC;--info:#BFC8F2;--info2:#A0AEEA;--on-inv:#1E1405}
+.th[data-theme="sapphire"]{--bg:#0A0F1E;--side:#0D1427;--sunk:#0F172C;--panel:#121B32;--panel2:#17223D;--panel3:#1D2A4A;--line:#1C2843;--bd1:#22304F;--bd2:#293A5E;--bd3:#364B76;--bd4:#465E8E;--tx:#EEF3FC;--tx2:#CAD5EC;--mut:#A6B4D2;--sub:#7C8CB0;--ac:#6FA3FF;--ac-tx:#8DB6FF;--ac-lab:#7FAEFF;--ac-pill:#A3C4FF;--ac-hi:#C2D8FF;--ac-soft:#B8CFFF;--g1:#9CC3FF;--g2:#5E95F2;--rim:#2F5FC4;--on-ac:#08132E;--inv-bg:#EEF3FC;--ok:#7FD8A8;--ok-tx:#A3E6C1;--bad:#F5A3A3;--bad2:#E05A5A;--bad-dk:#9A2F3A;--bad-tx:#F8C6C6;--info:#C9B8F5;--info2:#B09AF0;--on-inv:#08132E}
+.th[data-theme="emerald"]{--bg:#08130F;--side:#0B1813;--sunk:#0D1B16;--panel:#10201A;--panel2:#152821;--panel3:#1B3229;--line:#1A2B24;--bd1:#20352C;--bd2:#273F35;--bd3:#335244;--bd4:#426654;--tx:#EEF6F1;--tx2:#CBDDD3;--mut:#A6BFB2;--sub:#7C978A;--ac:#D8B970;--ac-tx:#E3C987;--ac-lab:#DDBF77;--ac-pill:#E8D39C;--ac-hi:#F0E0B5;--ac-soft:#E6D5A6;--g1:#ECD493;--g2:#C8A552;--rim:#8A6E2A;--on-ac:#1A1405;--inv-bg:#EEF6F1;--ok:#8FD9B0;--ok-tx:#AEE6C6;--bad:#F3A08F;--bad2:#D9553C;--bad-dk:#9A3A28;--bad-tx:#F6C4B8;--info:#B7CAF0;--info2:#98B2EA;--on-inv:#1A1405}
+.th[data-theme="burgundy"]{--bg:#14080C;--side:#1A0B10;--sunk:#1D0D13;--panel:#221016;--panel2:#2A151C;--panel3:#331A23;--line:#2E1820;--bd1:#381E28;--bd2:#422431;--bd3:#573042;--bd4:#6C3E54;--tx:#F8EDEF;--tx2:#E2CDD2;--mut:#C6A9B1;--sub:#9C7F88;--ac:#E8A07E;--ac-tx:#F0B497;--ac-lab:#EBA585;--ac-pill:#F3C0A6;--ac-hi:#F8D3BF;--ac-soft:#F2C9B4;--g1:#F2B595;--g2:#D3845F;--rim:#8E4A30;--on-ac:#24100A;--inv-bg:#F8EDEF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#FF9FA8;--bad2:#E0405A;--bad-dk:#9C2338;--bad-tx:#FFC7CD;--info:#B9C6F0;--info2:#9DAEEA;--on-inv:#24100A}
+.th[data-theme="ivory"]{--bg:#F6F1E7;--side:#EFE7D8;--sunk:#F3ECDF;--panel:#FFFDF8;--panel2:#FAF5EA;--panel3:#F1E8D6;--line:#E4D9C4;--bd1:#E0D3BB;--bd2:#D6C7AB;--bd3:#C2AF8C;--bd4:#A8936C;--tx:#1B2340;--tx2:#33405F;--mut:#4E5B78;--sub:#6D7891;--ac:#1F3A8A;--ac-tx:#1F3A8A;--ac-lab:#7A5A12;--ac-pill:#7A5A12;--ac-hi:#12286A;--ac-soft:#7A5A12;--g1:#2B4DAA;--g2:#1A3079;--rim:#B8902F;--on-ac:#FFFBF2;--inv-bg:#1B2340;--ok:#2E8B57;--ok-tx:#1F6B42;--bad:#C2412D;--bad2:#D9553C;--bad-dk:#9E3E2A;--bad-tx:#8E2A1C;--info:#2F5DB8;--info2:#3D6BC4;--on-inv:#FFFBF2}
+body{margin:0;background:var(--bg)}
+*{box-sizing:border-box}
+a{color:var(--ac-tx)}a:hover{color:var(--ac-hi)}
+button{font:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="th" data-theme="{{theme}}" style="position: relative; width: 100%; min-height: 1000px; background: var(--bg); color: var(--tx); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.5">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: var(--side)">
+<span style="display: flex; align-items: center; gap: 10px; flex: 1 1 200px">
+<span style="width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--ac); background: color-mix(in srgb, var(--ac) 12%, transparent); color: var(--ac-tx); display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z"></path></svg></span>
+<span style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 600">OmniPost</span>
+</span>
+<button type="button" aria-label="Switch brand. Showing all brands" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel); color: var(--tx); font-weight: 600"><span style="font-size: 13px; color: var(--mut)">Brand</span>All brands<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mut)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+<a href="#posts" style="display: inline-flex; align-items: center; height: 48px; padding: 0 16px; border-radius: 12px; color: var(--tx2); text-decoration: none; font-weight: 600">All posts</a>
+<a href="#settings" style="display: inline-flex; align-items: center; height: 48px; padding: 0 16px; border-radius: 12px; color: var(--tx2); text-decoration: none; font-weight: 600">Settings</a>
+<button type="button" aria-label="Your account: Demo Business" style="width: 44px; height: 44px; border: 0; border-radius: 22px; background: var(--bd2); color: var(--ac-soft); font-weight: 700; font-size: 14px">DB</button>
+</header>
+
+<main style="max-width: 1080px; margin: 0 auto; padding: 44px 24px 96px; display: flex; flex-direction: column; gap: 36px">
+<section aria-labelledby="b-hello">
+<h1 id="b-hello" style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 48px; line-height: 1.1">Good afternoon. <span style="font-style: italic; color: var(--ac-lab)">What would you like to do?</span></h1>
+</section>
+
+<section aria-label="Main actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px">
+<a href="#new-post" style="display: flex; align-items: center; gap: 22px; min-height: 172px; padding: 28px; border-radius: 26px; background: linear-gradient(180deg, var(--g1) 0%, var(--g2) 100%); color: var(--on-ac); text-decoration: none; box-shadow: 0 18px 44px color-mix(in srgb, var(--ac) 30%, transparent)">
+<span style="width: 72px; height: 72px; flex: none; border-radius: 36px; background: color-mix(in srgb, var(--on-ac) 14%, transparent); display: flex; align-items: center; justify-content: center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 800; font-size: 26px">Create a post</span><span style="font-size: 16px; font-weight: 600; opacity: 0.85">Start blank or from a ready-made template</span></span>
+</a>
+<a href="R4TodayApprove.dc.html" style="display: flex; align-items: center; gap: 22px; min-height: 172px; padding: 28px; border-radius: 26px; border: 1px solid var(--bd3); background: var(--panel); color: var(--tx); text-decoration: none">
+<span style="position: relative; width: 72px; height: 72px; flex: none; border-radius: 36px; border: 1.5px solid var(--ac-lab); color: var(--ac-lab); display: flex; align-items: center; justify-content: center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11 3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span style="position: absolute; top: -4px; right: -4px; min-width: 28px; height: 28px; padding: 0 7px; border-radius: 14px; background: var(--ac); color: var(--on-ac); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center">2</span></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 800; font-size: 26px">Approve posts</span><span style="font-size: 16px; font-weight: 600; color: var(--ac-pill)">2 posts are waiting for you</span></span>
+</a>
+<a href="R3Calendar.dc.html" style="display: flex; align-items: center; gap: 22px; min-height: 172px; padding: 28px; border-radius: 26px; border: 1px solid var(--bd3); background: var(--panel); color: var(--tx); text-decoration: none">
+<span style="width: 72px; height: 72px; flex: none; border-radius: 36px; border: 1.5px solid var(--ac-lab); color: var(--ac-lab); display: flex; align-items: center; justify-content: center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 800; font-size: 26px">Calendar</span><span style="font-size: 16px; font-weight: 600; color: var(--mut)">6 posts going out this week</span></span>
+</a>
+<a href="R3Accounts.dc.html" style="display: flex; align-items: center; gap: 22px; min-height: 172px; padding: 28px; border-radius: 26px; border: 1.5px solid color-mix(in srgb, var(--bad) 60%, transparent); background: color-mix(in srgb, var(--bad2) 7%, transparent); color: var(--tx); text-decoration: none">
+<span style="width: 72px; height: 72px; flex: none; border-radius: 36px; border: 1.5px solid var(--bad); color: var(--bad); display: flex; align-items: center; justify-content: center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 800; font-size: 26px">Social accounts</span><span style="font-size: 16px; font-weight: 700; color: var(--bad)">1 needs reconnecting</span></span>
+</a>
+</section>
+
+<section aria-labelledby="b-next" style="display: flex; flex-direction: column; gap: 14px">
+<h2 id="b-next" style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 30px">What happens next</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; border-radius: 22px; border: 1px solid var(--bd1); background: var(--panel); overflow: hidden">
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 18px 22px; border-bottom: 1px solid var(--line)">
+<span style="width: 112px; flex: none; font-weight: 800; color: var(--ac-pill)">Today, 4 PM</span>
+<span style="flex: 1 1 320px; font-size: 17px">"Weekend pastry box" will post to <strong>Aura Coffee's Instagram</strong>.</span>
+<span style="font-size: 14px; font-weight: 700; color: var(--ok-tx)">All set</span>
+</li>
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 18px 22px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bad2) 7%, transparent)">
+<span style="width: 112px; flex: none; font-weight: 800; color: var(--ac-pill)">Tomorrow, 10:30</span>
+<span style="flex: 1 1 320px; font-size: 17px">"Community drop-in" <strong style="color: var(--bad)">can't post</strong>: FitZone Gym's Facebook is disconnected.</span>
+<a href="R3Accounts.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; background: var(--inv-bg); color: var(--on-inv); text-decoration: none; font-weight: 800">Fix it</a>
+</li>
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 18px 22px; border-bottom: 1px solid var(--line)">
+<span style="width: 112px; flex: none; font-weight: 800; color: var(--ac-pill)">Tomorrow, 6 PM</span>
+<span style="flex: 1 1 320px; font-size: 17px">"Sunday slow brew" will post to <strong>Aura Coffee's Instagram</strong>.</span>
+<span style="font-size: 14px; font-weight: 700; color: var(--ok-tx)">All set</span>
+</li>
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 18px 22px">
+<span style="width: 112px; flex: none; font-weight: 800; color: var(--ac-pill)">Thu 26 Nov</span>
+<span style="flex: 1 1 320px; font-size: 17px">"Member celebration gift box" is <strong style="color: var(--ac-pill)">waiting for your OK</strong> before it can go out.</span>
+<a href="R4TodayApprove.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--bd4); color: var(--ac-tx); text-decoration: none; font-weight: 800">Review</a>
+</li>
+</ol>
+<a href="R3Calendar.dc.html" style="align-self: flex-start; font-weight: 700">See the whole week →</a>
+</section>
+</main>
+
+<button type="button" style="position: absolute; right: 28px; bottom: 28px; display: inline-flex; align-items: center; gap: 10px; height: 56px; padding: 0 22px; border-radius: 28px; border: 1px solid var(--bd4); background: var(--panel2); color: var(--tx); font-weight: 700; box-shadow: 0 14px 36px rgba(0,0,0,0.4)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7"></path><path d="M12 17h.01"></path></svg>Need help?</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["espresso","obsidian","daylight","amethyst","sapphire","emerald","burgundy","ivory"],"default":"espresso"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'espresso',};
+  }
+}
+</script>
+</body>
+</html>
