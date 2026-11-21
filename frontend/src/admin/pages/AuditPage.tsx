@@ -28,7 +28,7 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHead title="Audit trail" lede="Every change on the platform, newest first, with who made it and why. Rows can be added but never changed or deleted." />
+      <PageHead title="Audit trail" accent="Watch" lede="Every change on the platform, newest first, with who made it and why. Rows can be added but never changed or deleted." />
       <div className="toolbar">
         <SelectField label="Action" value={action} onChange={(v) => update({ action: v })} options={[["", "Any action"], ...AUDIT_ACTIONS.map((a): [string, string] => [a, titleCase(a)])]} />
         <SelectField label="Workspace" value={ws} onChange={(v) => update({ ws: v })} options={[["", "Any workspace"], ...(workspaces.data?.items ?? []).map((w): [string, string] => [w.id, w.name])]} />

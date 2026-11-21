@@ -49,7 +49,7 @@ export function UsagePage() {
 
   return (
     <>
-      <PageHead title="Usage" lede="Usage per workspace for billing, and the check that catches a workspace getting more than its plan allows." />
+      <PageHead title="Usage" accent="Watch" lede="Usage per workspace for billing, and the check that catches a workspace getting more than its plan allows." />
       <div className="toolbar">
         <Seg legend="Period" value={days} onChange={(v) => update({ days: v === "30" ? "" : v })} options={[["7", "7 days"], ["30", "30 days"], ["90", "90 days"]]} />
         <SelectField label="Plan" value={plan} onChange={(v) => update({ plan: v })} options={[["", "Any plan"], ...(plans.data ?? []).map((p): [string, string] => [p.key, p.name])]} />

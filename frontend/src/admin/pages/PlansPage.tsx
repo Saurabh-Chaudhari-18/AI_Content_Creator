@@ -78,6 +78,7 @@ export function PlansPage() {
     <>
       <PageHead
         title="Plans and limits"
+        accent="Product"
         lede="What each plan gives. A change reaches every workspace on that plan at its next request, except where a workspace has an override."
         actions={<button className="btn btn--primary" type="button" onClick={create}>New plan</button>}
       />

@@ -59,6 +59,7 @@ export function WorkspacesPage() {
     <>
       <PageHead
         title="Workspaces"
+        accent="Customers"
         lede="Every customer workspace. Workspaces are never deleted here: suspend one instead, so its posts and media stay."
         actions={<button className="btn btn--primary" type="button" onClick={create}>New workspace</button>}
       />

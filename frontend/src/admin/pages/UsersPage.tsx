@@ -68,6 +68,7 @@ export function UsersPage() {
     <>
       <PageHead
         title="Logins"
+        accent="Customers"
         lede="Everyone who can sign in, customers and staff. A new login gets a set-password link that is shown once."
         actions={<button className="btn btn--primary" type="button" onClick={create}>New login</button>}
       />

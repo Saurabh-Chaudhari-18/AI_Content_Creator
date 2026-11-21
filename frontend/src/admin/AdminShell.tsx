@@ -74,8 +74,15 @@ export function AdminShell() {
       <div className={menuOpen ? "app is-menu-open" : "app"} onClick={(e) => { if (menuOpen && !(e.target as HTMLElement).closest(".side, .menu-btn")) setMenuOpen(false); }}>
         <aside className="side" id="admin-side" aria-label="Staff console">
           <Link className="brand" to="/admin" aria-label="OmniPost staff console, overview">
-            <b>OmniPost</b>
-            <span>Staff console</span>
+            <span className="brand__mark" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z" />
+              </svg>
+            </span>
+            <span className="brand__text">
+              <b>OmniPost</b>
+              <span>Staff console</span>
+            </span>
           </Link>
           <nav className="nav" aria-label="Main">
             {GROUPS.map(([group, links]) => (
@@ -96,6 +103,14 @@ export function AdminShell() {
           </nav>
           <div className="side__foot">
             <div className="whoami">
+              <span className="whoami__avatar" aria-hidden="true">
+                {(user?.full_name ?? "?")
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((p) => p[0]!.toUpperCase())
+                  .join("")}
+              </span>
               <span className="muted">Signed in as staff</span>
               <b>{user?.full_name}</b>
               {overview.data && <span className="mono" title="The PostgreSQL role this API runs as">{overview.data.database_role}</span>}

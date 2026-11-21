@@ -48,11 +48,27 @@ export function useCrumbs(crumbs: Crumb[]) {
   }, [key, set]);
 }
 
-export function PageHead({ title, lede, actions, meta }: { title: string; lede?: ReactNode; actions?: ReactNode; meta?: ReactNode }) {
+export function PageHead({
+  title,
+  accent,
+  lede,
+  actions,
+  meta,
+}: {
+  title: string;
+  /** An italic word after the title, as in the customer app: "Plans and limits · Product". */
+  accent?: string;
+  lede?: ReactNode;
+  actions?: ReactNode;
+  meta?: ReactNode;
+}) {
   return (
     <div className="head">
       <div className="head__text">
-        <h1>{title}</h1>
+        <h1>
+          {title}
+          {accent && <em> · {accent}</em>}
+        </h1>
         {lede && <p>{lede}</p>}
         {meta && <div className="head__meta">{meta}</div>}
       </div>

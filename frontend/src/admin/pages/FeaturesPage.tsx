@@ -25,6 +25,7 @@ export function FeaturesPage() {
     <>
       <PageHead
         title="Feature switches"
+        accent="Product"
         lede="The switch above every plan. Off here means off for every workspace, whatever their plan or override says. The list itself comes from code; only the switch is changed here."
       />
       <section className="panel" aria-label="Global feature switches">
