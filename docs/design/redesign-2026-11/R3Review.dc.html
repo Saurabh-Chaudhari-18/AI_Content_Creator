@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Approval Studio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+.th{--bg:#120D0A;--side:#17110D;--sunk:#1A130F;--panel:#1D1511;--panel2:#221913;--panel3:#2A1F18;--line:#2C2119;--bd1:#33261D;--bd2:#3A2B21;--bd3:#4A3727;--bd4:#5A4433;--tx:#F4EADF;--tx2:#D9CBBB;--mut:#BFAE9B;--sub:#9C8A77;--ac:#EE8F35;--ac-tx:#F5A65B;--ac-lab:#F0A04F;--ac-pill:#F5B371;--ac-hi:#FBC48C;--ac-soft:#F5C89A;--g1:#F6A24A;--g2:#E2802A;--rim:#B8601E;--on-ac:#1F1208;--inv-bg:#F4EADF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A08F;--bad2:#DC5A3C;--bad-dk:#9E3E2A;--bad-tx:#F3C3B8;--info:#B5C9EE;--info2:#9DB8E8;--on-inv:#1F1208}
+.th[data-theme="obsidian"]{--bg:#0B0F17;--side:#111722;--sunk:#0E131D;--panel:#151D2A;--panel2:#1B2536;--panel3:#212E44;--line:#1C2537;--bd1:#232E42;--bd2:#27334A;--bd3:#2B3850;--bd4:#3A4864;--tx:#E8ECF4;--tx2:#C3CBDA;--mut:#A3AEC2;--sub:#8B97AD;--ac:#6366F1;--ac-tx:#A5B4FC;--ac-lab:#818CF8;--ac-pill:#C7D2FE;--ac-hi:#E0E7FF;--ac-soft:#C7D2FE;--g1:#6366F1;--g2:#4F46E5;--rim:#3730A3;--on-ac:#FFFFFF;--inv-bg:#E8ECF4;--ok:#34D399;--ok-tx:#6EE7B7;--bad:#F87171;--bad2:#E5484D;--bad-dk:#9B2C2F;--bad-tx:#FCA5A5;--info:#93C5FD;--info2:#60A5FA;--on-inv:#0B0F17}
+.th[data-theme="daylight"]{--bg:#F5F7FA;--side:#FFFFFF;--sunk:#EEF1F6;--panel:#FFFFFF;--panel2:#F6F8FB;--panel3:#EEF1F6;--line:#E9EDF3;--bd1:#E3E7EE;--bd2:#DCE1EA;--bd3:#D5DBE5;--bd4:#B8C1CF;--tx:#111827;--tx2:#374151;--mut:#4B5565;--sub:#6B7280;--ac:#4F46E5;--ac-tx:#4338CA;--ac-lab:#4F46E5;--ac-pill:#3730A3;--ac-hi:#312E81;--ac-soft:#3730A3;--g1:#5B54EA;--g2:#4338CA;--rim:#4F46E5;--on-ac:#FFFFFF;--inv-bg:#111827;--ok:#059669;--ok-tx:#047857;--bad:#DC2626;--bad2:#DC2626;--bad-dk:#991B1B;--bad-tx:#991B1B;--info:#1D4ED8;--info2:#3B82F6;--on-inv:#FFFFFF}
+.th[data-theme="amethyst"]{--bg:#110C1A;--side:#150F21;--sunk:#181125;--panel:#1C1429;--panel2:#231933;--panel3:#2C2040;--line:#2A1F3A;--bd1:#31253F;--bd2:#392B4A;--bd3:#4A3860;--bd4:#5C4878;--tx:#F3EEFA;--tx2:#D6CCE6;--mut:#B6A9CB;--sub:#8E7FA6;--ac:#D9A93E;--ac-tx:#E8C46A;--ac-lab:#E2B550;--ac-pill:#EBCB7E;--ac-hi:#F3D995;--ac-soft:#E9D29A;--g1:#EDC66A;--g2:#C9962E;--rim:#8A6418;--on-ac:#1E1405;--inv-bg:#F3EEFA;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A0A8;--bad2:#D9506A;--bad-dk:#8E2A44;--bad-tx:#F6C2CC;--info:#BFC8F2;--info2:#A0AEEA;--on-inv:#1E1405}
+.th[data-theme="sapphire"]{--bg:#0A0F1E;--side:#0D1427;--sunk:#0F172C;--panel:#121B32;--panel2:#17223D;--panel3:#1D2A4A;--line:#1C2843;--bd1:#22304F;--bd2:#293A5E;--bd3:#364B76;--bd4:#465E8E;--tx:#EEF3FC;--tx2:#CAD5EC;--mut:#A6B4D2;--sub:#7C8CB0;--ac:#6FA3FF;--ac-tx:#8DB6FF;--ac-lab:#7FAEFF;--ac-pill:#A3C4FF;--ac-hi:#C2D8FF;--ac-soft:#B8CFFF;--g1:#9CC3FF;--g2:#5E95F2;--rim:#2F5FC4;--on-ac:#08132E;--inv-bg:#EEF3FC;--ok:#7FD8A8;--ok-tx:#A3E6C1;--bad:#F5A3A3;--bad2:#E05A5A;--bad-dk:#9A2F3A;--bad-tx:#F8C6C6;--info:#C9B8F5;--info2:#B09AF0;--on-inv:#08132E}
+.th[data-theme="emerald"]{--bg:#08130F;--side:#0B1813;--sunk:#0D1B16;--panel:#10201A;--panel2:#152821;--panel3:#1B3229;--line:#1A2B24;--bd1:#20352C;--bd2:#273F35;--bd3:#335244;--bd4:#426654;--tx:#EEF6F1;--tx2:#CBDDD3;--mut:#A6BFB2;--sub:#7C978A;--ac:#D8B970;--ac-tx:#E3C987;--ac-lab:#DDBF77;--ac-pill:#E8D39C;--ac-hi:#F0E0B5;--ac-soft:#E6D5A6;--g1:#ECD493;--g2:#C8A552;--rim:#8A6E2A;--on-ac:#1A1405;--inv-bg:#EEF6F1;--ok:#8FD9B0;--ok-tx:#AEE6C6;--bad:#F3A08F;--bad2:#D9553C;--bad-dk:#9A3A28;--bad-tx:#F6C4B8;--info:#B7CAF0;--info2:#98B2EA;--on-inv:#1A1405}
+.th[data-theme="burgundy"]{--bg:#14080C;--side:#1A0B10;--sunk:#1D0D13;--panel:#221016;--panel2:#2A151C;--panel3:#331A23;--line:#2E1820;--bd1:#381E28;--bd2:#422431;--bd3:#573042;--bd4:#6C3E54;--tx:#F8EDEF;--tx2:#E2CDD2;--mut:#C6A9B1;--sub:#9C7F88;--ac:#E8A07E;--ac-tx:#F0B497;--ac-lab:#EBA585;--ac-pill:#F3C0A6;--ac-hi:#F8D3BF;--ac-soft:#F2C9B4;--g1:#F2B595;--g2:#D3845F;--rim:#8E4A30;--on-ac:#24100A;--inv-bg:#F8EDEF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#FF9FA8;--bad2:#E0405A;--bad-dk:#9C2338;--bad-tx:#FFC7CD;--info:#B9C6F0;--info2:#9DAEEA;--on-inv:#24100A}
+.th[data-theme="ivory"]{--bg:#F6F1E7;--side:#EFE7D8;--sunk:#F3ECDF;--panel:#FFFDF8;--panel2:#FAF5EA;--panel3:#F1E8D6;--line:#E4D9C4;--bd1:#E0D3BB;--bd2:#D6C7AB;--bd3:#C2AF8C;--bd4:#A8936C;--tx:#1B2340;--tx2:#33405F;--mut:#4E5B78;--sub:#6D7891;--ac:#1F3A8A;--ac-tx:#1F3A8A;--ac-lab:#7A5A12;--ac-pill:#7A5A12;--ac-hi:#12286A;--ac-soft:#7A5A12;--g1:#2B4DAA;--g2:#1A3079;--rim:#B8902F;--on-ac:#FFFBF2;--inv-bg:#1B2340;--ok:#2E8B57;--ok-tx:#1F6B42;--bad:#C2412D;--bad2:#D9553C;--bad-dk:#9E3E2A;--bad-tx:#8E2A1C;--info:#2F5DB8;--info2:#3D6BC4;--on-inv:#FFFBF2}
+body{margin:0;background:var(--bg)}
+*{box-sizing:border-box}
+a{color:var(--ac-tx)}a:hover{color:var(--ac-hi)}
+button{font:inherit;cursor:pointer}
+input{font:inherit}
+input::placeholder{color:var(--sub)}
+</style>
+</helmet>
+<div class="th" data-theme="{{theme}}" style="width: 100%; min-height: 1560px; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bg); color: var(--tx); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<div style="flex: 1 1 264px; max-width: 100%; background: var(--side); border-right: 1px solid var(--line)">
+<dc-import name="R3Sidebar" active="review" hint-size="100%,1000px"></dc-import>
+</div>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 22px 40px; border-bottom: 1px solid var(--line)">
+<h1 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 34px">Approval Studio <span style="color: var(--ac-lab); font-style: italic">· Review</span></h1>
+<span style="display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid var(--bd3); background: var(--panel); font-size: 14px; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--ac)"></span>FitZone Gym</span>
+<span style="flex: 1"></span>
+<span style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid var(--bd3); background: var(--panel); font-size: 14px; font-weight: 500"><span style="width: 9px; height: 9px; border-radius: 5px; background: var(--ok)"></span>Auto-publish is on</span>
+<a href="R3Compose.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 12px; background: linear-gradient(180deg, var(--g1) 0%, var(--g2) 100%); color: var(--on-ac); text-decoration: none; font-weight: 700; box-shadow: 0 10px 28px color-mix(in srgb, var(--ac) 28%, transparent)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>New post</a>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 28px; padding: 36px 40px 48px; align-items: flex-start">
+
+<div style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section aria-labelledby="rv-title" style="position: relative; background: var(--panel); border: 1px solid var(--bd1); border-radius: 24px; padding: 34px 36px 30px; overflow: hidden; display: flex; flex-direction: column; gap: 24px">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--rim), var(--g1), var(--rim))"></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--ac-lab) 55%, transparent); background: color-mix(in srgb, var(--ac) 10%, transparent); color: var(--ac-pill); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; display: inline-flex; align-items: center">1 of 2 waiting</span>
+<span style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 14px; display: inline-flex; align-items: center">FitZone Gym</span>
+<span style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 14px; display: inline-flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg>Instagram &amp; Facebook</span>
+<span style="height: 32px; padding: 0 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--ac-lab) 55%, transparent); background: color-mix(in srgb, var(--ac) 10%, transparent); font-size: 14px; display: inline-flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--ac)"></span>Goes out Sat 28 Nov, 7:00 AM</span>
+</div>
+
+<div style="border-top: 1px solid var(--line); padding-top: 24px">
+<h2 id="rv-title" style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 44px; line-height: 1.1">Weekend sunrise yoga</h2>
+<p style="margin: 8px 0 0; font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 17px; color: var(--mut)">Written by Priya S. · sent for review today at 10:12 AM</p>
+</div>
+
+<div role="img" aria-label="Post photo: rooftop terrace at sunrise with a yoga mat and water bottle" style="position: relative; width: 100%; aspect-ratio: 3 / 2; border-radius: 16px; overflow: hidden; border: 1px solid var(--bd3); background: linear-gradient(180deg, #F9D9A6 0%, #F2A65A 30%, #C46A2E 52%, #5A2E16 70%, #2A1609 100%)">
+<svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%" aria-hidden="true">
+<circle cx="330" cy="170" r="46" fill="rgba(255,244,214,0.85)"></circle>
+<path d="M0 200 h40 v-26 h22 v26 h30 v-40 h18 v40 h44 v-18 h26 v18 h60 v-30 h14 v30 h80 v-22 h30 v22 h50 v-36 h20 v36 h60 v-14 h40 v14 h66 V230 H0Z" fill="rgba(70,35,18,0.55)"></path>
+<path d="M0 226 H600 V400 H0Z" fill="rgba(60,30,14,0.55)"></path>
+<path d="M90 400 L250 236 M170 400 L285 236 M250 400 L318 236 M330 400 L350 236 M410 400 L383 236 M490 400 L416 236 M570 400 L450 236" stroke="rgba(255,200,140,0.16)" stroke-width="2"></path>
+<path d="M200 330 L390 300 L430 360 L215 392Z" fill="rgba(42,36,40,0.92)"></path>
+<rect x="400" y="280" width="16" height="48" rx="5" fill="rgba(28,34,56,0.95)"></rect>
+<ellipse cx="440" cy="330" rx="30" ry="13" fill="rgba(36,46,78,0.95)"></ellipse>
+<path d="M0 260 C40 240 60 280 30 320 L0 330Z" fill="rgba(48,60,30,0.75)"></path>
+<path d="M600 250 C560 236 540 290 575 330 L600 335Z" fill="rgba(48,60,30,0.75)"></path>
+</svg>
+<span style="position: absolute; left: 14px; top: 14px; height: 32px; padding: 0 12px; border-radius: 8px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid color-mix(in srgb, var(--ac-lab) 50%, transparent); color: var(--tx); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Right size for Instagram &amp; Facebook</span>
+<span style="position: absolute; right: 14px; bottom: 14px; height: 32px; padding: 0 12px; border-radius: 8px; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--bd3); color: var(--tx); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">1 photo · 4:5 portrait</span>
+</div>
+
+<div style="border: 1px solid var(--bd1); background: var(--sunk); border-radius: 18px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; line-height: 1; color: var(--ac-lab)" aria-hidden="true">“</span>
+<h3 style="margin: 0; flex: 1; font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">Caption</h3>
+<span style="font-size: 13px; color: var(--mut)">184 of 2,200 characters</span>
+</div>
+<p style="margin: 0; padding: 18px 20px; border-radius: 12px; border: 1px solid var(--bd2); background: var(--panel); font-size: 18px; line-height: 1.65">"Sunrise yoga on the terrace, Saturday 7 am. Bring your mat and an open mind, and stay for fresh herbal tea after class. Reserve your spot through the link in our bio."</p>
+<div style="display: flex; align-items: center; gap: 8px"><span style="color: var(--ac-lab); font-weight: 700">#</span><span style="font-size: 14px; font-weight: 700; color: var(--ac-lab); flex: 1">Hashtags</span><a href="R3Compose.dc.html" style="font-size: 13px; font-weight: 600">Edit</a></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 15px; display: inline-flex; align-items: center">#FitZoneMorning</span>
+<span style="height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 15px; display: inline-flex; align-items: center">#TerraceYoga</span>
+<span style="height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 15px; display: inline-flex; align-items: center">#WeekendWellness</span>
+<span style="height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 15px; display: inline-flex; align-items: center">#FitCommunity</span>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); background: color-mix(in srgb, var(--bad2) 8%, transparent)">
+<span style="width: 28px; height: 28px; flex: none; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--bad) 60%, transparent); color: var(--bad); font-weight: 800; display: flex; align-items: center; justify-content: center">!</span>
+<span style="flex: 1 1 260px; font-size: 15px">FitZone Gym's Facebook page is disconnected. Until it's fixed, this post goes to Instagram only.</span>
+<a href="R3Accounts.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; background: var(--inv-bg); color: var(--on-inv); text-decoration: none; font-weight: 700; font-size: 14px">Reconnect</a>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line); padding-top: 24px">
+<button type="button" style="flex: 1 1 170px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 58px; border: 1px solid var(--bd3); border-radius: 12px; background: var(--panel2); color: var(--tx); font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>Ask for changes</button>
+<a href="R3Compose.dc.html" style="flex: 1 1 150px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 58px; border: 1px solid var(--bd3); border-radius: 12px; background: var(--panel2); color: var(--tx); text-decoration: none; font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Edit post</a>
+<a href="R3Calendar.dc.html" style="flex: 1.6 1 240px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; height: 58px; border-radius: 12px; background: linear-gradient(180deg, var(--g1) 0%, var(--g2) 100%); color: var(--on-ac); text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: 0.04em; text-transform: uppercase; box-shadow: 0 12px 32px color-mix(in srgb, var(--ac) 32%, transparent)">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Approve &amp; schedule</a>
+</div>
+</section>
+
+<section aria-labelledby="rv-queue" style="background: var(--sunk); border: 1px solid var(--bd1); border-radius: 20px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="14" height="14" rx="2"></rect><path d="M7 3h12a2 2 0 0 1 2 2v12"></path></svg>
+<h2 id="rv-queue" style="margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">Up next</h2>
+<span style="height: 28px; padding: 0 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--ac-lab) 50%, transparent); background: color-mix(in srgb, var(--ac) 10%, transparent); color: var(--ac-pill); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">1 more waiting</span>
+</div>
+<a href="R3Review.dc.html" style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 16px 20px; color: var(--tx); text-decoration: none">
+<div role="img" aria-label="Post photo" style="width: 72px; height: 64px; flex: none; border-radius: 10px; border: 1px solid var(--bd3); background: linear-gradient(170deg, #E8B98A 0%, #9C5A2E 50%, #2E1A10 100%)"></div>
+<span style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; line-height: 1.4"><span style="font-weight: 700; font-size: 16px">Member celebration gift box</span><span style="font-size: 14px; color: var(--mut)">FitZone Gym · Instagram · planned Thu 26 Nov, 5:30 PM</span></span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ac-tx)">Review next <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></span>
+</a>
+</section>
+</div>
+
+<aside style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section aria-labelledby="rv-where" style="background: var(--panel); border: 1px solid var(--bd1); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-start; gap: 14px">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel2); color: var(--ac-lab); display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg></span>
+<div style="flex: 1; min-width: 0">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">This post goes to</div>
+<h2 id="rv-where" style="margin: 2px 0 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 26px; line-height: 1.2">Where It Posts</h2>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--bd1); background: var(--panel2)">
+<span style="width: 38px; height: 38px; flex: none; border-radius: 10px; border: 1px solid var(--bd3); color: var(--ac-soft); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">IG</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 600">Instagram</span><span style="font-size: 13px; color: var(--mut)">@fitzonegym</span></span>
+<span style="height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent); color: var(--ok-tx); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Working</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); background: var(--panel2)">
+<span style="width: 38px; height: 38px; flex: none; border-radius: 10px; border: 1px solid var(--bd3); color: var(--ac-soft); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">FB</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 600">Facebook</span><span style="font-size: 13px; color: var(--mut)">FitZone Gym page</span></span>
+<a href="R3Accounts.dc.html" style="height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--bad) 60%, transparent); color: var(--bad); text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center">Reconnect</a>
+</div>
+<p style="margin: 0; font-size: 13px; color: var(--mut); border-top: 1px solid var(--line); padding-top: 12px">Only FitZone Gym's accounts are shown, so this post can't go to another brand by mistake.</p>
+</section>
+
+<section aria-labelledby="rv-week" style="background: var(--panel); border: 1px solid var(--bd1); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px; padding-bottom: 4px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<h2 id="rv-week" style="margin: 0; flex: 1; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 24px">FitZone This Week</h2>
+<a href="R3Calendar.dc.html" style="font-size: 14px; font-weight: 600">Calendar →</a>
+</div>
+<sc-for list="{{week}}" as="w" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; border: 1px solid {{w.border}}; background: {{w.bg}}">
+<span style="width: 46px; height: 46px; flex: none; border-radius: 8px; border: 1px solid var(--bd3); background: var(--panel3); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05"><span style="font-family: 'Playfair Display', Georgia, serif; font-size: 15px; color: var(--ac-lab)">{{w.day}}</span><span style="font-size: 12px; font-weight: 700; color: var(--tx2)">{{w.num}}</span></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35"><span style="font-weight: 600; font-size: 15px">{{w.title}}</span><span style="font-size: 13px; color: var(--mut)">{{w.meta}}</span></span>
+<span style="height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid {{w.sb}}; color: {{w.sfg}}; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap">{{w.status}}</span>
+</div>
+</sc-for>
+</section>
+
+<section aria-labelledby="rv-notes" style="background: var(--panel); border: 1px solid var(--bd1); border-radius: 22px; padding: 26px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="rv-notes" style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 24px">Notes &amp; History</h2>
+<div style="display: flex; gap: 12px">
+<span style="width: 34px; height: 34px; flex: none; border-radius: 17px; background: var(--bd2); color: var(--ac-soft); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">PS</span>
+<div style="flex: 1; min-width: 0; padding: 10px 14px; border-radius: 4px 14px 14px 14px; background: var(--panel2); border: 1px solid var(--bd1)"><div style="font-size: 13px; color: var(--mut)"><strong style="color: var(--tx)">Priya S.</strong> · 10:12 AM</div><div style="font-size: 14px">Photo is from last Saturday's class. Happy to swap it if you prefer.</div></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding-left: 6px">
+<div style="display: flex; gap: 10px; font-size: 14px; color: var(--tx2)"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 4px; background: var(--sub)"></span>Sent for review · today, 10:12 AM</div>
+<div style="display: flex; gap: 10px; font-size: 14px; color: var(--tx2)"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 4px; background: var(--sub)"></span>Photo replaced · today, 9:40 AM</div>
+<div style="display: flex; gap: 10px; font-size: 14px; color: var(--tx2)"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 4px; background: var(--sub)"></span>Draft started · yesterday, 6:05 PM</div>
+</div>
+<div style="display: flex; gap: 8px">
+<label for="rv-note" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Add a note for Priya</label>
+<input id="rv-note" type="text" placeholder="Add a note for Priya" style="flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--bd4); background: var(--side); color: var(--tx); font-size: 14px">
+<button type="button" style="height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--bd3); background: var(--panel2); color: var(--ac-tx); font-weight: 700">Send</button>
+</div>
+</section>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["espresso","obsidian","daylight","amethyst","sapphire","emerald","burgundy","ivory"],"default":"espresso"},"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = { bg: 'var(--panel2)', border: 'var(--bd1)' };
+    const week = [
+      { day: 'Wed', num: '25', title: 'Wednesday workout tip', meta: '9:00 AM · Instagram', status: 'Scheduled', sb: 'color-mix(in srgb, var(--info2) 50%, transparent)', sfg: 'var(--info)', ...base },
+      { day: 'Thu', num: '26', title: 'Member celebration gift box', meta: '5:30 PM · Instagram', status: 'Waiting', sb: 'color-mix(in srgb, var(--ac-lab) 60%, transparent)', sfg: 'var(--ac-pill)', ...base },
+      { day: 'Sat', num: '28', title: 'Weekend sunrise yoga', meta: '7:00 AM · Instagram & Facebook', status: 'Open now', sb: 'color-mix(in srgb, var(--ac-lab) 90%, transparent)', sfg: 'var(--ac-hi)', bg: 'color-mix(in srgb, var(--ac) 12%, transparent)', border: 'color-mix(in srgb, var(--ac-lab) 55%, transparent)' },
+      { day: 'Sun', num: '29', title: 'Weekend community drop-in', meta: '10:30 AM · Facebook', status: 'Draft', sb: 'var(--bd4)', sfg: 'var(--tx2)', ...base }
+    ];
+    return { theme: this.props.theme ?? 'espresso', week };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidebar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<nav aria-label="Main" style="width: 100%; min-height: 1000px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; padding: 24px 16px 20px; background: var(--side, #17110D); color: var(--tx, #F4EADF); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+<a href="R3Home.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 0 8px; color: var(--tx, #F4EADF); text-decoration: none">
+<span style="width: 42px; height: 42px; flex: none; border-radius: 12px; border: 1.5px solid var(--ac, #EE8F35); background: color-mix(in srgb, var(--ac, var(--ac, #EE8F35)) 12%, transparent); color: var(--ac-tx, #F5A65B); display: flex; align-items: center; justify-content: center">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z"></path></svg>
+</span>
+<span style="font-family: 'Playfair Display', Georgia, serif; font-size: 23px; font-weight: 600; letter-spacing: 0.01em">OmniPost</span>
+</a>
+
+<button type="button" aria-label="Switch brand. Showing all brands" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px; padding: 8px 14px; border: 1px solid var(--bd2, #3A2B21); border-radius: 14px; background: var(--panel, #1D1511); color: var(--tx, #F4EADF); text-align: left; font: inherit; cursor: pointer">
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ac-lab, #F0A04F)">Brand</span><span style="font-weight: 600">All brands</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--mut, #BFAE9B)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+</button>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<a href="R3Home.dc.html" aria-current="{{home.current}}" style="display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: {{home.bg}}; color: {{home.fg}}; text-decoration: none; font-weight: {{home.weight}}; box-shadow: {{home.shadow}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+<span style="flex: 1">Home</span></a>
+<a href="R3Review.dc.html" aria-current="{{review.current}}" style="display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: {{review.bg}}; color: {{review.fg}}; text-decoration: none; font-weight: {{review.weight}}; box-shadow: {{review.shadow}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11 3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+<span style="flex: 1">Approval Studio</span>
+<span aria-label="2 waiting" style="min-width: 26px; height: 26px; padding: 0 8px; border-radius: 13px; border: 1px solid {{review.badgeBorder}}; color: {{review.fg}}; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span></a>
+<a href="R3Posts.dc.html" aria-current="{{posts.current}}" style="display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: {{posts.bg}}; color: {{posts.fg}}; text-decoration: none; font-weight: {{posts.weight}}; box-shadow: {{posts.shadow}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>
+<span style="flex: 1">All Posts &amp; Drafts</span></a>
+<a href="R3Calendar.dc.html" aria-current="{{calendar.current}}" style="display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: {{calendar.bg}}; color: {{calendar.fg}}; text-decoration: none; font-weight: {{calendar.weight}}; box-shadow: {{calendar.shadow}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>
+<span style="flex: 1">Posting Calendar</span></a>
+<a href="#templates" style="display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 16px; border-radius: 14px; color: var(--tx2, #D9CBBB); text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4"></path><path d="M12 17v4"></path><path d="M3 12h4"></path><path d="M17 12h4"></path><path d="m6 6 2 2"></path><path d="m16 16 2 2"></path><path d="m6 18 2-2"></path><path d="m16 8 2-2"></path></svg>
+<span style="flex: 1">Templates</span></a>
+<a href="R3Accounts.dc.html" aria-current="{{accounts.current}}" style="display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: {{accounts.bg}}; color: {{accounts.fg}}; text-decoration: none; font-weight: {{accounts.weight}}; box-shadow: {{accounts.shadow}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><circle cx="5" cy="5" r="2"></circle><circle cx="19" cy="5" r="2"></circle><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="19" r="2"></circle><path d="m7 7 3 3"></path><path d="m17 7-3 3"></path><path d="m7 17 3-3"></path><path d="m17 17-3-3"></path></svg>
+<span style="flex: 1">Social Accounts</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--bad, var(--bad, #F3A08F)) 60%, transparent); color: {{accounts.warn}}; font-size: 12px; font-weight: 700; display: flex; align-items: center">1 to fix</span></a>
+</div>
+
+<div style="flex: 1"></div>
+
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line, #2C2119); padding-top: 14px">
+<a href="#help" style="display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 0 16px; border-radius: 14px; color: var(--tx2, #D9CBBB); text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab, #F0A04F)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7"></path><path d="M12 17h.01"></path></svg>
+Help &amp; Guides</a>
+<a href="#settings" style="display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 0 16px; border-radius: 14px; color: var(--tx2, #D9CBBB); text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+Settings</a>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 10px 0">
+<span style="position: relative; width: 42px; height: 42px; flex: none; border-radius: 21px; background: var(--bd2, #3A2B21); color: var(--ac-soft, #F5C89A); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px">DB<span style="position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 6px; background: var(--ac, #EE8F35); border: 2px solid var(--side, #17110D)"></span></span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 600; font-size: 14px">Demo Business</span><span style="font-size: 12px; color: var(--mut, #BFAE9B)">Owner · Demo Agency</span></span>
+<a href="#sign-out" aria-label="Sign out" style="width: 40px; height: 40px; border-radius: 10px; color: var(--mut, #BFAE9B); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg></a>
+</div>
+</div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","review","posts","calendar","accounts","none"],"default":"home"},"$preview":{"width":264,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? 'home';
+    const item = (k) => a === k
+      ? { current: 'page', bg: 'linear-gradient(180deg, var(--g1, #F6A24A) 0%, var(--g2, #E2802A) 100%)', fg: 'var(--on-ac, #1F1208)', weight: '700', shadow: '0 10px 26px color-mix(in srgb, var(--ac, var(--ac, #EE8F35)) 28%, transparent)', badgeBorder: 'color-mix(in srgb, var(--on-ac, var(--on-ac, #1F1208)) 45%, transparent)', warn: 'var(--on-ac, #1F1208)' }
+      : { current: 'false', bg: 'transparent', fg: 'var(--tx2, #D9CBBB)', weight: '500', shadow: 'none', badgeBorder: 'color-mix(in srgb, var(--ac-lab, var(--ac-lab, #F0A04F)) 60%, transparent)', warn: 'var(--bad, #F3A08F)' };
+    return { home: item('home'), review: item('review'), posts: item('posts'), calendar: item('calendar'), accounts: item('accounts') };
+  }
+}
+</script>
+</body>
+</html>

@@ -55,7 +55,7 @@ export function TemplatesPage() {
   return (
     <BentoGrid>
       <div className="md:col-span-12">
-        <PageHeader eyebrow="Ready-made captions you fill in for your brand" title="Smart Templates" />
+        <PageHeader eyebrow="Ready-made captions you fill in for your brand" title="Smart Templates" accent="Ideas" />
       </div>
 
       <Tile className="flex-row flex-wrap items-end gap-3 md:col-span-12">

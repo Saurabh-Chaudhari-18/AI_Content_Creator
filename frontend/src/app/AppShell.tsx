@@ -2,10 +2,13 @@ import {
   Briefcase,
   CalendarDays,
   Check,
+  ChevronsUpDown,
   House,
+  Infinity as InfinityIcon,
   LayoutGrid,
   LayoutTemplate,
   Link2,
+  ListChecks,
   LogOut,
   Monitor,
   Moon,
@@ -17,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, NavLink, Outlet, useMatch } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useMatch } from "react-router";
 
 import {
   DropdownMenu,
@@ -30,8 +33,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { accountHealth } from "@/lib/accountHealth";
 import { useAuth } from "@/lib/auth";
 import { brandStyle, initials } from "@/lib/brandColor";
+import { ROLE_LABEL } from "@/lib/format";
+import { platformEnabled, useAccounts, useFeatures, useMyRole, useWorkspacePosts } from "@/lib/queries";
 import { useTheme, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
@@ -45,7 +51,7 @@ const NAV: NavItem[] = [
   { to: "/posts", label: "Posts", icon: SquarePen },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/templates", label: "Templates", icon: LayoutTemplate },
-  { to: "/accounts", label: "Connected accounts", short: "Accounts", icon: Link2 },
+  { to: "/accounts", label: "Social accounts", short: "Accounts", icon: Link2 },
   { to: "/brands", label: "Brands", icon: Briefcase },
 ];
 const SETTINGS: NavItem = { to: "/settings", label: "Settings", icon: Settings2 };
@@ -87,17 +93,32 @@ function RailLink({ item }: { item: NavItem }) {
   );
 }
 
-/** Theme + sign out; shared by the rail and the phone header. */
-function AccountMenu({ side }: { side: "right" | "bottom" }) {
+/** Theme + sign out; shared by the sidebar, the rail and the phone header. `wide` is the sidebar's name card. */
+function AccountMenu({ side, wide = false }: { side: "right" | "bottom"; wide?: boolean }) {
   const { user, logout, setThemePreference } = useAuth();
   const { theme } = useTheme();
+  const role = useMyRole();
+  const avatar = (
+    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+      {initials(user?.full_name) || "?"}
+    </span>
+  );
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={cn("grid size-9 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground", focusRing)}
+        className={cn(
+          wide ? "flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 text-left hover:bg-surface-hover" : "rounded-full",
+          focusRing,
+        )}
         aria-label={`Account menu for ${user?.full_name ?? "you"}`}
       >
-        {initials(user?.full_name) || "?"}
+        {avatar}
+        {wide && (
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-semibold">{user?.full_name}</span>
+            <span className="truncate text-xs text-muted-foreground">{role ? ROLE_LABEL[role] : " "}</span>
+          </span>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent side={side} align="end" sideOffset={10} className="w-60">
         <DropdownMenuLabel className="flex flex-col font-normal">
@@ -133,23 +154,49 @@ function AccountMenu({ side }: { side: "right" | "bottom" }) {
   );
 }
 
-/** The "Showing" filter: all brands or one brand. Its tile wears the brand's colour. */
-function BrandMenu({ side, compact = false }: { side: "right" | "bottom"; compact?: boolean }) {
+/** The "Showing" filter: all brands or one brand. Its tile wears the brand's colour. `wide` is the sidebar's labelled button. */
+function BrandMenu({ side, compact = false, wide = false }: { side: "right" | "bottom"; compact?: boolean; wide?: boolean }) {
   const { brands, brandId, setBrandId } = useWorkspace();
   const current = brands.find((b) => b.id === brandId);
+  const tile = current ? initials(current.name) : <LayoutGrid className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={current ? `Showing ${current.name}. Switch brand` : "Showing all brands. Switch brand"}
-        style={current ? brandStyle(current) : undefined}
+        style={current && !wide ? brandStyle(current) : undefined}
         className={cn(
-          "grid place-items-center rounded-[10px] text-xs font-medium transition-colors duration-150",
-          compact ? "size-9" : "size-10",
-          current ? "brand-tile" : "border bg-card text-muted-foreground hover:text-foreground",
+          wide
+            ? "flex min-h-[58px] w-full items-center gap-3 rounded-xl border bg-card px-3 text-left transition-colors duration-150 hover:bg-surface-hover"
+            : cn(
+                "grid place-items-center rounded-[10px] text-xs font-medium transition-colors duration-150",
+                compact ? "size-9" : "size-10",
+                current ? "brand-tile" : "border bg-card text-muted-foreground hover:text-foreground",
+              ),
           focusRing,
         )}
       >
-        {current ? initials(current.name) : <LayoutGrid className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />}
+        {wide ? (
+          <>
+            <span
+              style={current ? brandStyle(current) : undefined}
+              className={cn(
+                "grid size-9 shrink-0 place-items-center rounded-lg text-xs font-medium",
+                current ? "brand-tile" : "border bg-background text-muted-foreground",
+              )}
+            >
+              {tile}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col leading-tight">
+              <span className="eyebrow" style={{ fontSize: 11 }}>
+                Brand
+              </span>
+              <span className="truncate font-semibold">{current?.name ?? "All brands"}</span>
+            </span>
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </>
+        ) : (
+          tile
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent side={side} align="start" sideOffset={10} className="w-72">
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Showing</DropdownMenuLabel>
@@ -179,7 +226,7 @@ function BrandMenu({ side, compact = false }: { side: "right" | "bottom"; compac
 
 /** The workspace mark; it switches workspace when there is more than one. */
 function WorkspaceMark({ side }: { side: "right" | "bottom" }) {
-  const { workspace, workspaces, setWorkspaceId } = useWorkspace();
+  const { workspace, workspaces } = useWorkspace();
   const name = workspace?.name ?? "OmniPost";
   const mark = (
     <span className="grid size-9 place-items-center rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground">
@@ -200,17 +247,184 @@ function WorkspaceMark({ side }: { side: "right" | "bottom" }) {
       <DropdownMenuTrigger aria-label={`Workspace: ${name}. Switch workspace`} className={cn("rounded-[10px]", focusRing)}>
         {mark}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side={side} align="start" sideOffset={10} className="w-64">
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Workspace</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={workspace?.id} onValueChange={setWorkspaceId}>
-          {workspaces.map((w) => (
-            <DropdownMenuRadioItem key={w.id} value={w.id}>
-              {w.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
+      <WorkspaceMenuContent side={side} />
     </DropdownMenu>
+  );
+}
+
+function WorkspaceMenuContent({ side }: { side: "right" | "bottom" }) {
+  const { workspace, workspaces, setWorkspaceId } = useWorkspace();
+  return (
+    <DropdownMenuContent side={side} align="start" sideOffset={10} className="w-64">
+      <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Workspace</DropdownMenuLabel>
+      <DropdownMenuRadioGroup value={workspace?.id} onValueChange={setWorkspaceId}>
+        {workspaces.map((w) => (
+          <DropdownMenuRadioItem key={w.id} value={w.id}>
+            {w.name}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    </DropdownMenuContent>
+  );
+}
+
+/** Sidebar top: the product mark and name, with the workspace under it (a switcher when there are several). */
+function SidebarWorkspace() {
+  const { workspace, workspaces } = useWorkspace();
+  const body = (
+    <span className="flex min-w-0 flex-1 items-center gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-eyebrow/60 bg-accent text-eyebrow">
+        <InfinityIcon className="size-5" strokeWidth={2} aria-hidden="true" />
+      </span>
+      <span className="flex min-w-0 flex-col text-left leading-tight">
+        <span className="font-display text-[21px] font-semibold text-foreground">OmniPost</span>
+        <span className="truncate text-xs text-muted-foreground">{workspace?.name ?? " "}</span>
+      </span>
+    </span>
+  );
+  if (workspaces.length <= 1) {
+    return (
+      <Link to="/" aria-label="OmniPost home" className={cn("flex rounded-xl px-1 py-1 no-underline", focusRing)}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`Workspace: ${workspace?.name ?? ""}. Switch workspace`}
+        className={cn("flex items-center gap-2 rounded-xl px-1 py-1 hover:bg-surface-hover", focusRing)}
+      >
+        {body}
+        <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <WorkspaceMenuContent side="right" />
+    </DropdownMenu>
+  );
+}
+
+/** Counts shown next to sidebar items: posts waiting for approval, accounts that need fixing. */
+function useNavCounts() {
+  const pending = useWorkspacePosts({ status: "pending_approval", limit: 1 });
+  const accounts = useAccounts();
+  const features = useFeatures();
+  const toFix = (accounts.data ?? []).filter(
+    (a) => accountHealth(a, platformEnabled(features.data, a.platform)).tone !== "success",
+  ).length;
+  return { pending: pending.data?.total ?? 0, toFix };
+}
+
+type SideItem = { to: string; label: string; icon: LucideIcon; active: boolean; badge?: ReactNode };
+
+function SideLink({ item }: { item: SideItem }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      aria-current={item.active ? "page" : undefined}
+      className={cn(
+        "flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[15px] no-underline transition-colors duration-150",
+        item.active
+          ? "btn-depth font-semibold text-primary-foreground"
+          : "font-medium text-secondary-foreground hover:bg-surface-hover hover:text-foreground",
+        focusRing,
+      )}
+    >
+      <Icon className="size-[19px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+      <span className="flex-1 truncate">{item.label}</span>
+      {item.badge}
+    </Link>
+  );
+}
+
+function Count({ children, label, active, tone }: { children: ReactNode; label: string; active: boolean; tone: "warning" | "danger" }) {
+  return (
+    <span
+      aria-label={label}
+      className={cn(
+        "inline-flex h-6 min-w-6 items-center justify-center rounded-full border px-2 text-xs font-bold",
+        active
+          ? "border-white/40 text-primary-foreground"
+          : tone === "warning"
+            ? "border-warning-border bg-warning-soft text-warning"
+            : "border-danger-border bg-danger-soft text-danger",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Desktop sidebar (lg and up): every section labelled, counts where something needs you. */
+function Sidebar() {
+  const { pathname, search } = useLocation();
+  const { pending, toFix } = useNavCounts();
+  const status = new URLSearchParams(search).get("status");
+  const under = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
+  const approving = pathname === "/posts" && status === "pending_approval";
+
+  const main: SideItem[] = [
+    { to: "/", label: "Home", icon: House, active: pathname === "/" },
+    {
+      to: "/posts?status=pending_approval",
+      label: "To approve",
+      icon: ListChecks,
+      active: approving,
+      badge:
+        pending > 0 ? (
+          <Count label={`${pending} waiting for approval`} active={approving} tone="warning">
+            {pending}
+          </Count>
+        ) : undefined,
+    },
+    { to: "/posts", label: "All posts", icon: SquarePen, active: under("/posts") && !approving },
+    { to: "/calendar", label: "Calendar", icon: CalendarDays, active: under("/calendar") },
+    { to: "/templates", label: "Templates", icon: LayoutTemplate, active: under("/templates") },
+  ];
+  const accountsActive = under("/accounts") || under("/social-accounts");
+  const workspaceItems: SideItem[] = [
+    {
+      to: "/accounts",
+      label: "Social accounts",
+      icon: Link2,
+      active: accountsActive,
+      badge:
+        toFix > 0 ? (
+          <Count label={`${toFix} need fixing`} active={accountsActive} tone="danger">
+            {toFix}
+          </Count>
+        ) : undefined,
+    },
+    { to: "/brands", label: "Brands", icon: Briefcase, active: under("/brands") },
+    { to: "/settings", label: "Settings", icon: Settings2, active: under("/settings") },
+  ];
+
+  return (
+    <aside
+      aria-label="Main"
+      className="fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col gap-5 overflow-y-auto border-r bg-surface-subtle px-4 py-5 lg:flex"
+    >
+      <SidebarWorkspace />
+      <BrandMenu side="right" wide />
+      <nav aria-label="Sections" className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1">
+          {main.map((item) => (
+            <SideLink key={item.label} item={item} />
+          ))}
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="px-3.5 pb-1 text-xs font-semibold text-muted-foreground">Workspace</span>
+          {workspaceItems.map((item) => (
+            <SideLink key={item.label} item={item} />
+          ))}
+        </div>
+      </nav>
+      <div className="flex-1" />
+      <div className="flex items-center gap-1 border-t pt-4">
+        <AccountMenu side="right" wide />
+        <NotificationBell side="right" />
+      </div>
+    </aside>
   );
 }
 
@@ -220,9 +434,12 @@ export function AppShell() {
   return (
     <TooltipProvider>
       {/* overflow-x-clip (not hidden) so decorative bleeds never cause sideways scroll and sticky headers still work */}
-      <div className="min-h-svh overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:pb-0 md:pl-16">
-        {/* ── Desktop: the icon rail ─────────────────────────────── */}
-        <aside aria-label="Main" className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center justify-between border-r bg-surface-subtle py-4 md:flex">
+      <div className="min-h-svh overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:pb-0 md:pl-16 lg:pl-[264px]">
+        {/* ── Desktop: the labelled sidebar ──────────────────────── */}
+        <Sidebar />
+
+        {/* ── Tablet: the icon rail ──────────────────────────────── */}
+        <aside aria-label="Main" className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center justify-between border-r bg-surface-subtle py-4 md:flex lg:hidden">
           <div className="flex w-full flex-col items-center gap-4">
             <WorkspaceMark side="right" />
             <BrandMenu side="right" />

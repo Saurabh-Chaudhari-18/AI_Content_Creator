@@ -53,6 +53,7 @@ import { ApprovalActions, ApprovalRecord, usePostHistory } from "./ApprovalPanel
 import { CHAR_LIMIT, HashtagInput, limitState, LimitRing, PlatformMark, PlatformPreview, renderPostText } from "./parts";
 import { focusPublishPanel, JobsPanel, PublishPanel } from "./PublishPanel";
 import { ReviewerDialog, ReviewPanel } from "./ReviewerDialogs";
+import { ReviewStudio } from "./ReviewStudio";
 import { shortHash } from "./Seal";
 import { TemplateBrowserDialog, TemplateFillDialog, type TemplateResult } from "./TemplateDialogs";
 
@@ -146,7 +147,7 @@ function Section({ title, aside, children, id }: { title: string; aside?: ReactN
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="m-0 scroll-mt-28 text-sm font-medium">
+        <h2 id={id} className="eyebrow m-0 scroll-mt-28">
           {title}
         </h2>
         {aside && <span className="text-xs text-muted-foreground">{aside}</span>}
@@ -568,8 +569,34 @@ export function PostStudioPage() {
     <MediaSection post={p} media={media} editable={editable} inputRef={mediaInputRef} ensurePostId={ensurePostId} creating={create.isPending} />
   );
 
+  // Waiting for approval: the post is locked, so show the Approval Studio review layout instead of the editor.
+  const reviewMode = !!p && status === "pending_approval";
+
   return (
-    <div className="flex flex-col lg:h-svh">
+    <div className={cn("flex flex-col", !reviewMode && "lg:h-svh")}>
+      {reviewMode ? (
+        <ReviewStudio
+          post={p}
+          brand={brand}
+          brandColor={brandColor(brand)}
+          brandStyle={brandStyle(brand)}
+          channels={CHANNELS}
+          previewPlatform={previewPlatform}
+          onPreview={setPreviewTab}
+          shown={shown}
+          lengthOn={lengthOn}
+          imageUrl={firstImage}
+          mediaCount={media.length}
+          authorName={members.data?.find((m) => m.user_id === p.created_by)?.full_name}
+          submitted={history.data?.find((h) => h.action === "submitted")}
+          expiring={expiring}
+          canApprove={canApprove}
+          canManage={canManage}
+          approveBlockedReason={approveBlockedReason}
+          onDelete={() => setConfirmDelete(true)}
+        />
+      ) : (
+      <>
       {/* ── Header: where you are, the seal, status, actions ─────── */}
       <header className="sticky top-14 z-20 flex min-h-16 flex-none flex-wrap items-center gap-x-6 gap-y-3 border-b bg-surface-subtle px-4 py-3 sm:px-6 md:top-0">
         <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -651,7 +678,7 @@ export function PostStudioPage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <h1 className="m-0 text-2xl leading-8 font-medium">{title}</h1>
+                  <h1 className="m-0 font-display text-[30px] leading-tight font-medium sm:text-[36px]">{title}</h1>
                   <p className="m-0 mt-1 text-sm text-muted-foreground">
                     <span aria-hidden="true" className="mr-2 inline-block size-2 rounded-full align-middle" style={{ background: brandColor(brand) }} />
                     {meta.join(" · ")}
@@ -938,6 +965,8 @@ export function PostStudioPage() {
           </div>
         </section>
       </div>
+      </>
+      )}
 
       {p && <ReviewerDialog post={p} brandName={brand?.name ?? "—"} mode="submit" open={submitOpen} onOpenChange={setSubmitOpen} />}
       <TemplateBrowserDialog open={browseOpen} industry={brand?.industry} onClose={() => setBrowseOpen(false)} onPick={(t) => setFilling(t)} />

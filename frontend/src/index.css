@@ -3,6 +3,9 @@
 @import "@fontsource-variable/plus-jakarta-sans";
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource/instrument-serif";
+@import "@fontsource/playfair-display/500.css";
+@import "@fontsource/playfair-display/500-italic.css";
+@import "@fontsource/playfair-display/600.css";
 
 /* ─────────────────────────────────────────────────────────────────────
    THEME — the product owner's design (docs/design/post-studio.html).
@@ -19,6 +22,8 @@
   --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-serif: "Instrument Serif", Georgia, serif;
+  /* Page and card headings (2026-11 redesign, Round 3) */
+  --font-display: "Playfair Display", Georgia, serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -64,13 +69,16 @@
   --color-info-soft: var(--info-soft);
   --color-info-border: var(--info-border);
 
+  /* Small uppercase section labels and the italic word in page titles */
+  --color-eyebrow: var(--eyebrow);
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Light: the owner's palette on cool greys */
 :root {
   --radius: 0.625rem;        /* 10px: inputs, buttons */
-  --radius-tile: 1rem;       /* 16px: cards */
+  --radius-tile: 1.25rem;    /* 20px: cards */
 
   --background: #f5f7fa;
   --foreground: #111827;
@@ -107,6 +115,8 @@
   --info: #3730a3;
   --info-soft: #eef0ff;
   --info-border: #c7d2fe;
+
+  --eyebrow: #4f46e5;
 }
 
 /* Dark (default): the owner's obsidian palette */
@@ -146,6 +156,8 @@
   --info: #c7d2fe;
   --info-soft: #1c1f3a;
   --info-border: #3730a3;
+
+  --eyebrow: #818cf8;
 }
 
 @layer base {
@@ -176,6 +188,26 @@
   }
   .btn-depth:hover {
     background-image: linear-gradient(180deg, #7b7ef6, #5b52ec);
+  }
+  /* The thin indigo line along the top of a featured card (Round 3 "spotlight") */
+  .rim {
+    position: relative;
+    overflow: hidden;
+  }
+  .rim::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3730a3, #818cf8, #3730a3);
+  }
+  /* Small uppercase section label */
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--eyebrow);
   }
   /* Platform identity tiles: the platforms' own colours, small */
   .tile-instagram {

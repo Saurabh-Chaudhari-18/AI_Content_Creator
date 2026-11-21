@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New Post</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+.th{--bg:#120D0A;--side:#17110D;--sunk:#1A130F;--panel:#1D1511;--panel2:#221913;--panel3:#2A1F18;--line:#2C2119;--bd1:#33261D;--bd2:#3A2B21;--bd3:#4A3727;--bd4:#5A4433;--tx:#F4EADF;--tx2:#D9CBBB;--mut:#BFAE9B;--sub:#9C8A77;--ac:#EE8F35;--ac-tx:#F5A65B;--ac-lab:#F0A04F;--ac-pill:#F5B371;--ac-hi:#FBC48C;--ac-soft:#F5C89A;--g1:#F6A24A;--g2:#E2802A;--rim:#B8601E;--on-ac:#1F1208;--inv-bg:#F4EADF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A08F;--bad2:#DC5A3C;--bad-dk:#9E3E2A;--bad-tx:#F3C3B8;--info:#B5C9EE;--info2:#9DB8E8;--on-inv:#1F1208}
+.th[data-theme="obsidian"]{--bg:#0B0F17;--side:#111722;--sunk:#0E131D;--panel:#151D2A;--panel2:#1B2536;--panel3:#212E44;--line:#1C2537;--bd1:#232E42;--bd2:#27334A;--bd3:#2B3850;--bd4:#3A4864;--tx:#E8ECF4;--tx2:#C3CBDA;--mut:#A3AEC2;--sub:#8B97AD;--ac:#6366F1;--ac-tx:#A5B4FC;--ac-lab:#818CF8;--ac-pill:#C7D2FE;--ac-hi:#E0E7FF;--ac-soft:#C7D2FE;--g1:#6366F1;--g2:#4F46E5;--rim:#3730A3;--on-ac:#FFFFFF;--inv-bg:#E8ECF4;--ok:#34D399;--ok-tx:#6EE7B7;--bad:#F87171;--bad2:#E5484D;--bad-dk:#9B2C2F;--bad-tx:#FCA5A5;--info:#93C5FD;--info2:#60A5FA;--on-inv:#0B0F17}
+.th[data-theme="daylight"]{--bg:#F5F7FA;--side:#FFFFFF;--sunk:#EEF1F6;--panel:#FFFFFF;--panel2:#F6F8FB;--panel3:#EEF1F6;--line:#E9EDF3;--bd1:#E3E7EE;--bd2:#DCE1EA;--bd3:#D5DBE5;--bd4:#B8C1CF;--tx:#111827;--tx2:#374151;--mut:#4B5565;--sub:#6B7280;--ac:#4F46E5;--ac-tx:#4338CA;--ac-lab:#4F46E5;--ac-pill:#3730A3;--ac-hi:#312E81;--ac-soft:#3730A3;--g1:#5B54EA;--g2:#4338CA;--rim:#4F46E5;--on-ac:#FFFFFF;--inv-bg:#111827;--ok:#059669;--ok-tx:#047857;--bad:#DC2626;--bad2:#DC2626;--bad-dk:#991B1B;--bad-tx:#991B1B;--info:#1D4ED8;--info2:#3B82F6;--on-inv:#FFFFFF}
+.th[data-theme="amethyst"]{--bg:#110C1A;--side:#150F21;--sunk:#181125;--panel:#1C1429;--panel2:#231933;--panel3:#2C2040;--line:#2A1F3A;--bd1:#31253F;--bd2:#392B4A;--bd3:#4A3860;--bd4:#5C4878;--tx:#F3EEFA;--tx2:#D6CCE6;--mut:#B6A9CB;--sub:#8E7FA6;--ac:#D9A93E;--ac-tx:#E8C46A;--ac-lab:#E2B550;--ac-pill:#EBCB7E;--ac-hi:#F3D995;--ac-soft:#E9D29A;--g1:#EDC66A;--g2:#C9962E;--rim:#8A6418;--on-ac:#1E1405;--inv-bg:#F3EEFA;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#F3A0A8;--bad2:#D9506A;--bad-dk:#8E2A44;--bad-tx:#F6C2CC;--info:#BFC8F2;--info2:#A0AEEA;--on-inv:#1E1405}
+.th[data-theme="sapphire"]{--bg:#0A0F1E;--side:#0D1427;--sunk:#0F172C;--panel:#121B32;--panel2:#17223D;--panel3:#1D2A4A;--line:#1C2843;--bd1:#22304F;--bd2:#293A5E;--bd3:#364B76;--bd4:#465E8E;--tx:#EEF3FC;--tx2:#CAD5EC;--mut:#A6B4D2;--sub:#7C8CB0;--ac:#6FA3FF;--ac-tx:#8DB6FF;--ac-lab:#7FAEFF;--ac-pill:#A3C4FF;--ac-hi:#C2D8FF;--ac-soft:#B8CFFF;--g1:#9CC3FF;--g2:#5E95F2;--rim:#2F5FC4;--on-ac:#08132E;--inv-bg:#EEF3FC;--ok:#7FD8A8;--ok-tx:#A3E6C1;--bad:#F5A3A3;--bad2:#E05A5A;--bad-dk:#9A2F3A;--bad-tx:#F8C6C6;--info:#C9B8F5;--info2:#B09AF0;--on-inv:#08132E}
+.th[data-theme="emerald"]{--bg:#08130F;--side:#0B1813;--sunk:#0D1B16;--panel:#10201A;--panel2:#152821;--panel3:#1B3229;--line:#1A2B24;--bd1:#20352C;--bd2:#273F35;--bd3:#335244;--bd4:#426654;--tx:#EEF6F1;--tx2:#CBDDD3;--mut:#A6BFB2;--sub:#7C978A;--ac:#D8B970;--ac-tx:#E3C987;--ac-lab:#DDBF77;--ac-pill:#E8D39C;--ac-hi:#F0E0B5;--ac-soft:#E6D5A6;--g1:#ECD493;--g2:#C8A552;--rim:#8A6E2A;--on-ac:#1A1405;--inv-bg:#EEF6F1;--ok:#8FD9B0;--ok-tx:#AEE6C6;--bad:#F3A08F;--bad2:#D9553C;--bad-dk:#9A3A28;--bad-tx:#F6C4B8;--info:#B7CAF0;--info2:#98B2EA;--on-inv:#1A1405}
+.th[data-theme="burgundy"]{--bg:#14080C;--side:#1A0B10;--sunk:#1D0D13;--panel:#221016;--panel2:#2A151C;--panel3:#331A23;--line:#2E1820;--bd1:#381E28;--bd2:#422431;--bd3:#573042;--bd4:#6C3E54;--tx:#F8EDEF;--tx2:#E2CDD2;--mut:#C6A9B1;--sub:#9C7F88;--ac:#E8A07E;--ac-tx:#F0B497;--ac-lab:#EBA585;--ac-pill:#F3C0A6;--ac-hi:#F8D3BF;--ac-soft:#F2C9B4;--g1:#F2B595;--g2:#D3845F;--rim:#8E4A30;--on-ac:#24100A;--inv-bg:#F8EDEF;--ok:#8BD3A0;--ok-tx:#A8E0B8;--bad:#FF9FA8;--bad2:#E0405A;--bad-dk:#9C2338;--bad-tx:#FFC7CD;--info:#B9C6F0;--info2:#9DAEEA;--on-inv:#24100A}
+.th[data-theme="ivory"]{--bg:#F6F1E7;--side:#EFE7D8;--sunk:#F3ECDF;--panel:#FFFDF8;--panel2:#FAF5EA;--panel3:#F1E8D6;--line:#E4D9C4;--bd1:#E0D3BB;--bd2:#D6C7AB;--bd3:#C2AF8C;--bd4:#A8936C;--tx:#1B2340;--tx2:#33405F;--mut:#4E5B78;--sub:#6D7891;--ac:#1F3A8A;--ac-tx:#1F3A8A;--ac-lab:#7A5A12;--ac-pill:#7A5A12;--ac-hi:#12286A;--ac-soft:#7A5A12;--g1:#2B4DAA;--g2:#1A3079;--rim:#B8902F;--on-ac:#FFFBF2;--inv-bg:#1B2340;--ok:#2E8B57;--ok-tx:#1F6B42;--bad:#C2412D;--bad2:#D9553C;--bad-dk:#9E3E2A;--bad-tx:#8E2A1C;--info:#2F5DB8;--info2:#3D6BC4;--on-inv:#FFFBF2}
+body{margin:0;background:var(--bg)}
+*{box-sizing:border-box}
+a{color:var(--ac-tx)}a:hover{color:var(--ac-hi)}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit}
+input::placeholder{color:var(--sub)}
+</style>
+</helmet>
+<div class="th" data-theme="{{theme}}" style="width: 100%; min-height: 1080px; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bg); color: var(--tx); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<div style="flex: 1 1 264px; max-width: 100%; background: var(--side); border-right: 1px solid var(--line)">
+<dc-import name="R3Sidebar" active="none" hint-size="100%,1000px"></dc-import>
+</div>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 22px 40px; border-bottom: 1px solid var(--line)">
+<h1 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 34px">New Post <span style="color: var(--ac-lab); font-style: italic">· Draft</span></h1>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--mut)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Saved a moment ago</span>
+<span style="flex: 1"></span>
+<a href="R3Home.dc.html" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel); color: var(--tx); text-decoration: none; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>Close, keep draft</a>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 28px; padding: 32px 40px 48px; align-items: flex-start">
+
+<section aria-label="Write your post" style="flex: 999 1 600px; min-width: 0; position: relative; background: var(--panel); border: 1px solid var(--bd1); border-radius: 24px; padding: 32px 34px 28px; overflow: hidden; display: flex; flex-direction: column; gap: 28px">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--rim), var(--g1), var(--rim))"></div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">1 · Which brand?</h2>
+<div role="radiogroup" aria-label="Brand" style="display: flex; flex-wrap: wrap; gap: 10px">
+<label style="display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px; border-radius: 12px; border: 1.5px solid var(--ac); background: color-mix(in srgb, var(--ac) 12%, transparent); font-weight: 700"><input type="radio" name="brand" checked style="width: 18px; height: 18px; accent-color: var(--ac)">FitZone Gym</label>
+<label style="display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel2); font-weight: 500; color: var(--tx2)"><input type="radio" name="brand" style="width: 18px; height: 18px; accent-color: var(--ac)">Aura Coffee</label>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px">
+<label for="cp-caption" style="flex: 1; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">2 · Caption</label>
+<a href="#templates" style="font-size: 14px; font-weight: 600">Start from a template</a>
+</div>
+<textarea id="cp-caption" rows="4" style="width: 100%; padding: 18px 20px; border-radius: 14px; border: 1px solid var(--bd4); background: var(--side); color: var(--tx); font-size: 17px; line-height: 1.65; resize: vertical">New here? Your first week at FitZone is on us. Come say hi at the front desk, get a free fitness check, and try any class you like.</textarea>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="height: 34px; padding: 0 6px 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 14px; display: inline-flex; align-items: center; gap: 4px">#FitZone<button type="button" aria-label="Remove #FitZone" style="width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--mut); display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button></span>
+<span style="height: 34px; padding: 0 6px 0 12px; border-radius: 6px; border: 1px solid var(--bd3); background: var(--panel2); font-size: 14px; display: inline-flex; align-items: center; gap: 4px">#NewMember<button type="button" aria-label="Remove #NewMember" style="width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--mut); display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button></span>
+<label for="cp-tag" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Add a hashtag</label>
+<input id="cp-tag" type="text" placeholder="+ Add hashtag" style="height: 34px; width: 150px; padding: 0 12px; border-radius: 6px; border: 1px dashed var(--bd4); background: transparent; color: var(--tx); font-size: 14px">
+<span style="flex: 1"></span>
+<span style="font-size: 13px; color: var(--mut)">132 of 2,200 characters</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">3 · Photos</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<div role="img" aria-label="Added photo" style="width: 112px; height: 140px; border-radius: 12px; border: 1px solid var(--bd3); background: linear-gradient(170deg, #E8B98A 0%, #9C5A2E 50%, #2E1A10 100%)"></div>
+<button type="button" style="flex: 1 1 260px; min-height: 140px; border: 1.5px dashed var(--bd4); border-radius: 12px; background: var(--side); color: var(--tx2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ac-lab)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="m6 10 6-6 6 6"></path><path d="M4 20h16"></path></svg>
+<span style="font-weight: 700; color: var(--tx)">Drop photos here or browse</span>
+<span style="font-size: 13px; color: var(--mut)">JPG or PNG · 4:5 portrait works best on Instagram</span>
+</button>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">4 · Where should it post?</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<label style="flex: 1 1 240px; display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px; border-radius: 14px; border: 1.5px solid var(--ac); background: color-mix(in srgb, var(--ac) 8%, transparent)">
+<input type="checkbox" checked style="width: 20px; height: 20px; accent-color: var(--ac)">
+<span style="width: 38px; height: 38px; flex: none; border-radius: 10px; border: 1px solid var(--bd3); color: var(--ac-soft); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">IG</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 700">Instagram</span><span style="font-size: 13px; color: var(--mut)">@fitzonegym · working</span></span>
+</label>
+<div style="flex: 1 1 240px; display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); background: var(--panel2)">
+<input id="cp-fb" type="checkbox" disabled style="width: 20px; height: 20px">
+<span style="width: 38px; height: 38px; flex: none; border-radius: 10px; border: 1px solid var(--bd3); color: var(--ac-soft); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">FB</span>
+<label for="cp-fb" style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 700">Facebook</span><span style="font-size: 13px; color: var(--bad)">Disconnected</span></label>
+<a href="R3Accounts.dc.html" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--bad) 60%, transparent); color: var(--bad); text-decoration: none; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center">Reconnect</a>
+</div>
+</div>
+<p style="margin: 0; font-size: 13px; color: var(--mut)">Only FitZone Gym's accounts are listed.</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">5 · When?</h2>
+<div role="radiogroup" aria-label="When to post" style="display: flex; flex-wrap: wrap; gap: 10px">
+<label style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel2); color: var(--tx2)"><input type="radio" name="when" style="width: 18px; height: 18px; accent-color: var(--ac)">As soon as it's approved</label>
+<label style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--ac); background: color-mix(in srgb, var(--ac) 12%, transparent); font-weight: 700"><input type="radio" name="when" checked style="width: 18px; height: 18px; accent-color: var(--ac)">Pick a date and time</label>
+<label style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel2); color: var(--tx2)"><input type="radio" name="when" style="width: 18px; height: 18px; accent-color: var(--ac)">Decide later</label>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<label style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--mut)">Date
+<input type="text" value="Mon, 30 Nov 2026" style="height: 50px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--bd4); background: var(--side); color: var(--tx); font-size: 16px"></label>
+<label style="flex: 1 1 140px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--mut)">Time (IST)
+<input type="text" value="8:00 AM" style="height: 50px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--bd4); background: var(--side); color: var(--tx); font-size: 16px"></label>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line); padding-top: 24px">
+<a href="R3Posts.dc.html" style="flex: 1 1 180px; display: inline-flex; align-items: center; justify-content: center; height: 58px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel2); color: var(--tx); text-decoration: none; font-weight: 600">Save as draft</a>
+<a href="R3Review.dc.html" style="flex: 2 1 260px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; height: 58px; border-radius: 12px; background: linear-gradient(180deg, var(--g1) 0%, var(--g2) 100%); color: var(--on-ac); text-decoration: none; font-weight: 800; font-size: 16px; letter-spacing: 0.04em; text-transform: uppercase; box-shadow: 0 12px 32px color-mix(in srgb, var(--ac) 32%, transparent)">Send for review
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></a>
+</div>
+</section>
+
+<aside style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section aria-labelledby="cp-prev" style="background: var(--panel); border: 1px solid var(--bd1); border-radius: 22px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 10px">
+<h2 id="cp-prev" style="margin: 0; flex: 1; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 24px">Live Preview</h2>
+<div style="display: flex; gap: 4px; padding: 4px; border-radius: 10px; border: 1px solid var(--bd1); background: var(--side)">
+<button type="button" aria-pressed="true" style="height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--bd2); color: var(--tx); font-weight: 700; font-size: 13px">Instagram</button>
+<button type="button" aria-pressed="false" style="height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--mut); font-weight: 600; font-size: 13px">Facebook</button>
+</div>
+</div>
+<div style="border-radius: 16px; border: 1px solid var(--bd2); background: var(--side); overflow: hidden; box-shadow: 0 24px 60px color-mix(in srgb, var(--ac) 12%, transparent)">
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px">
+<span style="width: 32px; height: 32px; border-radius: 16px; border: 1.5px solid var(--ac); color: var(--ac-hi); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">FG</span>
+<span style="font-weight: 700; font-size: 14px">fitzonegym</span>
+</div>
+<div role="img" aria-label="Photo preview" style="width: 100%; aspect-ratio: 4 / 5; background: linear-gradient(170deg, #E8B98A 0%, #9C5A2E 50%, #2E1A10 100%)"></div>
+<p style="margin: 0; padding: 12px 14px 16px; font-size: 14px; line-height: 1.55"><strong>fitzonegym</strong> New here? Your first week at FitZone is on us. Come say hi at the front desk, get a free fitness check, and try any class you like. <span style="color: var(--ac-pill)">#FitZone #NewMember</span></p>
+</div>
+</section>
+
+<section aria-labelledby="cp-who" style="background: var(--panel); border: 1px solid var(--bd1); border-radius: 22px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac-lab)">After you send it</div>
+<h2 id="cp-who" style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 24px">Who Approves</h2>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--ac); background: color-mix(in srgb, var(--ac) 8%, transparent)"><input type="radio" name="who" checked style="width: 18px; height: 18px; accent-color: var(--ac)"><span style="flex: 1; font-weight: 600">You (Owner)</span></label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--bd3); background: var(--panel2)"><input type="radio" name="who" style="width: 18px; height: 18px; accent-color: var(--ac)"><span style="flex: 1; color: var(--tx2)">Send a link to the client</span></label>
+</section>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["espresso","obsidian","daylight","amethyst","sapphire","emerald","burgundy","ivory"],"default":"espresso"},"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'espresso',};
+  }
+}
+</script>
+</body>
+</html>

@@ -74,8 +74,12 @@ export function BrandsPage() {
       <div className="md:col-span-12">
         <PageHeader
           eyebrow="Who you post for — each brand has its own voice"
-          title="Brands"
-          actions={<Button onClick={() => setEditing("new")}>Add a brand</Button>}
+          title="Your Brands"
+          actions={
+            <Button size="lg" onClick={() => setEditing("new")}>
+              Add a brand
+            </Button>
+          }
         />
       </div>
 

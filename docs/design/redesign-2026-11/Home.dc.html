@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#0B0F17}
+*{box-sizing:border-box}
+a{color:#A5B4FC}a:hover{color:#C7D2FE}
+button{font:inherit;cursor:pointer}
+input{font:inherit}
+input::placeholder{color:#8C97AD}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1240px; display: flex; flex-wrap: wrap; align-items: stretch; background: #0B0F17; color: #E8ECF4; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<nav aria-label="Main" style="flex: 1 1 252px; max-width: 100%; background: #0E131D; border-right: 1px solid #1C2537; padding: 22px 16px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 34px; height: 34px; border-radius: 10px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z"></path></svg>
+</div>
+<span style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em">OmniPost</span>
+</div>
+
+<button type="button" aria-label="Switch brand. Showing all brands" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 8px 12px; border: 1px solid #2A354B; border-radius: 12px; background: #131A26; color: #E8ECF4; text-align: left">
+<span style="display: flex; flex: none">
+<span style="width: 26px; height: 26px; border-radius: 8px; background: #FB923C; color: #1A0E05; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #131A26">FG</span>
+<span style="width: 26px; height: 26px; margin-left: -8px; border-radius: 8px; background: #2DD4BF; color: #042F2A; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #131A26">AC</span>
+</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 12px; color: #A3AEC2">Showing</span><span style="font-weight: 700">All brands</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3AEC2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+</button>
+
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="#home" aria-current="page" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #1B2536; color: #FFFFFF; text-decoration: none; font-weight: 700">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+Home</a>
+<a href="#review" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11 3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+<span style="flex: 1">To approve</span>
+<span style="min-width: 24px; height: 22px; padding: 0 7px; border-radius: 11px; background: rgba(245,158,11,0.16); color: #FCD34D; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span></a>
+<a href="#posts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>
+All posts</a>
+<a href="#calendar" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>
+Calendar</a>
+<a href="#templates" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+Templates</a>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="padding: 0 12px 6px; font-size: 12px; font-weight: 600; color: #8C97AD">Workspace</span>
+<a href="#accounts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+<span style="flex: 1">Social accounts</span>
+<span role="img" aria-label="1 needs attention" style="width: 9px; height: 9px; border-radius: 5px; background: #F87171"></span></a>
+<a href="#brands" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9 4.5 4h15L21 9"></path><path d="M3 9v11h18V9"></path><path d="M3 9h18"></path><path d="M9 20v-6h6v6"></path></svg>
+Brands</a>
+<a href="#team" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"></circle><path d="M2 21a7 7 0 0 1 14 0"></path><path d="M17 11a3 3 0 1 0 0-6"></path><path d="M22 21a6 6 0 0 0-4-5.6"></path></svg>
+Team</a>
+<a href="#settings" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C3CBDA; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+Settings</a>
+</div>
+
+<div style="flex: 1"></div>
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: #131A26; border: 1px solid #1C2537">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 18px; background: #312E81; color: #E0E7FF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">DB</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 700; font-size: 14px">Demo Business</span><span style="font-size: 12px; color: #A3AEC2">Owner · Demo Agency</span></span>
+<button type="button" aria-label="Help and guides" style="width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: #A3AEC2; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7"></path><path d="M12 17h.01"></path></svg></button>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 28px; padding: 22px 36px 48px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<div style="flex: 0 1 420px; min-width: 220px; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border: 1px solid #2A354B; border-radius: 12px; background: #111722; color: #A3AEC2">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<label for="h-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search</label>
+<input id="h-search" type="search" placeholder="Search posts, brands, templates" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #E8ECF4; font-size: 14px">
+<span style="font-size: 12px; padding: 2px 7px; border: 1px solid #33415C; border-radius: 6px; color: #A3AEC2">Ctrl K</span>
+</div>
+<span style="flex: 1"></span>
+<button type="button" aria-label="Notifications, 3 new" style="position: relative; width: 44px; height: 44px; border: 1px solid #2A354B; border-radius: 12px; background: #111722; color: #C3CBDA; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10 21a2 2 0 0 0 4 0"></path></svg>
+<span style="position: absolute; top: 9px; right: 10px; width: 8px; height: 8px; border-radius: 4px; background: #F87171"></span>
+</button>
+</div>
+
+<section aria-labelledby="h-greet" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 20px">
+<div style="flex: 1 1 420px; min-width: 0">
+<p style="margin: 0 0 6px; font-size: 14px; color: #A3AEC2; font-weight: 500">Saturday, 21 November</p>
+<h1 id="h-greet" style="margin: 0; font-size: 34px; line-height: 1.15; font-weight: 800; letter-spacing: -0.03em">Good afternoon. <span style="color: #A3AEC2; font-weight: 700">4 things need you today.</span></h1>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border: 1px solid #33415C; border-radius: 12px; background: #151D2A; color: #E8ECF4; font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+Use a template</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border: 0; border-radius: 12px; background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 16px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+New post</button>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+
+<section aria-labelledby="h-todo" style="flex: 999 1 560px; min-width: 0; background: #111722; border: 1px solid #1F2A3D; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 4px 10px">
+<h2 id="h-todo" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Needs you</h2>
+<span style="height: 24px; min-width: 24px; padding: 0 8px; border-radius: 12px; background: #1B2536; color: #E8ECF4; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">4</span>
+<span style="flex: 1"></span>
+<span style="font-size: 13px; color: #A3AEC2">Most urgent first</span>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: rgba(239,68,68,0.07); border: 1px solid rgba(248,113,113,0.28)">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 12px; background: rgba(239,68,68,0.16); color: #FCA5A5; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path><path d="M3 3l18 18"></path></svg></span>
+<div style="flex: 1 1 260px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-weight: 700">Reconnect FitZone Gym's Facebook page</span><span style="height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(239,68,68,0.18); color: #FCA5A5; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">Due tomorrow</span></div>
+<div style="font-size: 14px; color: #A3AEC2">"Community drop-in" goes out Sun 10:30 AM and won't post until this is fixed.</div>
+</div>
+<button type="button" style="height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: #F1F5F9; color: #0B0F17; font-weight: 700">Reconnect</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px; border-radius: 14px">
+<div role="img" aria-label="Post photo" style="width: 44px; height: 44px; flex: none; border-radius: 12px; background: linear-gradient(160deg, #F59E0B 0%, #B45309 55%, #451A03 100%)"></div>
+<div style="flex: 1 1 260px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-weight: 700">Approve "Weekend sunrise yoga"</span><span style="height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(245,158,11,0.16); color: #FCD34D; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">Waiting for you</span></div>
+<div style="font-size: 14px; color: #A3AEC2"><span style="color: #FDBA74">FitZone Gym</span> · Instagram + Facebook · planned Sat 28 Nov, 7:00 AM</div>
+</div>
+<button type="button" style="height: 44px; padding: 0 18px; border: 1px solid #33415C; border-radius: 12px; background: #151D2A; color: #E8ECF4; font-weight: 600">Review</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px; border-radius: 14px">
+<div role="img" aria-label="Post photo" style="width: 44px; height: 44px; flex: none; border-radius: 12px; background: linear-gradient(160deg, #A78BFA 0%, #6D28D9 55%, #2E1065 100%)"></div>
+<div style="flex: 1 1 260px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-weight: 700">Approve "Member celebration gift box"</span><span style="height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(245,158,11,0.16); color: #FCD34D; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">Waiting for you</span></div>
+<div style="font-size: 14px; color: #A3AEC2"><span style="color: #FDBA74">FitZone Gym</span> · Instagram · planned Thu 26 Nov, 5:30 PM</div>
+</div>
+<button type="button" style="height: 44px; padding: 0 18px; border: 1px solid #33415C; border-radius: 12px; background: #151D2A; color: #E8ECF4; font-weight: 600">Review</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px; border-radius: 14px">
+<span style="width: 44px; height: 44px; flex: none; border-radius: 12px; background: rgba(99,102,241,0.16); color: #A5B4FC; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>
+<div style="flex: 1 1 260px; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-weight: 700">Pick a time for "New-member welcome offer"</span><span style="height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(16,185,129,0.16); color: #6EE7B7; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">Approved</span></div>
+<div style="font-size: 14px; color: #A3AEC2"><span style="color: #FDBA74">FitZone Gym</span> · approved yesterday, no date set yet</div>
+</div>
+<button type="button" style="height: 44px; padding: 0 18px; border: 1px solid #33415C; border-radius: 12px; background: #151D2A; color: #E8ECF4; font-weight: 600">Pick a time</button>
+</div>
+</section>
+
+<div style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<section aria-labelledby="h-week" style="background: #111722; border: 1px solid #1F2A3D; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 id="h-week" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Next 7 days</h2>
+<a href="#calendar" style="font-size: 14px; font-weight: 600">Calendar</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{week}}" as="d" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 12px; border-radius: 12px; background: {{d.bg}}; border: 1px solid {{d.border}}">
+<span style="font-size: 12px; color: #A3AEC2; font-weight: 600">{{d.name}}</span>
+<span style="font-size: 17px; font-weight: 800">{{d.num}}</span>
+<span style="display: flex; gap: 3px; height: 6px">
+<sc-for list="{{d.dots}}" as="dot" hint-placeholder-count="1"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{dot.c}}"></span></sc-for>
+</span>
+</div>
+</sc-for>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<div style="padding: 12px; border-radius: 12px; background: #151D2A"><div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em">6</div><div style="font-size: 13px; color: #A3AEC2">going out</div></div>
+<div style="padding: 12px; border-radius: 12px; background: #151D2A"><div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #FCD34D">2</div><div style="font-size: 13px; color: #A3AEC2">waiting for OK</div></div>
+<div style="padding: 12px; border-radius: 12px; background: #151D2A"><div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #FCA5A5">1</div><div style="font-size: 13px; color: #A3AEC2">at risk</div></div>
+</div>
+</section>
+
+<section aria-labelledby="h-acc" style="background: #111722; border: 1px solid #1F2A3D; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 6px">
+<h2 id="h-acc" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Accounts</h2>
+<a href="#accounts" style="font-size: 14px; font-weight: 600">Manage</a>
+</div>
+<sc-for list="{{accounts}}" as="a" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 46px">
+<span style="width: 34px; height: 34px; flex: none; border-radius: 10px; background: {{a.tileBg}}; color: {{a.tileFg}}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">{{a.net}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 600; font-size: 14px">{{a.name}}</span><span style="font-size: 12px; color: #A3AEC2">{{a.brand}}</span></span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: {{a.fg}}"><span style="width: 8px; height: 8px; border-radius: 4px; background: {{a.fg}}"></span>{{a.status}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+</div>
+
+<section aria-labelledby="h-up" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: baseline; gap: 12px">
+<h2 id="h-up" style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.015em">Coming up</h2>
+<span style="font-size: 14px; color: #A3AEC2">Next 5 posts, all brands</span>
+<span style="flex: 1"></span>
+<a href="#calendar" style="font-size: 14px; font-weight: 600">See all in calendar</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px">
+<sc-for list="{{upcoming}}" as="c" hint-placeholder-count="5">
+<a href="#open-post" style="display: flex; flex-direction: column; gap: 12px; padding: 10px 10px 14px; border-radius: 18px; background: #111722; border: 1px solid #1F2A3D; color: #E8ECF4; text-decoration: none">
+<div role="img" aria-label="Post photo" style="position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: {{c.bg}}">
+<svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%" aria-hidden="true"><circle cx="112" cy="46" r="20" fill="rgba(255,255,255,0.28)"></circle><path d="M0 92 C30 76 56 84 82 88 S132 72 160 82 V120 H0Z" fill="rgba(0,0,0,0.22)"></path><path d="M0 104 C40 96 72 102 102 100 S142 96 160 100 V120 H0Z" fill="rgba(0,0,0,0.3)"></path></svg>
+<span style="position: absolute; left: 8px; top: 8px; height: 26px; padding: 0 10px; border-radius: 13px; background: rgba(11,15,23,0.78); color: #FFFFFF; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{{c.when}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 0 4px">
+<span style="font-weight: 700; font-size: 15px; line-height: 1.3">{{c.title}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #A3AEC2"><span style="width: 8px; height: 8px; border-radius: 4px; background: {{c.dot}}"></span>{{c.brand}} · {{c.channels}}</span>
+<span style="align-self: flex-start; margin-top: 4px; height: 24px; padding: 0 9px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; background: {{c.sbg}}; color: {{c.sfg}}">{{c.status}}</span>
+</div>
+</a>
+</sc-for>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+<section aria-labelledby="h-brands" style="flex: 1 1 420px; min-width: 0; background: #111722; border: 1px solid #1F2A3D; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 id="h-brands" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Your brands</h2>
+<a href="#brands" style="font-size: 14px; font-weight: 600">Manage brands</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: #151D2A">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 14px; background: #FB923C; color: #1A0E05; font-weight: 800; display: flex; align-items: center; justify-content: center">FG</span>
+<div style="flex: 1 1 160px; min-width: 0"><div style="font-weight: 700">FitZone Gym</div><div style="font-size: 13px; color: #A3AEC2">Fitness · 3 scheduled · 2 waiting</div></div>
+<button type="button" aria-label="New post for FitZone Gym" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border: 1px solid #33415C; border-radius: 10px; background: transparent; color: #E8ECF4; font-weight: 600; font-size: 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Post</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: #151D2A">
+<span style="width: 48px; height: 48px; flex: none; border-radius: 14px; background: #2DD4BF; color: #042F2A; font-weight: 800; display: flex; align-items: center; justify-content: center">AC</span>
+<div style="flex: 1 1 160px; min-width: 0"><div style="font-weight: 700">Aura Coffee</div><div style="font-size: 13px; color: #A3AEC2">Café · 3 scheduled · nothing waiting</div></div>
+<button type="button" aria-label="New post for Aura Coffee" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border: 1px solid #33415C; border-radius: 10px; background: transparent; color: #E8ECF4; font-weight: 600; font-size: 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Post</button>
+</div>
+<button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1.5px dashed #33415C; border-radius: 14px; background: transparent; color: #C3CBDA; font-weight: 600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Add a brand</button>
+</section>
+
+<section aria-labelledby="h-ideas" style="flex: 1.3 1 420px; min-width: 0; background: #111722; border: 1px solid #1F2A3D; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div>
+<h2 id="h-ideas" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Stuck for an idea?</h2>
+<p style="margin: 2px 0 0; font-size: 14px; color: #A3AEC2">Ready-made templates. Fill in the blanks and send for review.</p>
+</div>
+<a href="#templates" style="font-size: 14px; font-weight: 600; white-space: nowrap">All templates</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{ideas}}" as="i" hint-placeholder-count="4">
+<a href="#use-template" style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 14px; border-radius: 14px; background: #151D2A; color: #E8ECF4; text-decoration: none">
+<span style="width: 38px; height: 38px; flex: none; border-radius: 10px; background: {{i.bg}}; color: {{i.fg}}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px">{{i.mark}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 700; font-size: 14px">{{i.title}}</span><span style="font-size: 12px; color: #A3AEC2">{{i.for}}</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3AEC2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+</a>
+</sc-for>
+</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#4F46E5","options":["#4F46E5","#7C3AED","#EA580C","#0F766E"]},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const FZ = '#FB923C', AC = '#2DD4BF';
+    const week = [
+      { name: 'Sat', num: '21', dots: [AC], today: true },
+      { name: 'Sun', num: '22', dots: [FZ, AC] },
+      { name: 'Mon', num: '23', dots: [] },
+      { name: 'Tue', num: '24', dots: [AC] },
+      { name: 'Wed', num: '25', dots: [FZ] },
+      { name: 'Thu', num: '26', dots: [FZ] },
+      { name: 'Fri', num: '27', dots: [] }
+    ].map((d) => ({ ...d, dots: d.dots.map((c) => ({ c })), bg: d.today ? 'rgba(99,102,241,0.16)' : '#151D2A', border: d.today ? 'rgba(165,180,252,0.5)' : 'transparent' }));
+    const S = {
+      scheduled: { status: 'Scheduled', sbg: 'rgba(59,130,246,0.16)', sfg: '#93C5FD' },
+      fix: { status: 'Needs a fix', sbg: 'rgba(239,68,68,0.16)', sfg: '#FCA5A5' },
+      review: { status: 'Waiting for OK', sbg: 'rgba(245,158,11,0.16)', sfg: '#FCD34D' }
+    };
+    const upcoming = [
+      { when: 'Today · 4:00 PM', title: 'Weekend pastry box', brand: 'Aura Coffee', dot: AC, channels: 'Instagram', bg: 'linear-gradient(160deg, #F472B6 0%, #9D174D 60%, #3B0A20 100%)', ...S.scheduled },
+      { when: 'Sun · 10:30 AM', title: 'Community drop-in', brand: 'FitZone Gym', dot: FZ, channels: 'Facebook', bg: 'linear-gradient(160deg, #60A5FA 0%, #1E3A8A 60%, #0B1530 100%)', ...S.fix },
+      { when: 'Sun · 6:00 PM', title: 'Sunday slow brew', brand: 'Aura Coffee', dot: AC, channels: 'Instagram', bg: 'linear-gradient(160deg, #D6A35C 0%, #7C4A12 60%, #2A1705 100%)', ...S.scheduled },
+      { when: 'Tue · 8:00 AM', title: 'Winter blend launch', brand: 'Aura Coffee', dot: AC, channels: 'IG + FB', bg: 'linear-gradient(160deg, #5EEAD4 0%, #0F766E 60%, #042F2A 100%)', ...S.scheduled },
+      { when: 'Wed · 9:00 AM', title: 'Wednesday workout tip', brand: 'FitZone Gym', dot: FZ, channels: 'Instagram', bg: 'linear-gradient(160deg, #94A3B8 0%, #334155 60%, #0F172A 100%)', ...S.scheduled }
+    ];
+    const ok = '#6EE7B7', bad = '#FCA5A5';
+    const ig = { tileBg: 'rgba(236,72,153,0.18)', tileFg: '#F9A8D4', net: 'IG' };
+    const fb = { tileBg: 'rgba(59,130,246,0.18)', tileFg: '#93C5FD', net: 'FB' };
+    const accounts = [
+      { ...fb, name: 'FitZone Gym page', brand: 'FitZone Gym', status: 'Disconnected', fg: bad },
+      { ...ig, name: '@fitzonegym', brand: 'FitZone Gym', status: 'Working', fg: ok },
+      { ...ig, name: '@auracoffee', brand: 'Aura Coffee', status: 'Working', fg: ok },
+      { ...fb, name: 'Aura Coffee page', brand: 'Aura Coffee', status: 'Working', fg: ok }
+    ];
+    const ideas = [
+      { title: 'Class of the week', for: 'FitZone Gym', mark: 'C', bg: 'rgba(251,146,60,0.16)', fg: '#FDBA74' },
+      { title: 'Member shout-out', for: 'FitZone Gym', mark: 'M', bg: 'rgba(251,146,60,0.16)', fg: '#FDBA74' },
+      { title: 'New on the menu', for: 'Aura Coffee', mark: 'N', bg: 'rgba(45,212,191,0.16)', fg: '#5EEAD4' },
+      { title: 'Behind the counter', for: 'Aura Coffee', mark: 'B', bg: 'rgba(45,212,191,0.16)', fg: '#5EEAD4' }
+    ];
+    return { accent: this.props.accent ?? '#4F46E5', week, upcoming, accounts, ideas };
+  }
+}
+</script>
+</body>
+</html>

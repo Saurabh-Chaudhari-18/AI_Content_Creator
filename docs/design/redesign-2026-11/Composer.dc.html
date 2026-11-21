@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option C — New post drawer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F4F2}
+*{box-sizing:border-box}
+a{color:#4338CA}a:hover{color:#312E81}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit}
+</style>
+</helmet>
+<div style="position: relative; width: 100%; min-height: 940px; overflow: hidden; background: #F4F4F2; color: #18181B; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<div aria-hidden="true" style="display: flex; flex-direction: column; gap: 18px">
+<div style="height: 69px; background: #FFFFFF; border-bottom: 1px solid #E2E2DE; display: flex; align-items: center; gap: 16px; padding: 0 28px">
+<div style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}"></div>
+<div style="width: 90px; height: 14px; border-radius: 7px; background: #D4D4D8"></div>
+<div style="width: 320px; height: 14px; border-radius: 7px; background: #E4E4E7"></div>
+</div>
+<div style="display: flex; gap: 20px; padding: 0 28px">
+<div style="flex: 0 0 260px; height: 520px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E2DE"></div>
+<div style="flex: 1; height: 760px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E2DE; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; padding: 14px">
+<div style="height: 90px; border-radius: 10px; background: #F1F1EF"></div>
+<div style="height: 90px; border-radius: 10px; background: #F1F1EF"></div>
+<div style="height: 90px; border-radius: 10px; background: #F1F1EF"></div>
+<div style="height: 90px; border-radius: 10px; background: #F1F1EF"></div>
+<div></div>
+<div style="height: 90px; border-radius: 10px; background: #F1F1EF"></div>
+<div style="height: 90px; border-radius: 10px; background: #F1F1EF"></div>
+</div>
+</div>
+</div>
+
+<div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(24, 24, 27, 0.5)"></div>
+
+<section role="dialog" aria-modal="true" aria-labelledby="d-title" style="position: absolute; top: 0; right: 0; bottom: 0; width: min(900px, 100%); background: #FFFFFF; display: flex; flex-direction: column; border-left: 1px solid #E2E2DE">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid #EDEDEA">
+<div style="flex: 1 1 260px; min-width: 0">
+<h2 id="d-title" style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em">New post</h2>
+<p style="margin: 0; font-size: 14px; color: #52525B">For <strong style="color: #18181B">FitZone Gym</strong> · <a href="#change-brand">Change brand</a></p>
+</div>
+<button type="button" aria-label="Close and keep draft" style="width: 44px; height: 44px; border: 1px solid #D4D4D8; border-radius: 10px; background: #FFFFFF; color: #3F3F46; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button>
+</header>
+
+<nav aria-label="Steps" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 24px; border-bottom: 1px solid #EDEDEA">
+<a href="#s-write" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 18px; background: #DCFCE7; color: #166534; text-decoration: none; font-size: 13px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Write</a>
+<a href="#s-photos" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 18px; background: #DCFCE7; color: #166534; text-decoration: none; font-size: 13px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Photos</a>
+<a href="#s-where" aria-current="step" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 18px; background: #18181B; color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 600"><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; color: #18181B; font-size: 11px; display: flex; align-items: center; justify-content: center">3</span>Where</a>
+<a href="#s-when" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 18px; background: #F1F1EF; color: #3F3F46; text-decoration: none; font-size: 13px; font-weight: 600"><span style="width: 18px; height: 18px; border-radius: 9px; background: #D4D4D8; color: #18181B; font-size: 11px; display: flex; align-items: center; justify-content: center">4</span>When</a>
+</nav>
+
+<div style="flex: 1; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 24px; padding: 20px 24px; align-items: flex-start">
+<div style="flex: 999 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+
+<section id="s-write" aria-labelledby="d-write" style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 8px">
+<h3 id="d-write" style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">1. Write the caption</h3>
+<a href="#template" style="font-size: 14px; font-weight: 500">Start from a template</a>
+</div>
+<label for="d-caption" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Caption</label>
+<textarea id="d-caption" rows="4" style="width: 100%; padding: 12px 14px; border: 1px solid #A1A1AA; border-radius: 10px; font-size: 15px; line-height: 1.55; color: #18181B; resize: vertical">New here? Your first week at FitZone is on us. Come say hi at the front desk, get a free fitness check, and try any class you like.</textarea>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+<span style="height: 30px; padding: 0 6px 0 10px; border-radius: 8px; background: #F1F1EF; font-size: 14px; display: inline-flex; align-items: center; gap: 4px">#FitZone<button type="button" aria-label="Remove #FitZone" style="width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #52525B; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button></span>
+<span style="height: 30px; padding: 0 6px 0 10px; border-radius: 8px; background: #F1F1EF; font-size: 14px; display: inline-flex; align-items: center; gap: 4px">#NewMember<button type="button" aria-label="Remove #NewMember" style="width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #52525B; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg></button></span>
+<label for="d-tag" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Add a hashtag</label>
+<input id="d-tag" type="text" placeholder="Add hashtag" style="height: 30px; width: 130px; padding: 0 10px; border: 1px dashed #A1A1AA; border-radius: 8px; font-size: 14px">
+<span style="flex: 1"></span>
+<span style="font-size: 13px; color: #52525B">132 / 2,200</span>
+</div>
+</section>
+
+<section id="s-photos" aria-labelledby="d-photos" style="display: flex; flex-direction: column; gap: 8px">
+<h3 id="d-photos" style="margin: 0; font-size: 15px; font-weight: 600">2. Photos</h3>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<div role="img" aria-label="Added photo placeholder" style="width: 96px; height: 120px; border-radius: 10px; background: #E7E6E1"></div>
+<button type="button" style="flex: 1 1 220px; min-height: 120px; border: 1.5px dashed #A1A1AA; border-radius: 10px; background: #FAFAF9; color: #3F3F46; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 14px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="m6 10 6-6 6 6"></path><path d="M4 20h16"></path></svg>
+<span style="font-weight: 600">Drop photos or browse</span>
+<span style="font-size: 13px; color: #52525B">JPG or PNG. 4:5 works best for Instagram.</span>
+</button>
+</div>
+</section>
+
+<section id="s-where" aria-labelledby="d-where" style="display: flex; flex-direction: column; gap: 8px; padding: 16px; margin: 0 -16px; border-radius: 14px; background: #F7F7FF">
+<h3 id="d-where" style="margin: 0; font-size: 15px; font-weight: 600">3. Where should it post?</h3>
+<p style="margin: 0; font-size: 13px; color: #3F3F46">Only FitZone Gym's accounts are listed, so a post can't go to another brand by mistake.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<label style="flex: 1 1 220px; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 2px solid #18181B; border-radius: 12px; background: #FFFFFF">
+<input type="checkbox" checked style="width: 20px; height: 20px; accent-color: #18181B">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: #FCE7F3; color: #9D174D; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">IG</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 600; font-size: 14px">Instagram</span><span style="font-size: 13px; color: #52525B">@fitzonegym · Ready</span></span>
+</label>
+<div style="flex: 1 1 220px; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border: 1px solid #D4D4D8; border-radius: 12px; background: #FFFFFF">
+<input id="d-fb" type="checkbox" disabled style="width: 20px; height: 20px">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: #DBEAFE; color: #1E40AF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">FB</span>
+<label for="d-fb" style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-weight: 600; font-size: 14px">Facebook</span><span style="font-size: 13px; color: #92400E">Disconnected</span></label>
+<button type="button" style="height: 34px; padding: 0 12px; border: 1px solid #B45309; border-radius: 8px; background: #FFFBEB; color: #92400E; font-weight: 600; font-size: 13px">Reconnect</button>
+</div>
+</div>
+</section>
+
+<section id="s-when" aria-labelledby="d-when" style="display: flex; flex-direction: column; gap: 10px">
+<h3 id="d-when" style="margin: 0; font-size: 15px; font-weight: 600">4. When</h3>
+<div role="radiogroup" aria-labelledby="d-when" style="display: flex; flex-wrap: wrap; gap: 8px">
+<label style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #D4D4D8; border-radius: 10px; font-size: 14px"><input type="radio" name="when" style="width: 18px; height: 18px">Keep as draft</label>
+<label style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 2px solid #18181B; border-radius: 10px; font-size: 14px; font-weight: 600"><input type="radio" name="when" checked style="width: 18px; height: 18px">Pick a date</label>
+<label style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #D4D4D8; border-radius: 10px; font-size: 14px"><input type="radio" name="when" style="width: 18px; height: 18px">Post as soon as approved</label>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<label style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #3F3F46">Date
+<input type="text" value="Mon, 30 Nov 2026" style="height: 44px; padding: 0 12px; border: 1px solid #A1A1AA; border-radius: 10px; font-size: 15px; color: #18181B"></label>
+<label style="flex: 1 1 120px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #3F3F46">Time (IST)
+<input type="text" value="8:00 AM" style="height: 44px; padding: 0 12px; border: 1px solid #A1A1AA; border-radius: 10px; font-size: 15px; color: #18181B"></label>
+</div>
+</section>
+</div>
+
+<aside aria-labelledby="d-preview" style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<h3 id="d-preview" style="margin: 0; font-size: 15px; font-weight: 600">Preview · Instagram</h3>
+<div style="border: 1px solid #E2E2DE; border-radius: 14px; overflow: hidden; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px">
+<span style="width: 28px; height: 28px; border-radius: 14px; background: #FDE7D3; color: #9A3412; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">FG</span>
+<span style="font-weight: 600; font-size: 13px">fitzonegym</span>
+</div>
+<div role="img" aria-label="Photo placeholder" style="width: 100%; aspect-ratio: 4 / 5; background: #E7E6E1"></div>
+<p style="margin: 0; padding: 10px 12px 14px; font-size: 13px; line-height: 1.5"><strong>fitzonegym</strong> New here? Your first week at FitZone is on us. Come say hi at the front desk, get a free fitness check, and try any class you like. <span style="color: #1E40AF">#FitZone #NewMember</span></p>
+</div>
+</aside>
+</div>
+
+<footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 24px; border-top: 1px solid #EDEDEA; background: #FAFAF9">
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3F3F46"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Saved a moment ago</span>
+<span style="flex: 1"></span>
+<button type="button" style="height: 44px; padding: 0 16px; border: 1px solid #A1A1AA; border-radius: 10px; background: #FFFFFF; color: #18181B; font-weight: 600">Save and close</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border: 0; border-radius: 10px; background: {{accent}}; color: #FFFFFF; font-weight: 600; font-size: 16px">Send for review
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></button>
+</footer>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#4F46E5","options":["#4F46E5","#0F766E","#C2410C","#18181B"]},"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#4F46E5' };
+  }
+}
+</script>
+</body>
+</html>

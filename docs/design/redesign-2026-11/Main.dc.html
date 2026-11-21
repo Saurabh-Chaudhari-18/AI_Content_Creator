@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option A — Spotlight review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F4F2}
+*{box-sizing:border-box}
+a{color:#4338CA}a:hover{color:#312E81}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1080px; display: flex; flex-wrap: wrap; align-items: stretch; background: #F4F4F2; color: #18181B; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+<nav aria-label="Main" style="flex: 1 1 248px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E2E2DE; padding: 20px 16px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px">
+<div style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">O</div>
+<span style="font-weight: 700; font-size: 17px; letter-spacing: -0.01em">OmniPost</span>
+</div>
+
+<button type="button" aria-label="Switch brand. Current brand: FitZone Gym" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 12px; border: 1px solid #B9B9B3; border-radius: 10px; background: #FAFAF9; text-align: left; color: #18181B">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: #FDE7D3; color: #9A3412; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px">FG</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 12px; color: #52525B">Brand</span><span style="font-weight: 600">FitZone Gym</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+</button>
+
+<button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 44px; border: 0; border-radius: 10px; background: {{accent}}; color: #FFFFFF; font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+New post
+</button>
+
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="#home" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+Home</a>
+<a href="#review" aria-current="page" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #EEF0FF; color: #312E81; text-decoration: none; font-weight: 600">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11 3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+<span style="flex: 1">Review</span>
+<span style="min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; background: {{accent}}; color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center">2</span></a>
+<a href="#posts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>
+All posts</a>
+<a href="#calendar" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>
+Calendar</a>
+<a href="#templates" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+Templates</a>
+<a href="#accounts" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+<span style="flex: 1">Social accounts</span>
+<span aria-label="1 needs attention" style="width: 10px; height: 10px; border-radius: 5px; background: #D97706"></span></a>
+<a href="#brands" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9 4.5 4h15L21 9"></path><path d="M3 9v11h18V9"></path><path d="M3 9h18"></path><path d="M9 20v-6h6v6"></path></svg>
+Brands</a>
+</div>
+
+<div style="flex: 1"></div>
+
+<div style="display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #EDEDEA; padding-top: 12px">
+<a href="#help" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7"></path><path d="M12 17h.01"></path></svg>
+Help and guides</a>
+<a href="#settings" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #3F3F46; text-decoration: none; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10"></path><path d="M18 6h2"></path><path d="M4 12h4"></path><path d="M12 12h8"></path><path d="M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+Settings</a>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-top: 6px">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 18px; background: #E4E4E7; color: #3F3F46; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px">DB</span>
+<span style="display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 600; font-size: 14px">Demo Business</span><span style="font-size: 13px; color: #52525B">Owner</span></span>
+</div>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px 32px; border-bottom: 1px solid #E2E2DE; background: #FFFFFF">
+<div style="flex: 1 1 300px; min-width: 0">
+<h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.015em">Review</h1>
+<p style="margin: 2px 0 0; color: #52525B; font-size: 14px">2 posts are waiting for your OK. Showing FitZone Gym only. <a href="#all">Show all brands</a></p>
+</div>
+<div style="flex: 0 1 340px; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border: 1px solid #A1A1AA; border-radius: 10px; background: #FFFFFF; color: #52525B">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+<label for="a-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search posts</label>
+<input id="a-search" type="search" placeholder="Search posts, captions, hashtags" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 14px; color: #18181B">
+<span style="font-size: 12px; padding: 2px 6px; border: 1px solid #D4D4D8; border-radius: 6px; color: #52525B">Ctrl K</span>
+</div>
+<button type="button" aria-label="Notifications, 3 new" style="position: relative; width: 44px; height: 44px; border: 1px solid #D4D4D8; border-radius: 10px; background: #FFFFFF; color: #3F3F46; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10 21a2 2 0 0 0 4 0"></path></svg>
+<span style="position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 4px; background: #DC2626"></span>
+</button>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; padding: 28px 32px 40px; align-items: flex-start">
+
+<div style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+<section aria-labelledby="a-post-title" style="background: #FFFFFF; border: 1px solid #E2E2DE; border-radius: 16px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 20px; border-bottom: 1px solid #EDEDEA">
+<span style="display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 15px; background: #FEF3C7; color: #92400E; font-size: 13px; font-weight: 600">Waiting for you · 1 of 2</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid #E2E2DE; font-size: 13px; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 4px; background: #EA580C"></span>FitZone Gym</span>
+<span style="display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid #E2E2DE; font-size: 13px; font-weight: 500">Instagram + Facebook</span>
+<span style="flex: 1"></span>
+<button type="button" aria-label="Previous post" style="width: 40px; height: 40px; border: 1px solid #D4D4D8; border-radius: 10px; background: #FFFFFF; color: #3F3F46; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+<button type="button" aria-label="Next post" style="width: 40px; height: 40px; border: 1px solid #D4D4D8; border-radius: 10px; background: #FFFFFF; color: #3F3F46; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 28px; padding: 24px">
+<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<div role="img" aria-label="Post photo placeholder, portrait 4 by 5" style="width: 100%; aspect-ratio: 4 / 5; border-radius: 12px; background: #E7E6E1; color: #52525B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-5-5L5 21"></path></svg>
+<span style="font-size: 14px; font-weight: 500">Photo · 4:5 portrait</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #52525B">
+<span>1 photo</span>
+<a href="#replace">Replace photo</a>
+</div>
+</div>
+
+<div style="flex: 1.4 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<div>
+<h2 id="a-post-title" style="margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em">Weekend sunrise yoga</h2>
+<p style="margin: 6px 0 0; font-size: 14px; color: #52525B">Written by Priya S. · sent for review 2 hours ago</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="font-weight: 600; font-size: 15px">Caption</span>
+<a href="#edit-caption" style="font-size: 14px; font-weight: 500">Edit</a>
+</div>
+<p style="margin: 0; padding: 14px 16px; border: 1px solid #E2E2DE; border-radius: 10px; background: #FAFAF9; font-size: 16px; line-height: 1.6">Sunrise yoga on the terrace, Saturday 7 am. Bring your mat and an open mind, and stay for fresh herbal tea after class. Reserve your spot through the link in our bio.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #F1F1EF; font-size: 14px; display: inline-flex; align-items: center">#FitZoneMorning</span>
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #F1F1EF; font-size: 14px; display: inline-flex; align-items: center">#TerraceYoga</span>
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #F1F1EF; font-size: 14px; display: inline-flex; align-items: center">#WeekendWellness</span>
+<span style="height: 30px; padding: 0 10px; border-radius: 8px; background: #F1F1EF; font-size: 14px; display: inline-flex; align-items: center">#FitCommunity</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-weight: 600; font-size: 15px">Before it goes out</span>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14px">
+<span style="width: 24px; height: 24px; flex: none; border-radius: 12px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+Photo fits Instagram and Facebook</div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14px">
+<span style="width: 24px; height: 24px; flex: none; border-radius: 12px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+Caption length is fine (184 of 2,200 characters)</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 48px; padding: 6px 6px 6px 10px; border-radius: 10px; background: #FFFBEB; font-size: 14px">
+<span style="width: 24px; height: 24px; flex: none; border-radius: 12px; background: #FEF3C7; color: #92400E; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px">!</span>
+<span style="flex: 1 1 200px">Facebook page needs reconnecting before Saturday</span>
+<button type="button" style="height: 36px; padding: 0 14px; border: 1px solid #B45309; border-radius: 8px; background: #FFFFFF; color: #92400E; font-weight: 600; font-size: 14px">Reconnect</button>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 20px; border-top: 1px solid #EDEDEA; background: #FAFAF9">
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 1px solid #A1A1AA; border-radius: 10px; background: #FFFFFF; color: #18181B; font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+Ask for changes</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 1px solid #A1A1AA; border-radius: 10px; background: #FFFFFF; color: #18181B; font-weight: 600">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+Edit post</button>
+<span style="flex: 1"></span>
+<span style="font-size: 14px; color: #3F3F46">Goes out <strong>Sat 28 Nov, 7:00 AM</strong> · <a href="#change-time">Change</a></span>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border: 0; border-radius: 10px; background: {{accent}}; color: #FFFFFF; font-weight: 600; font-size: 16px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>
+Approve and schedule</button>
+</div>
+</section>
+
+<section aria-labelledby="a-next" style="background: #FFFFFF; border: 1px solid #E2E2DE; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<h2 id="a-next" style="margin: 0; font-size: 16px; font-weight: 600">Next in line</h2>
+<span style="font-size: 14px; color: #52525B">1 more waiting</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px; border: 1px solid #EDEDEA; border-radius: 12px">
+<div role="img" aria-label="Photo placeholder" style="width: 64px; height: 64px; flex: none; border-radius: 10px; background: #E7E6E1"></div>
+<div style="flex: 1 1 240px; min-width: 0">
+<div style="font-weight: 600">Member celebration gift box</div>
+<div style="font-size: 14px; color: #52525B">FitZone Gym · Instagram · Thu 26 Nov, 5:30 PM</div>
+</div>
+<a href="#review-next" style="display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px; border: 1px solid #A1A1AA; border-radius: 10px; color: #18181B; text-decoration: none; font-weight: 600">Review next
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></a>
+</div>
+</section>
+</div>
+
+<aside aria-label="Post details" style="flex: 1 1 340px; max-width: 100%; display: flex; flex-direction: column; gap: 16px">
+<section aria-labelledby="a-where" style="background: #FFFFFF; border: 1px solid #E2E2DE; border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="a-where" style="margin: 0; font-size: 16px; font-weight: 600">Will post to</h2>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 48px">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; background: #FCE7F3; color: #9D174D; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">IG</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 600; font-size: 14px">Instagram</span><span style="font-size: 13px; color: #52525B">@fitzonegym</span></span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #DCFCE7; color: #166534; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Ready</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 48px">
+<span style="width: 36px; height: 36px; flex: none; border-radius: 10px; background: #DBEAFE; color: #1E40AF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">FB</span>
+<span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0"><span style="font-weight: 600; font-size: 14px">Facebook</span><span style="font-size: 13px; color: #52525B">FitZone Gym page</span></span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #FEF3C7; color: #92400E; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Needs reconnect</span>
+</div>
+<p style="margin: 0; font-size: 13px; color: #52525B; border-top: 1px solid #EDEDEA; padding-top: 10px">Only FitZone Gym's accounts are shown here.</p>
+</section>
+
+<section aria-labelledby="a-week" style="background: #FFFFFF; border: 1px solid #E2E2DE; border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 id="a-week" style="margin: 0; font-size: 16px; font-weight: 600">This week</h2>
+<a href="#calendar" style="font-size: 14px; font-weight: 500">Open calendar</a>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 10px; border-radius: 10px">
+<span style="width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; line-height: 1.2"><span style="font-size: 12px; color: #52525B">Wed</span><span style="font-size: 17px; font-weight: 700">25</span></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35"><span style="font-weight: 600; font-size: 14px">Wednesday workout tip</span><span style="font-size: 13px; color: #52525B">9:00 AM · Instagram</span></span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #DBEAFE; color: #1E40AF; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Scheduled</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 10px; border-radius: 10px">
+<span style="width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; line-height: 1.2"><span style="font-size: 12px; color: #52525B">Thu</span><span style="font-size: 17px; font-weight: 700">26</span></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35"><span style="font-weight: 600; font-size: 14px">Member celebration gift box</span><span style="font-size: 13px; color: #52525B">5:30 PM · Instagram</span></span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #FEF3C7; color: #92400E; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">In review</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 10px; border-radius: 10px; background: #EEF0FF">
+<span style="width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; line-height: 1.2"><span style="font-size: 12px; color: #3730A3">Sat</span><span style="font-size: 17px; font-weight: 700; color: #312E81">28</span></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35"><span style="font-weight: 600; font-size: 14px">Weekend sunrise yoga</span><span style="font-size: 13px; color: #3F3F46">7:00 AM · Instagram + Facebook</span></span>
+<span style="font-size: 13px; font-weight: 600; color: #312E81">Open now</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 10px; border-radius: 10px">
+<span style="width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; line-height: 1.2"><span style="font-size: 12px; color: #52525B">Sun</span><span style="font-size: 17px; font-weight: 700">29</span></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35"><span style="font-weight: 600; font-size: 14px">Weekend community drop-in</span><span style="font-size: 13px; color: #52525B">10:30 AM · Facebook</span></span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #E4E4E7; color: #3F3F46; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center">Draft</span>
+</div>
+</section>
+
+<section aria-labelledby="a-history" style="background: #FFFFFF; border: 1px solid #E2E2DE; border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="a-history" style="margin: 0; font-size: 16px; font-weight: 600">What happened so far</h2>
+<div style="display: flex; gap: 10px; font-size: 14px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 4px; background: #A1A1AA"></span><span><strong>Priya S.</strong> sent it for review<br><span style="color: #52525B">Today, 10:12 AM</span></span></div>
+<div style="display: flex; gap: 10px; font-size: 14px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 4px; background: #A1A1AA"></span><span><strong>Priya S.</strong> replaced the photo<br><span style="color: #52525B">Today, 9:40 AM</span></span></div>
+<div style="display: flex; gap: 10px; font-size: 14px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 4px; background: #A1A1AA"></span><span><strong>Priya S.</strong> started the draft<br><span style="color: #52525B">Yesterday, 6:05 PM</span></span></div>
+</section>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#4F46E5","options":["#4F46E5","#0F766E","#C2410C","#18181B"]},"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#4F46E5' };
+  }
+}
+</script>
+</body>
+</html>
