@@ -16,7 +16,8 @@ export function OverviewPage() {
   return (
     <>
       <PageHead
-        title="What needs a look today"
+        title="What needs a look"
+        accent="Today"
         lede="Workspaces over a limit, or with posts the usage log did not record, come first. Every figure is counted live from the database."
       />
 
@@ -56,7 +57,7 @@ export function OverviewPage() {
       </Region>
 
       <div className="grid-2">
-        <section className="panel" aria-labelledby="h-watch">
+        <section className="panel panel--rim" aria-labelledby="h-watch">
           <div className="panel__head"><h2 id="h-watch">Watchlist</h2><p>From the usage check, this calendar month</p></div>
           <Region
             q={problems}

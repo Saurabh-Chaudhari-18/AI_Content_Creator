@@ -59,6 +59,7 @@ export function TemplatesPage() {
     <>
       <PageHead
         title="Smart Templates"
+        accent="Product"
         lede="One library shared by every customer, who can only read it. Templates are switched off, never deleted; posts already written from one keep their text."
         actions={<button className="btn btn--primary" type="button" onClick={create}>New template</button>}
       />

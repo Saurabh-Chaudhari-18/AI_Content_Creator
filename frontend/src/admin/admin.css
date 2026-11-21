@@ -457,6 +457,66 @@
 }
 .staff .panel__head h2 { scroll-margin-top: calc(var(--bar-h) + var(--space-md)); }
 
+/* ── Round 3 redesign (2026-11) ────────────────────────────────────────
+   The customer app's layout language — serif headings, rounded cards, a
+   filled active item, tile readings, a lit top line on featured panels —
+   in the staff console's own graphite + amber, so staff never mistake it
+   for a customer screen. Only tokens and component skins change here. */
+[data-theme="staff"] {
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Host Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --tracking-display: -0.005em;
+  --text-display: 2.25rem;
+  --text-section: 1.4rem;
+  --radius-card: 20px;
+  --radius-pill: 10px;
+  --radius-chip: 6px;
+  --control-h: 40px;
+  --sidebar-w: 264px;
+  --color-accent-2: oklch(72% 0.15 65);
+}
+
+/* Sidebar: product mark, uppercase group labels, a filled amber pill for where you are */
+.staff .side { gap: var(--space-lg); padding: var(--space-lg) var(--space-md); }
+.staff .brand { flex-direction: row; align-items: center; gap: var(--space-sm); padding: var(--space-2xs); border-radius: 12px; }
+.staff .brand__mark { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1.5px solid var(--color-accent); border-radius: 12px; background: var(--color-accent-soft); color: var(--color-accent); }
+.staff .brand__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.staff .brand b { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; letter-spacing: 0.01em; line-height: 1.1; }
+.staff .nav { gap: var(--space-lg); }
+.staff .nav__label { padding: 0 var(--space-md) var(--space-xs); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+.staff .nav a { min-height: 44px; padding: 0 var(--space-md); border-radius: 12px; font-size: 15px; }
+.staff .nav a[aria-current="page"] { background: linear-gradient(180deg, var(--color-accent), var(--color-accent-2)); color: var(--color-accent-ink); font-weight: 700; box-shadow: 0 8px 22px color-mix(in oklab, var(--color-accent) 24%, transparent); }
+.staff .nav .count { min-width: 24px; padding: 1px 7px; border: 1px solid color-mix(in oklab, var(--color-bad) 55%, transparent); border-radius: 999px; text-align: center; font-weight: 700; }
+.staff .nav a[aria-current="page"] .count { color: var(--color-accent-ink); border-color: color-mix(in oklab, var(--color-accent-ink) 45%, transparent); }
+.staff .side__foot { padding: var(--space-md) 0 0; }
+.staff .whoami { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: var(--space-sm); row-gap: 1px; align-items: center; padding: var(--space-sm); border: var(--rule-hair) solid var(--color-rule); border-radius: 14px; background: var(--color-paper-2); }
+.staff .whoami__avatar { grid-row: 1 / span 3; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); font-weight: 700; font-size: var(--text-sm); }
+
+/* Page titles: large serif, with an optional italic amber word */
+.staff .head h1 { font-size: clamp(1.9rem, 1.4rem + 1.6vw, var(--text-display)); line-height: 1.12; }
+.staff .head h1 em { font-style: italic; color: var(--color-accent); }
+
+/* Buttons: amber depth on the one main action */
+.staff .btn { font-weight: 600; }
+.staff .btn--primary { background: linear-gradient(180deg, var(--color-accent), var(--color-accent-2)); border-color: transparent; box-shadow: 0 8px 22px color-mix(in oklab, var(--color-accent) 22%, transparent); }
+.staff .btn--primary:hover { background: linear-gradient(180deg, var(--color-accent), var(--color-accent-2)); filter: brightness(1.06); }
+
+/* Panels: rounder, roomier heads; --rim lights the top edge of the panel that matters most */
+.staff .panel__head { padding: var(--space-lg) var(--space-lg) var(--space-md); }
+.staff .panel--rim { position: relative; overflow: hidden; }
+.staff .panel--rim::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--color-accent-2), var(--color-accent), var(--color-accent-2)); }
+.staff .note, .staff .record, .staff .preview-caption { border-radius: 12px; }
+
+/* Readings become tiles, like the customer app's stat tiles */
+.staff .readings { gap: var(--space-sm); padding: 0; border: 0; }
+.staff .reading { padding: var(--space-md) var(--space-lg) !important; border: var(--rule-hair) solid var(--color-rule) !important; border-radius: 14px; background: var(--color-paper-2); }
+.staff .panel .readings { padding: var(--space-lg); }
+.staff .panel .reading { background: var(--color-paper-3); }
+.staff .reading dt { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (max-width: 60rem) {
+  .staff .readings { row-gap: var(--space-sm); }
+}
+
 /* The plans table stays a grid on phones: a narrow pinned feature column, plan columns scrolling beside it. */
 @media (max-width: 60rem) {
   .staff .matrix th:first-child, .staff .matrix td:first-child { width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; white-space: normal; box-shadow: 1px 0 0 var(--color-rule); }

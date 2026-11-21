@@ -11,6 +11,7 @@ export function SettingsPage() {
     <>
       <PageHead
         title="Platform settings"
+        accent="Product"
         lede="Values the code reads on every request instead of a constant, so a change here applies straight away. New settings are added in app/core/settings_registry.py."
       />
       <section className="panel" aria-label="Settings">
