@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CheckCircle2, Circle, ExternalLink, LayoutTemplate } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowRight, CheckCircle2, Circle, Clock, ExternalLink, LayoutTemplate, Link2Off, RotateCcw, ShieldCheck, type LucideIcon } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
 
-import { EmptyState, InlineLoadError, LoadError, StatusBadge, TileTitle } from "@/components/common";
+import { EmptyState, InlineLoadError, LoadError, PageHeader, TileTitle } from "@/components/common";
 import { BrandLogo, PostThumb } from "@/components/PostThumb";
-import { BentoGrid, Tile } from "@/components/Tile";
+import { Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { accountHealth } from "@/lib/accountHealth";
 import { api, type Post, type UsageSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { daysUntil, formatDateTime, humanize, platformName } from "@/lib/format";
-import { useMyApprovals } from "@/lib/approvals";
+import { formatDateTime, humanize, platformName } from "@/lib/format";
 import { keys, platformEnabled, useAccounts, useFeatures, useTemplates, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
@@ -29,27 +29,28 @@ function greeting(now = new Date()): string {
 
 const longDate = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long" });
 const dayChip = new Intl.DateTimeFormat("en-IN", { weekday: "short" });
-const timeOnly = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" });
+const whenShort = new Intl.DateTimeFormat("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" });
 
-/** One sentence that says what today looks like. */
-function summary(counts: { pending: number; scheduledWeek: number; failed: number }): string {
-  const parts: string[] = [];
-  if (counts.failed) parts.push(`${counts.failed} post${counts.failed === 1 ? "" : "s"} didn’t publish`);
-  if (counts.pending) parts.push(`${counts.pending} waiting for approval`);
-  if (counts.scheduledWeek) parts.push(`${counts.scheduledWeek} going out this week`);
-  if (parts.length === 0) return "Nothing is waiting on you. A good moment to plan next week.";
-  return parts.join(" · ") + ".";
-}
+/** One thing on the "Needs you" list: what to do, why, and the one button that does it. */
+type Todo = {
+  key: string;
+  title: string;
+  detail: ReactNode;
+  action: string;
+  to: string;
+  tone: "danger" | "warning" | "default";
+  post?: Post;
+  icon?: LucideIcon;
+};
 
 export function HomePage() {
   const { user } = useAuth();
   const { workspace, brands, brandId, brandName } = useWorkspace();
   const firstName = user?.full_name.split(" ")[0] ?? "";
 
-  // One wide read of recent posts drives most tiles; per-status totals stay exact.
+  // One wide read of recent posts drives most cards; per-status totals stay exact.
   const recent = useWorkspacePosts({ limit: 100 });
   const pending = useWorkspacePosts({ status: "pending_approval", limit: 5 });
-  const mine = useMyApprovals();
   const approved = useWorkspacePosts({ status: "approved", limit: 5 });
   const failed = useWorkspacePosts({ status: "failed", limit: 5 });
   const partial = useWorkspacePosts({ status: "partially_published", limit: 5 });
@@ -63,6 +64,7 @@ export function HomePage() {
   });
   const selectedBrand = brands.find((b) => b.id === brandId);
   const ideas = useTemplates({ industry: selectedBrand?.industry ?? brands[0]?.industry ?? undefined });
+  const brandOf = (id: string) => brands.find((b) => b.id === id);
 
   const now = Date.now();
   const posts = recent.data?.items ?? [];
@@ -94,31 +96,68 @@ export function HomePage() {
     }
     return days;
   }, [published, now]);
-  const publishedThisMonth = published.filter((p) => new Date(p.published_at!).getTime() > now - 30 * DAY).length;
   const perBrand = useMemo(() => {
-    const m = new Map<string, { total: number; scheduled: number; drafts: number }>();
+    const m = new Map<string, { scheduled: number; waiting: number }>();
     for (const p of posts) {
-      const e = m.get(p.brand_id) ?? { total: 0, scheduled: 0, drafts: 0 };
-      e.total++;
+      const e = m.get(p.brand_id) ?? { scheduled: 0, waiting: 0 };
       if (p.status === "scheduled") e.scheduled++;
-      if (p.status === "draft" || p.status === "pending_approval") e.drafts++;
+      if (p.status === "pending_approval") e.waiting++;
       m.set(p.brand_id, e);
     }
     return m;
   }, [posts]);
 
-  // Failures first, then approvals waiting, then approved-but-unscheduled.
-  const attention: { post: Post; action: string; tone: "danger" | "info" | "success" }[] = [
-    ...(failed.data?.items ?? []).map((post) => ({ post, action: "Try again", tone: "danger" as const })),
-    ...(partial.data?.items ?? []).map((post) => ({ post, action: "Try again", tone: "danger" as const })),
-    ...(pending.data?.items ?? []).map((post) => ({ post, action: "Review", tone: "info" as const })),
-    ...(approved.data?.items ?? []).map((post) => ({ post, action: "Schedule", tone: "success" as const })),
-  ].slice(0, 6);
-  const attentionLoading = failed.isLoading || pending.isLoading || approved.isLoading;
-  const attentionError = failed.isError || partial.isError || pending.isError || approved.isError;
-  const retryAttention = () => [failed, partial, pending, approved].forEach((q) => q.isError && void q.refetch());
-
   const activeAccounts = (accounts.data ?? []).filter((a) => a.is_active);
+  const accountStates = activeAccounts.map((a) => ({ account: a, health: accountHealth(a, platformEnabled(features.data, a.platform)) }));
+  const working = accountStates.filter((s) => s.health.tone === "success").length;
+
+  // Most urgent first: accounts that stop posts, failures, approvals, then approved posts with no date.
+  const todos: Todo[] = [
+    ...accountStates
+      .filter((s) => s.health.tone === "danger" || s.health.tone === "warning")
+      .map(({ account: a, health: h }) => ({
+        key: `acc-${a.id}`,
+        title: `${h.tone === "danger" ? "Fix" : "Refresh"} ${platformName(a.platform)} · ${a.account_name}`,
+        detail: h.tone === "danger" ? `${h.label}. Posts to this account won’t go out until it’s fixed.` : "Its connection runs out soon. Reconnect it to keep posting.",
+        action: "Fix it",
+        to: "/accounts",
+        tone: h.tone === "danger" ? ("danger" as const) : ("warning" as const),
+        icon: Link2Off,
+      })),
+    ...[...(failed.data?.items ?? []), ...(partial.data?.items ?? [])].map((post) => ({
+      key: post.id,
+      title: `“${post.title || "Untitled post"}” didn’t publish`,
+      detail: `${brandName(post.brand_id)} · open it to see why and try again`,
+      action: "Try again",
+      to: `/posts/${post.id}`,
+      tone: "danger" as const,
+      post,
+    })),
+    ...(pending.data?.items ?? []).map((post) => ({
+      key: post.id,
+      title: `Approve “${post.title || "Untitled post"}”`,
+      detail: `${brandName(post.brand_id)}${post.scheduled_at ? ` · planned ${formatDateTime(post.scheduled_at)}` : ""}`,
+      action: "Review",
+      to: `/posts/${post.id}`,
+      tone: "default" as const,
+      post,
+    })),
+    ...(approved.data?.items ?? []).map((post) => ({
+      key: post.id,
+      title: `Pick a time for “${post.title || "Untitled post"}”`,
+      detail: `${brandName(post.brand_id)} · approved, no date set yet`,
+      action: "Pick a time",
+      // "?schedule=1" lands on the scheduling panel, not the top of the editor.
+      to: `/posts/${post.id}?schedule=1`,
+      tone: "default" as const,
+      post,
+      icon: Clock,
+    })),
+  ].slice(0, 6);
+  const todosLoading = failed.isLoading || pending.isLoading || approved.isLoading || accounts.isLoading;
+  const todosError = failed.isError || partial.isError || pending.isError || approved.isError;
+  const retryTodos = () => [failed, partial, pending, approved].forEach((q) => q.isError && void q.refetch());
+
   const setup = {
     brand: brands.length > 0,
     account: activeAccounts.length > 0,
@@ -127,370 +166,359 @@ export function HomePage() {
   };
   const setupDone = Object.values(setup).every(Boolean);
   const loadingCore = recent.isLoading || accounts.isLoading;
-
   const brandQuery = brandId === ALL_BRANDS ? "" : `&brand=${brandId}`;
+  const total = todos.length;
 
   return (
-    <BentoGrid>
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section
-        className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-[var(--radius-tile)] p-6 text-white sm:p-7 md:col-span-8"
-        style={{ background: "linear-gradient(135deg, #4f46e5 0%, #312e81 70%, #1e1b4b 100%)" }}
-      >
-        <div className="relative flex flex-col gap-1.5">
-          <span className="text-sm text-white/75">{longDate.format(new Date())}</span>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {greeting()}, {firstName}
-          </h1>
-          {loadingCore ? (
-            <Skeleton className="h-5 w-72 bg-white/20" />
-          ) : !setupDone ? (
-            <p className="m-0 max-w-xl text-white/85">Let’s get your workspace ready. A few steps and you can publish your first post.</p>
-          ) : (
-            <p className="m-0 max-w-xl text-white/85">
-              {summary({ pending: pending.data?.total ?? 0, scheduledWeek: upcoming.length, failed: (failed.data?.total ?? 0) + (partial.data?.total ?? 0) })}
-            </p>
-          )}
-        </div>
-        <div className="relative flex flex-wrap gap-2">
-          <div className="[&>button]:bg-white [&>button]:text-[#1e1b4b] [&>button]:hover:bg-white/90">
+    <main className="mx-auto flex max-w-[1400px] flex-col gap-7 px-4 pt-6 pb-12 sm:px-8 lg:px-10">
+      <PageHeader
+        title="Your Studio"
+        accent="Today"
+        actions={
+          <>
+            <Button asChild variant="outline" size="lg">
+              <Link to="/templates">
+                <LayoutTemplate aria-hidden="true" /> Use a template
+              </Link>
+            </Button>
             <NewPostButton size="lg" />
-          </div>
-          <Button asChild size="lg" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
-            <Link to="/templates">
-              <LayoutTemplate aria-hidden="true" /> Browse templates
-            </Link>
-          </Button>
-        </div>
-      </section>
+          </>
+        }
+      />
 
-      {/* ── Activity ─────────────────────────────────────────────── */}
-      <Tile aria-labelledby="activity-h" className="justify-between md:col-span-4">
-        <div className="flex items-baseline justify-between gap-2">
-          <TileTitle id="activity-h">Last 14 days</TileTitle>
-          <span className="text-[13px] text-muted-foreground">{published.length ? `${activity.reduce((s, d) => s + d.count, 0)} published` : "—"}</span>
-        </div>
-        {recent.isLoading ? (
-          <Skeleton className="h-20" />
-        ) : (
-          <div
-            role="img"
-            aria-label={`Posts published per day over the last 14 days: ${activity.map((d) => d.count).join(", ")}`}
-            className="flex h-20 items-end gap-1"
-          >
-            {activity.map((d, i) => {
-              const max = Math.max(1, ...activity.map((x) => x.count));
-              // Pixel heights: a percentage would be relative to the column, which has no fixed height.
-              const px = d.count ? Math.max(10, Math.round((d.count / max) * 56)) : 4;
-              return (
-                <div key={d.start} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-                  <div
-                    title={`${new Date(d.start).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}: ${d.count}`}
-                    className={cn("w-full rounded-t-sm", d.count ? "bg-primary" : "bg-muted")}
-                    style={{ height: `${px}px` }}
-                  />
-                  {(i === 0 || i === 13) && <span className="text-[10px] text-muted-foreground">{dayChip.format(new Date(d.start))}</span>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-muted py-2">
-            <span className="block text-xl font-semibold">{usage.data?.counts.post_created ?? "–"}</span>
-            <span className="text-[11px] text-muted-foreground">written · 30d</span>
-          </div>
-          <div className="rounded-xl bg-muted py-2">
-            <span className="block text-xl font-semibold">{usage.data?.counts.post_published ?? "–"}</span>
-            <span className="text-[11px] text-muted-foreground">published · 30d</span>
-          </div>
-          <div className="rounded-xl bg-muted py-2">
-            <span className="block text-xl font-semibold">{usage.data?.counts.media_uploaded ?? "–"}</span>
-            <span className="text-[11px] text-muted-foreground">photos · 30d</span>
-          </div>
-        </div>
-      </Tile>
+      <div className="flex flex-wrap items-start gap-7">
+        {/* ── Left: what needs you, then what's coming ─────────────── */}
+        <div className="flex min-w-0 flex-[999_1_600px] flex-col gap-6">
+          <Tile aria-labelledby="hello-h" className="rim gap-6 p-6 sm:p-9">
+            <div className="flex flex-wrap gap-2">
+              <span className="eyebrow inline-flex h-8 items-center rounded-md border border-eyebrow/50 bg-accent px-3">
+                {loadingCore ? "Loading…" : !setupDone ? "Let’s get you set up" : total === 0 ? "All caught up" : `${total} thing${total === 1 ? "" : "s"} need you`}
+              </span>
+              <span className="inline-flex h-8 items-center rounded-md border bg-secondary px-3 text-sm">{longDate.format(new Date())}</span>
+            </div>
+            <div className="border-t pt-6">
+              <h2 id="hello-h" className="font-display text-[34px] leading-tight font-medium sm:text-[42px]">
+                {greeting()}
+                {firstName ? `, ${firstName}` : ""}.
+              </h2>
+              <p className="mt-1.5 mb-0 font-display text-[17px] text-muted-foreground italic">
+                {loadingCore
+                  ? "Getting today ready…"
+                  : !setupDone
+                    ? "A few steps and you can publish your first post."
+                    : "Here’s what needs you today, most urgent first."}
+              </p>
+            </div>
 
-      {/* ── Counts (each opens Posts pre-filtered) ───────────────── */}
-      {/* Two-by-two on phones, one row of four from md up. */}
-      <div className="grid grid-cols-2 gap-4 md:col-span-12 md:grid-cols-4">
-        <CountTile to={`/posts?status=pending_approval${brandQuery}`} label="waiting for approval" value={pending.data?.total} tone={pending.data?.total ? "info" : "default"} loading={pending.isLoading} />
-        <CountTile to={`/posts?status=scheduled${brandQuery}`} label="scheduled" value={scheduled.data?.total} tone="default" loading={scheduled.isLoading} />
-        <CountTile to={`/posts?status=published${brandQuery}`} label="published this month" value={recent.isLoading ? undefined : publishedThisMonth} tone={publishedThisMonth ? "success" : "default"} loading={recent.isLoading} />
-        <CountTile to={`/posts?status=failed${brandQuery}`} label="didn’t publish" value={(failed.data?.total ?? 0) + (partial.data?.total ?? 0)} tone={(failed.data?.total ?? 0) + (partial.data?.total ?? 0) ? "danger" : "default"} loading={failed.isLoading} />
+            {!loadingCore && !setupDone ? (
+              <ol className="m-0 flex flex-col gap-3 p-0">
+                <SetupStep done={setup.brand} to="/brands" title="Add a brand" hint="Who you post for. Agencies add one per client." />
+                <SetupStep done={setup.account} to="/accounts" title="Connect a social account" hint="Facebook and Instagram, or a test account while you try things." />
+                <SetupStep done={setup.post} to="/posts/new" title="Write your first post" hint="Start from a Smart Template in two clicks." />
+                <SetupStep done={setup.approved} to="/posts" title="Get it approved" hint="Then schedule it or post it right away." />
+              </ol>
+            ) : todosLoading ? (
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-[76px] rounded-2xl" />
+                <Skeleton className="h-[76px] rounded-2xl" />
+              </div>
+            ) : todosError ? (
+              <LoadError what="what needs you" onRetry={retryTodos} />
+            ) : todos.length === 0 ? (
+              <EmptyState title="You’re all caught up">Nothing needs approving, scheduling or fixing right now. A good moment to plan next week.</EmptyState>
+            ) : (
+              <ul className="m-0 flex flex-col gap-3 p-0">
+                {todos.map((t) => (
+                  <TodoRow key={t.key} todo={t} brand={t.post ? brandOf(t.post.brand_id) : undefined} />
+                ))}
+              </ul>
+            )}
+          </Tile>
+
+          <section aria-labelledby="upcoming-h" className="flex flex-col gap-4 rounded-[var(--radius-tile)] border bg-surface-subtle p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 id="upcoming-h" className="eyebrow m-0" style={{ fontSize: 14 }}>
+                Coming up
+              </h2>
+              <span className="inline-flex h-7 items-center rounded-full border border-eyebrow/40 bg-accent px-3 text-[13px] font-semibold text-accent-foreground">
+                Next 7 days
+              </span>
+              <span className="flex-1" />
+              <Link to="/calendar" className="text-sm font-semibold text-accent-foreground">
+                Open calendar →
+              </Link>
+            </div>
+            {scheduled.isLoading ? (
+              <Skeleton className="h-40 rounded-2xl" />
+            ) : scheduled.isError ? (
+              <InlineLoadError what="the schedule" onRetry={() => void scheduled.refetch()} />
+            ) : upcoming.length === 0 ? (
+              <p className="m-0 text-muted-foreground">Nothing scheduled in the next 7 days.</p>
+            ) : (
+              <ul className="m-0 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3.5 p-0">
+                {upcoming.slice(0, 5).map((p) => (
+                  <li key={p.id} className="list-none">
+                    <Link to={`/posts/${p.id}`} className="flex h-full flex-col gap-2.5 rounded-2xl border bg-card p-2 pb-3 text-foreground no-underline hover:bg-surface-hover">
+                      <span className="relative block">
+                        <PostThumb post={p} brand={brandOf(p.brand_id)} className="aspect-[4/3] h-auto w-full rounded-xl text-base" />
+                        <span className="absolute top-1.5 left-1.5 rounded-md border border-eyebrow/50 bg-background/85 px-2 py-0.5 text-xs font-bold">
+                          {whenShort.format(new Date(p.scheduled_at!))}
+                        </span>
+                      </span>
+                      <span className="px-1 text-sm leading-snug font-bold">{p.title || "Untitled post"}</span>
+                      <span className="px-1 text-[13px] text-muted-foreground">{brandName(p.brand_id)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* ── Right: publishing status, activity, recent posts ─────── */}
+        <aside aria-label="At a glance" className="flex min-w-0 flex-[1_1_360px] flex-col gap-6">
+          <Tile aria-labelledby="publishing-h" className="gap-4 p-6">
+            <div className="flex items-start gap-3.5">
+              <span className="grid size-12 shrink-0 place-items-center rounded-xl border bg-secondary text-eyebrow">
+                <ShieldCheck className="size-[22px]" strokeWidth={1.75} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="eyebrow">Publishing</div>
+                <h2 id="publishing-h" className="m-0 font-display text-[26px] leading-tight font-medium">
+                  Auto-publish
+                </h2>
+              </div>
+            </div>
+            <p className="m-0 leading-relaxed text-secondary-foreground">
+              Approved posts go out on their own at the time you set. If one can’t post, it shows up in “Needs you” with a fix.
+            </p>
+            <div className="grid grid-cols-3 gap-2.5 border-t pt-4">
+              <Stat value={accounts.isLoading ? "–" : `${working} / ${activeAccounts.length}`} label="Accounts working" />
+              <Stat value={scheduled.isLoading ? "–" : String(upcoming.length)} label="Next 7 days" />
+              <Stat value={pending.isLoading ? "–" : String(pending.data?.total ?? 0)} label="Waiting for you" to={`/posts?status=pending_approval${brandQuery}`} />
+            </div>
+          </Tile>
+
+          <Tile aria-labelledby="activity-h" className="gap-4 p-6">
+            <div className="flex items-baseline justify-between gap-2">
+              <TileTitle id="activity-h">Last 14 Days</TileTitle>
+              <span className="text-[13px] text-muted-foreground">{activity.reduce((s, d) => s + d.count, 0)} published</span>
+            </div>
+            {recent.isLoading ? (
+              <Skeleton className="h-20" />
+            ) : (
+              <div
+                role="img"
+                aria-label={`Posts published per day over the last 14 days: ${activity.map((d) => d.count).join(", ")}`}
+                className="flex h-20 items-end gap-1"
+              >
+                {activity.map((d, i) => {
+                  const max = Math.max(1, ...activity.map((x) => x.count));
+                  // Pixel heights: a percentage would be relative to the column, which has no fixed height.
+                  const px = d.count ? Math.max(10, Math.round((d.count / max) * 56)) : 4;
+                  return (
+                    <div key={d.start} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                      <div className={cn("w-full rounded-t-sm", d.count ? "bg-primary" : "bg-muted")} style={{ height: `${px}px` }} />
+                      {(i === 0 || i === 13) && <span className="text-[10px] text-muted-foreground">{dayChip.format(new Date(d.start))}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2.5">
+              <Stat value={usage.data?.counts.post_created ?? "–"} label="Written · 30d" />
+              <Stat value={usage.data?.counts.post_published ?? "–"} label="Published · 30d" />
+              <Stat value={usage.data?.counts.media_uploaded ?? "–"} label="Photos · 30d" />
+            </div>
+          </Tile>
+
+          <Tile aria-labelledby="recent-h" className="gap-4 p-6">
+            <div className="flex items-baseline justify-between">
+              <TileTitle id="recent-h">Recently Posted</TileTitle>
+              <Link to={`/posts?status=published${brandQuery}`} className="text-sm font-semibold text-accent-foreground">
+                All posts →
+              </Link>
+            </div>
+            {recent.isLoading ? (
+              <Skeleton className="h-40" />
+            ) : published.length === 0 ? (
+              <p className="m-0 text-muted-foreground">Nothing published yet. Your first post will show up here.</p>
+            ) : (
+              <ul className="m-0 grid grid-cols-2 gap-3 p-0">
+                {published.slice(0, 4).map((p) => {
+                  const links = Object.values((p.publish_result ?? {}) as Record<string, { url?: string }>)
+                    .map((r) => r.url)
+                    .filter(Boolean) as string[];
+                  return (
+                    <li key={p.id} className="flex list-none flex-col gap-2 rounded-2xl border bg-secondary p-2 pb-3">
+                      <PostThumb post={p} brand={brandOf(p.brand_id)} className="aspect-[16/10] h-auto w-full rounded-xl" />
+                      <Link to={`/posts/${p.id}`} className="truncate px-1 text-sm font-semibold text-foreground">
+                        {p.title || "Untitled post"}
+                      </Link>
+                      <span className="px-1 text-xs text-muted-foreground">
+                        {brandName(p.brand_id)} · {formatDateTime(p.published_at)}
+                      </span>
+                      {links[0] && (
+                        <a href={links[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-1 text-xs font-semibold text-accent-foreground">
+                          View post <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Tile>
+        </aside>
       </div>
 
-      {/* ── Waiting for my approval (posts assigned to me) ─────────── */}
-      {!!mine.data?.items.length && (
-        <Tile aria-labelledby="mine-h" tone="info" className="gap-1 md:col-span-12">
-          <div className="mb-1 flex items-baseline justify-between gap-3">
-            <TileTitle id="mine-h">Waiting for your approval</TileTitle>
-            <Link to={`/posts?status=pending_approval${brandQuery}`} className="text-[13px] font-semibold text-accent-foreground">
-              All waiting ({pending.data?.total ?? mine.data.total})
+      {/* ── Brands and ideas ───────────────────────────────────────── */}
+      <div className="flex flex-wrap items-stretch gap-6">
+        {brands.length > 0 && (
+          <Tile aria-labelledby="brands-h" className="min-w-0 flex-[1_1_420px] gap-4 p-6">
+            <div className="flex items-baseline justify-between">
+              <TileTitle id="brands-h">Your Brands</TileTitle>
+              <Link to="/brands" className="text-sm font-semibold text-accent-foreground">
+                Manage brands
+              </Link>
+            </div>
+            <ul className="m-0 flex flex-col gap-3 p-0">
+              {brands.slice(0, 4).map((b) => {
+                const c = perBrand.get(b.id) ?? { scheduled: 0, waiting: 0 };
+                return (
+                  <li key={b.id} className="flex list-none flex-wrap items-center gap-3.5 rounded-2xl border bg-secondary p-3.5">
+                    <BrandLogo brand={b} className="size-12 rounded-xl text-sm" />
+                    <div className="flex min-w-0 flex-1 basis-40 flex-col">
+                      <span className="truncate font-bold">{b.name}</span>
+                      <span className="text-[13px] text-muted-foreground">
+                        {b.industry ? `${humanize(b.industry)} · ` : ""}
+                        {c.scheduled} scheduled · {c.waiting ? `${c.waiting} waiting` : "nothing waiting"}
+                      </span>
+                    </div>
+                    <Button asChild variant="outline" aria-label={`New post for ${b.name}`}>
+                      <Link to={`/posts/new?brand=${b.id}`}>Post</Link>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </Tile>
+        )}
+
+        <Tile aria-labelledby="ideas-h" className="min-w-0 flex-[1.3_1_420px] gap-4 p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <TileTitle id="ideas-h">Stuck for an Idea?</TileTitle>
+              <p className="mt-1 mb-0 text-sm text-muted-foreground">
+                Smart Templates{selectedBrand?.industry ? ` for ${humanize(selectedBrand.industry).toLowerCase()}` : ""}. Fill in the blanks and send for review.
+              </p>
+            </div>
+            <Link to="/templates" className="shrink-0 text-sm font-semibold text-accent-foreground">
+              All templates
             </Link>
           </div>
-          <ul className="m-0 flex flex-col p-0">
-            {mine.data.items.map((post) => (
-              <li key={post.id} className="flex list-none flex-wrap items-center gap-3 border-t py-3">
-                <div className="flex min-w-0 flex-1 basis-40 flex-col">
-                  <span className="font-semibold">
-                    {post.title || "Untitled post"} <span className="font-normal text-muted-foreground">· {brandName(post.brand_id)}</span>
-                  </span>
-                  <span className="line-clamp-1 text-[13px] text-muted-foreground">{post.caption || "No caption yet"}</span>
-                </div>
-                <Button asChild size="sm">
-                  <Link to={`/posts/${post.id}`}>Review</Link>
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </Tile>
-      )}
-
-      {/* ── Needs you / setup ────────────────────────────────────── */}
-      {!loadingCore && !setupDone ? (
-        <Tile aria-labelledby="setup-h" className="md:col-span-6 md:row-span-2">
-          <TileTitle id="setup-h">Get set up</TileTitle>
-          <ol className="m-0 flex flex-col p-0">
-            <SetupStep done={setup.brand} to="/brands" title="Add a brand" hint="Who you post for. Agencies add one per client." />
-            <SetupStep done={setup.account} to="/accounts" title="Connect a social account" hint="Facebook and Instagram, or a test account while you try things." />
-            <SetupStep done={setup.post} to="/posts" title="Write your first post" hint="Start from a Smart Template in two clicks." />
-            <SetupStep done={setup.approved} to="/posts" title="Get it approved" hint="Then schedule it or post it right away." />
-          </ol>
-        </Tile>
-      ) : (
-        <Tile aria-labelledby="attention-h" className="gap-1 md:col-span-6 md:row-span-2">
-          <div className="mb-1 flex items-baseline justify-between">
-            <TileTitle id="attention-h">Needs your attention</TileTitle>
-            <Link to="/posts" className="text-[13px] font-semibold text-accent-foreground">All posts</Link>
-          </div>
-          {attentionLoading ? (
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-12" />
-              <Skeleton className="h-12" />
-            </div>
-          ) : attentionError ? (
-            <LoadError what="what needs your attention" onRetry={retryAttention} />
-          ) : attention.length === 0 ? (
-            <EmptyState title="You’re all caught up">Nothing needs approving, scheduling or fixing right now.</EmptyState>
+          {ideas.isLoading ? (
+            <Skeleton className="h-28" />
+          ) : (ideas.data?.items ?? []).length === 0 || brands.length === 0 ? (
+            <p className="m-0 text-sm text-muted-foreground">Add a brand with an industry to get matching ideas.</p>
           ) : (
-            <ul className="m-0 flex flex-col p-0">
-              {attention.map(({ post, action }) => (
-                <li key={post.id} className="flex list-none flex-wrap items-center gap-3 border-t py-3">
-                  <PostThumb post={post} brand={brands.find((b) => b.id === post.brand_id)} className="size-10" />
-                  <div className="flex min-w-0 flex-1 basis-40 flex-col">
-                    <span className="font-semibold">{post.title || "Untitled post"} <span className="font-normal text-muted-foreground">· {brandName(post.brand_id)}</span></span>
-                    <span className="line-clamp-1 text-[13px] text-muted-foreground">{post.caption || "No caption yet"}</span>
-                  </div>
-                  <StatusBadge status={post.status} />
-                  <Button asChild size="sm" variant={action === "Try again" ? "default" : "outline"}>
-                    {/* "Schedule" lands on the scheduling panel, not the top of the editor. */}
-                    <Link to={`/posts/${post.id}${action === "Schedule" ? "?schedule=1" : ""}`}>{action}</Link>
-                  </Button>
-                </li>
-              ))}
+            <ul className="m-0 grid grid-cols-1 gap-2.5 p-0 sm:grid-cols-2">
+              {(ideas.data?.items ?? []).slice(0, 4).map((t) => {
+                const brand = selectedBrand ?? brands.find((b) => b.industry === t.industry) ?? brands[0]!;
+                return (
+                  <li key={t.id} className="list-none">
+                    <Link
+                      to={`/posts/new?brand=${brand.id}&template=${t.id}`}
+                      className="flex min-h-16 items-center gap-3 rounded-2xl border bg-secondary px-3.5 py-3 text-foreground no-underline hover:bg-surface-active"
+                    >
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent font-display text-base font-semibold text-eyebrow">
+                        {t.title.charAt(0)}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                        <span className="truncate text-sm font-bold">{t.title}</span>
+                        <span className="truncate text-xs text-muted-foreground">{brand.name}</span>
+                      </span>
+                      <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Tile>
-      )}
-
-      {/* ── Coming up ────────────────────────────────────────────── */}
-      <Tile aria-labelledby="upcoming-h" className="md:col-span-3 md:row-span-2">
-        <div className="flex items-baseline justify-between">
-          <TileTitle id="upcoming-h">Coming up</TileTitle>
-          <Link to="/calendar" className="text-[13px] font-semibold text-accent-foreground">Calendar</Link>
-        </div>
-        {scheduled.isLoading ? (
-          <Skeleton className="h-24" />
-        ) : scheduled.isError ? (
-          <InlineLoadError what="the schedule" onRetry={() => void scheduled.refetch()} />
-        ) : upcoming.length === 0 ? (
-          <p className="m-0 text-muted-foreground">Nothing scheduled in the next 7 days.</p>
-        ) : (
-          <ul className="m-0 flex flex-col gap-3 p-0">
-            {upcoming.slice(0, 5).map((p) => {
-              const d = new Date(p.scheduled_at!);
-              return (
-                <li key={p.id} className="list-none">
-                  <Link to={`/posts/${p.id}`} className="flex gap-3 text-foreground no-underline">
-                    <span className="flex w-12 shrink-0 flex-col items-center rounded-xl bg-muted py-1.5">
-                      <span className="text-[11px] text-muted-foreground">{dayChip.format(d)}</span>
-                      <span className="text-lg leading-tight font-semibold">{d.getDate()}</span>
-                    </span>
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate font-semibold">{p.title || "Untitled post"}</span>
-                      <span className="text-[13px] text-muted-foreground">{timeOnly.format(d)} · {brandName(p.brand_id)}</span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Tile>
-
-      {/* ── Accounts ─────────────────────────────────────────────── */}
-      <Tile aria-labelledby="accounts-h" className="md:col-span-3 md:row-span-2">
-        <div className="flex items-baseline justify-between">
-          <TileTitle id="accounts-h">Accounts</TileTitle>
-          <Link to="/accounts" className="text-[13px] font-semibold text-accent-foreground">Manage</Link>
-        </div>
-        {accounts.isLoading ? (
-          <Skeleton className="h-16" />
-        ) : accounts.isError ? (
-          <InlineLoadError what="accounts" onRetry={() => void accounts.refetch()} />
-        ) : activeAccounts.length === 0 ? (
-          <>
-            <p className="m-0 text-muted-foreground">No accounts connected yet.</p>
-            <Button asChild variant="outline" className="self-start"><Link to="/accounts">Connect one</Link></Button>
-          </>
-        ) : (
-          <ul className="m-0 flex flex-col gap-3 p-0">
-            {activeAccounts.map((a) => {
-              const days = daysUntil(a.token_expires_at);
-              const soon = a.needs_reauth || (days !== null && days <= 7);
-              const pct = days === null ? 100 : Math.max(4, Math.min(100, Math.round((days / 60) * 100)));
-              // Same answer as the Accounts page: off for this workspace beats any countdown.
-              const blocked = platformEnabled(features.data, a.platform) === false;
-              return (
-                <li key={a.id} className="flex list-none flex-col gap-1">
-                  <div className="flex justify-between gap-2 text-[13px]">
-                    <span className="truncate">{platformName(a.platform)} · {a.account_name}</span>
-                    <span className={cn("shrink-0 font-semibold", blocked ? "text-danger" : soon ? "text-warning" : "text-success")}>
-                      {blocked ? "Can’t post" : days === null ? "OK" : days <= 0 ? "Expired" : `${days}d`}
-                    </span>
-                  </div>
-                  <div aria-hidden="true" className="h-1.5 rounded-full bg-muted">
-                    <div className={cn("h-1.5 rounded-full", blocked ? "bg-red-400" : soon ? "bg-amber-400" : "bg-emerald-400")} style={{ width: blocked ? "100%" : `${pct}%` }} />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Tile>
-
-      {/* ── Brands ───────────────────────────────────────────────── */}
-      {brands.length > 0 && (
-        <Tile aria-labelledby="brands-h" className="md:col-span-7">
-          <div className="flex items-baseline justify-between">
-            <TileTitle id="brands-h">Your brands</TileTitle>
-            <Link to="/brands" className="text-[13px] font-semibold text-accent-foreground">Manage</Link>
-          </div>
-          <ul className="m-0 grid gap-3 p-0 sm:grid-cols-2">
-            {brands.slice(0, 4).map((b) => {
-              const c = perBrand.get(b.id) ?? { total: 0, scheduled: 0, drafts: 0 };
-              return (
-                <li key={b.id} className="flex list-none items-center gap-3 rounded-xl border p-3">
-                  <BrandLogo brand={b} className="size-11 rounded-xl text-sm" />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-semibold">{b.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {c.scheduled} scheduled · {c.drafts} in progress{b.industry ? ` · ${humanize(b.industry)}` : ""}
-                    </span>
-                  </div>
-                  <Button asChild size="sm" variant="ghost" aria-label={`New post for ${b.name}`}>
-                    <Link to={`/posts/new?brand=${b.id}`}><ArrowRight aria-hidden="true" /></Link>
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        </Tile>
-      )}
-
-      {/* ── Ideas ────────────────────────────────────────────────── */}
-      <Tile tone="info" aria-labelledby="ideas-h" className={brands.length > 0 ? "md:col-span-5" : "md:col-span-12"}>
-        <TileTitle id="ideas-h">Ideas for {selectedBrand?.name ?? "your next post"}</TileTitle>
-        <p className="m-0 text-[13px]">Smart Templates{selectedBrand?.industry ? ` for ${humanize(selectedBrand.industry).toLowerCase()}` : ""} — fill in the blanks and go.</p>
-        <div className="flex flex-wrap gap-2">
-          {(ideas.data?.items ?? []).slice(0, 4).map((t) => {
-            const brand = selectedBrand ?? brands.find((b) => b.industry === t.industry) ?? brands[0];
-            return brand ? (
-              <Button key={t.id} asChild size="sm" variant="outline" className="rounded-full bg-card">
-                <Link to={`/posts/new?brand=${brand.id}&template=${t.id}`}>{t.title}</Link>
-              </Button>
-            ) : null;
-          })}
-          {ideas.isSuccess && (ideas.data.items.length === 0 || brands.length === 0) && (
-            <span className="text-[13px]">Add a brand with an industry to get matching ideas.</span>
-          )}
-        </div>
-      </Tile>
-
-      {/* ── Recently published ───────────────────────────────────── */}
-      <Tile aria-labelledby="recent-h" className="md:col-span-12">
-        <div className="flex items-baseline justify-between">
-          <TileTitle id="recent-h">Recently published</TileTitle>
-          <Link to={`/posts?status=published${brandQuery}`} className="text-[13px] font-semibold text-accent-foreground">See all</Link>
-        </div>
-        {recent.isLoading ? (
-          <Skeleton className="h-24" />
-        ) : published.length === 0 ? (
-          <p className="m-0 text-muted-foreground">Nothing published yet. Your first post will show up here.</p>
-        ) : (
-          <ul className="m-0 grid gap-3 p-0 sm:grid-cols-2 lg:grid-cols-4">
-            {published.slice(0, 4).map((p) => {
-              const links = Object.values((p.publish_result ?? {}) as Record<string, { url?: string }>).map((r) => r.url).filter(Boolean) as string[];
-              return (
-                <li key={p.id} className="flex list-none gap-3 rounded-xl border p-3">
-                  <PostThumb post={p} brand={brands.find((b) => b.id === p.brand_id)} className="size-16" />
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <Link to={`/posts/${p.id}`} className="truncate font-semibold text-foreground">{p.title || "Untitled post"}</Link>
-                    <span className="text-xs text-muted-foreground">{brandName(p.brand_id)} · {formatDateTime(p.published_at)}</span>
-                    {links[0] && (
-                      <a href={links[0]} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-foreground">
-                        View post <ExternalLink className="size-3" aria-hidden="true" />
-                      </a>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Tile>
-    </BentoGrid>
+      </div>
+    </main>
   );
 }
 
-function CountTile({
-  to,
-  label,
-  value,
-  tone,
-  loading,
-}: {
-  to: string;
-  label: string;
-  value: number | undefined;
-  tone: "default" | "info" | "danger" | "success";
-  loading: boolean;
-}) {
+function TodoRow({ todo, brand }: { todo: Todo; brand?: Parameters<typeof PostThumb>[0]["brand"] }) {
+  const Icon = todo.icon ?? RotateCcw;
   return (
-    <Tile tone={tone} className="group min-h-24 justify-between p-0 sm:p-0">
-      <Link to={to} className="flex h-full flex-col justify-between gap-3 p-4 text-inherit no-underline sm:p-6">
-        {loading ? <Skeleton className="h-9 w-10" /> : <span className="text-3xl leading-none font-semibold sm:text-4xl">{value ?? 0}</span>}
-        <span className="flex items-center justify-between gap-2 leading-snug font-medium">
-          {label}
-          <ArrowRight aria-hidden="true" className="size-4 opacity-0 transition-opacity group-hover:opacity-70" />
+    <li
+      className={cn(
+        "flex list-none flex-wrap items-center gap-4 rounded-2xl border px-4 py-3.5",
+        todo.tone === "danger" ? "border-danger-border bg-danger-soft" : todo.tone === "warning" ? "border-warning-border bg-warning-soft" : "bg-secondary",
+      )}
+    >
+      {todo.post && !todo.icon ? (
+        <PostThumb post={todo.post} brand={brand} className="size-14 rounded-xl" />
+      ) : (
+        <span
+          className={cn(
+            "grid size-14 shrink-0 place-items-center rounded-xl border",
+            todo.tone === "danger" ? "border-danger-border text-danger" : todo.tone === "warning" ? "border-warning-border text-warning" : "border-eyebrow/50 text-eyebrow",
+          )}
+        >
+          <Icon className="size-[22px]" strokeWidth={1.75} aria-hidden="true" />
         </span>
-      </Link>
-    </Tile>
+      )}
+      <div className="min-w-0 flex-[1_1_260px]">
+        <div className="text-base font-bold">{todo.title}</div>
+        <div className="text-sm text-muted-foreground">{todo.detail}</div>
+      </div>
+      <Button asChild variant={todo.tone === "danger" ? "default" : "outline"}>
+        <Link to={todo.to}>
+          {todo.action} <ArrowRight aria-hidden="true" />
+        </Link>
+      </Button>
+    </li>
+  );
+}
+
+function Stat({ value, label, to }: { value: ReactNode; label: string; to?: string }) {
+  const body = (
+    <>
+      <span className="num block font-display text-[26px] leading-tight text-accent-foreground">{value}</span>
+      <span className="block text-[11px] font-bold tracking-[0.06em] text-muted-foreground uppercase">{label}</span>
+    </>
+  );
+  const cls = "rounded-xl border bg-secondary px-2 py-3 text-center no-underline";
+  return to ? (
+    <Link to={to} className={cn(cls, "text-foreground hover:bg-surface-active")}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }
 
 function SetupStep({ done, to, title, hint }: { done: boolean; to: string; title: string; hint: string }) {
   return (
-    <li className="flex list-none items-start gap-3 border-t py-3 first:border-t-0">
-      {done ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" /> : <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />}
-      <div className="flex flex-1 flex-col">
-        <span className={cn("font-semibold", done && "text-muted-foreground line-through")}>{title}</span>
-        <span className="text-[13px] text-muted-foreground">{hint}</span>
+    <li className={cn("flex list-none flex-wrap items-center gap-4 rounded-2xl border px-4 py-3.5", done ? "bg-transparent" : "bg-secondary")}>
+      {done ? (
+        <CheckCircle2 className="size-6 shrink-0 text-success" aria-hidden="true" />
+      ) : (
+        <Circle className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+      )}
+      <div className="flex min-w-0 flex-[1_1_220px] flex-col">
+        <span className={cn("font-bold", done && "text-muted-foreground line-through")}>{title}</span>
+        <span className="text-sm text-muted-foreground">{hint}</span>
       </div>
       {!done && (
-        <Button asChild size="sm" variant="outline">
-          <Link to={to}>Go</Link>
+        <Button asChild variant="outline">
+          <Link to={to}>
+            Go <ArrowRight aria-hidden="true" />
+          </Link>
         </Button>
       )}
     </li>
