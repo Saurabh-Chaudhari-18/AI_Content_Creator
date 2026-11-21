@@ -23,13 +23,30 @@ export function JobBadge({ status }: { status: string }) {
   );
 }
 
-/** Title row for a page: small context line, h1, and optional actions on the right. */
-export function PageHeader({ eyebrow, title, actions }: { eyebrow?: ReactNode; title: ReactNode; actions?: ReactNode }) {
+/**
+ * Title row for a page: a serif h1 (with an optional italic accent word, e.g.
+ * "Posting Calendar · This week"), a plain-language line under it, and
+ * optional actions on the right.
+ */
+export function PageHeader({
+  eyebrow,
+  title,
+  accent,
+  actions,
+}: {
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  accent?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="flex flex-col gap-1">
-        {eyebrow && <span className="text-[13px] text-muted-foreground">{eyebrow}</span>}
-        <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <h1 className="font-display text-[28px] leading-tight font-medium sm:text-[34px]">
+          {title}
+          {accent && <span className="text-eyebrow italic"> · {accent}</span>}
+        </h1>
+        {eyebrow && <span className="text-sm text-muted-foreground">{eyebrow}</span>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -74,7 +91,7 @@ export function InlineLoadError({ what, onRetry }: { what: string; onRetry: () =
 /** A section heading inside a tile. */
 export function TileTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (
-    <h2 id={id} className="text-base font-semibold">
+    <h2 id={id} className="font-display text-[22px] leading-tight font-medium">
       {children}
     </h2>
   );

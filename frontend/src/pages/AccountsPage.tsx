@@ -21,25 +21,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { accountHealth } from "@/lib/accountHealth";
 import { api, ApiError, type Schemas, type SocialAccount } from "@/lib/api";
-import { daysUntil, formatDateTime, PLATFORMS, platformName } from "@/lib/format";
+import { formatDateTime, PLATFORMS, platformName } from "@/lib/format";
 import { keys, platformEnabled, useAccounts, useFeatures, useMyRole, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { PlatformMark } from "@/pages/posts/parts";
 import { useWorkspace } from "@/lib/workspace";
 
-/**
- * One account's state, in the same words the pre-publish check uses: an
- * account that is connected but can't be posted to (plan or a pause on our
- * side) must never read as "Working".
- */
-function health(a: SocialAccount, canPost: boolean | undefined): { label: string; tone: "success" | "warning" | "danger" | "neutral"; days: number | null } {
-  const days = daysUntil(a.token_expires_at);
-  if (days !== null && days <= 0) return { label: "Expired", tone: "danger", days };
-  if (canPost === false) return { label: "Can’t post right now", tone: "danger", days };
-  if (a.needs_reauth || (days !== null && days <= 7)) return { label: "Refresh soon", tone: "warning", days };
-  return { label: "Working", tone: "success", days };
-}
+const health = accountHealth;
 
 export function AccountsPage() {
   const qc = useQueryClient();
