@@ -8,6 +8,7 @@
 import { Check, CircleAlert, Clock, MessageSquareText, ShieldCheck, TimerOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { SafeImage } from "@/components/SafeImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -229,13 +230,16 @@ export function ClientApprovalPage() {
 
   const header = (
     <header className="flex items-center gap-3">
-      {view.brand_logo_url ? (
-        <img src={view.brand_logo_url} alt="" className="size-11 rounded-xl object-cover" />
-      ) : (
-        <span aria-hidden="true" className="grid size-11 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
-          {view.brand_name.slice(0, 2).toUpperCase()}
-        </span>
-      )}
+      <SafeImage
+        src={view.brand_logo_url}
+        alt=""
+        className="size-11 rounded-xl object-cover"
+        fallback={
+          <span aria-hidden="true" className="grid size-11 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
+            {view.brand_name.slice(0, 2).toUpperCase()}
+          </span>
+        }
+      />
       <div className="min-w-0">
         <p className="m-0 truncate text-base font-medium">{view.brand_name}</p>
         <p className="m-0 truncate text-xs text-muted-foreground">From {view.agency_name}</p>
@@ -340,7 +344,7 @@ export function ClientApprovalPage() {
               m.media_type === "video" ? (
                 <video key={i} src={m.url} controls playsInline className="aspect-square w-full flex-none snap-center object-contain" />
               ) : (
-                <img key={i} src={m.url} alt={m.alt_text ?? ""} className="aspect-square w-full flex-none snap-center object-cover" />
+                <SafeImage key={i} retry src={m.url} alt={m.alt_text ?? ""} className="aspect-square w-full flex-none snap-center object-cover" />
               ),
             )}
           </div>

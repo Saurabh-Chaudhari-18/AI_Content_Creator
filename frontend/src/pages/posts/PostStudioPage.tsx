@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarClock,
+  Check,
   FileCheck,
   ImagePlus,
   LayoutTemplate,
@@ -15,12 +17,14 @@ import {
   Undo2,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { Link, useBlocker, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import { EmptyState, StatusBadge } from "@/components/common";
-import { BentoGrid } from "@/components/Tile";
+import { BrandChoices } from "@/components/BrandPicker";
+import { StatusBadge } from "@/components/common";
+import { SafeImage } from "@/components/SafeImage";
+import { BentoGrid, Tile } from "@/components/Tile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,15 +44,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { api, ApiError, type Post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { brandColor, brandStyle } from "@/lib/brandColor";
-import { daysUntil, humanize, PLATFORMS, platformName, type Platform } from "@/lib/format";
+import { daysUntil, humanize, PLATFORMS, platformName, toLocalInputValue, type Platform } from "@/lib/format";
 import { keys, useAccounts, useMembers, useMyRole, useTemplates, type Template } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 import { ApprovalActions, ApprovalRecord, usePostHistory } from "./ApprovalPanel";
-import { ReviewerDialog, ReviewPanel } from "./ReviewerDialogs";
 import { CHAR_LIMIT, HashtagInput, limitState, LimitRing, PlatformMark, PlatformPreview, renderPostText } from "./parts";
-import { JobsPanel, PublishPanel } from "./PublishPanel";
+import { focusPublishPanel, JobsPanel, PublishPanel } from "./PublishPanel";
+import { ReviewerDialog, ReviewPanel } from "./ReviewerDialogs";
 import { shortHash } from "./Seal";
 import { TemplateBrowserDialog, TemplateFillDialog, type TemplateResult } from "./TemplateDialogs";
 
@@ -67,6 +71,8 @@ const LOCKED: Post["status"][] = ["pending_approval", "publishing", "published",
 const NEEDS_REAPPROVAL: Post["status"][] = ["approved", "scheduled", "failed"];
 // The preview and channel cards read left to right in this order.
 const CHANNELS: Platform[] = ["instagram", "facebook", "linkedin"];
+/** Drafts save themselves this long after the last keystroke. */
+const AUTOSAVE_MS = 1500;
 
 function formFromPost(p: Post): Form {
   return {
@@ -78,9 +84,28 @@ function formFromPost(p: Post): Form {
   };
 }
 
-function sameForm(a: Form, b: Form): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+/** Exactly what the API stores, so "unsaved" means "the server has something different". */
+function toPayload(form: Form) {
+  const targets: Form["targets"] = {};
+  for (const p of PLATFORMS) if (form.targets[p]) targets[p] = form.targets[p];
+  return {
+    title: form.title.trim() || null,
+    caption: form.caption,
+    hashtags: form.hashtags,
+    cta: form.cta.trim() || null,
+    platform_targets: targets,
+  };
 }
+
+/** JSON with sorted keys: two payloads compare equal whatever order their keys were added in. */
+function stableKey(value: unknown): string {
+  return JSON.stringify(value, (_k, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
+}
+const formKey = (f: Form) => stableKey(toPayload(f));
 
 const languageName = (code: string | undefined) => {
   if (!code) return "";
@@ -90,6 +115,13 @@ const languageName = (code: string | undefined) => {
     return code;
   }
 };
+
+/** "?schedule=2026-11-20T10:00" from a calendar day; "?schedule=1" just means "take me to scheduling". */
+function scheduleValue(raw: string | null): string | undefined {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return undefined;
+  const d = new Date(raw);
+  return Number.isFinite(d.getTime()) && d.getTime() > Date.now() ? toLocalInputValue(d) : undefined;
+}
 
 function Banner({ tone, icon: Icon, children }: { tone: "warning" | "success" | "danger"; icon: LucideIcon; children: ReactNode }) {
   return (
@@ -114,7 +146,7 @@ function Section({ title, aside, children, id }: { title: string; aside?: ReactN
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="m-0 text-sm font-medium">
+        <h2 id={id} className="m-0 scroll-mt-28 text-sm font-medium">
           {title}
         </h2>
         {aside && <span className="text-xs text-muted-foreground">{aside}</span>}
@@ -124,10 +156,22 @@ function Section({ title, aside, children, id }: { title: string; aside?: ReactN
   );
 }
 
+type SaveVars = {
+  payload: ReturnType<typeof toPayload>;
+  /** Show "Saved." (a deliberate save), not for autosave. */
+  announce?: boolean;
+  /** Autosave: show failures in the header, not as a toast. */
+  quietErrors?: boolean;
+  /** The user is leaving: create the draft but don't move to its address. */
+  leaving?: boolean;
+};
+
 export function PostStudioPage() {
-  const { id } = useParams();
-  const isNew = !id;
+  const { id: rawId } = useParams();
+  const isNew = !rawId || rawId === "new";
+  const id = isNew ? undefined : rawId;
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -136,6 +180,9 @@ export function PostStudioPage() {
   const accounts = useAccounts();
   const members = useMembers();
 
+  // A new post that just got its id arrives with the post already in the
+  // cache (see `create`), so the editor never flashes skeletons.
+  const cached = id ? qc.getQueryData<Post>(keys.post(id)) : undefined;
   const post = useQuery({
     queryKey: keys.post(id),
     queryFn: () => api<Post>(`/posts/${id}`),
@@ -149,16 +196,16 @@ export function PostStudioPage() {
       return false;
     },
   });
-  const history = usePostHistory(isNew ? undefined : id);
+  const history = usePostHistory(id);
 
   const brandId = post.data?.brand_id ?? params.get("brand") ?? undefined;
   const brand = brands.find((b) => b.id === brandId);
 
   // ── Form state ───────────────────────────────────────────────────────
-  const [form, setForm] = useState<Form>(EMPTY);
-  const [baseline, setBaseline] = useState<Form>(EMPTY);
-  const loadedRef = useRef<string | null>(null);
-  const dirty = !sameForm(form, baseline);
+  const [form, setForm] = useState<Form>(() => (cached ? formFromPost(cached) : EMPTY));
+  const [baseline, setBaseline] = useState<Form>(() => (cached ? formFromPost(cached) : EMPTY));
+  const loadedRef = useRef<string | null>(cached ? `${cached.id}:${cached.updated_at}` : null);
+  const dirty = formKey(form) !== formKey(baseline);
 
   useEffect(() => {
     if (!post.data) return;
@@ -176,6 +223,9 @@ export function PostStudioPage() {
   const editable = isNew || !LOCKED.includes(status);
   const [tab, setTab] = useState<"all" | Platform>("all");
   const [previewTab, setPreviewTab] = useState<Platform>("instagram");
+  const [captionError, setCaptionError] = useState<string | null>(null);
+  const captionRef = useRef<HTMLTextAreaElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   // ── Roles ────────────────────────────────────────────────────────────
   const isAdmin = role === "owner" || role === "admin";
@@ -184,61 +234,178 @@ export function PostStudioPage() {
   const selfApprovalBlocked = isAuthor && workspace?.allow_self_approval === false;
   const canApprove = !!post.data && isAdmin && !selfApprovalBlocked;
   const approveBlockedReason = !isAdmin
-    ? "An owner or admin will review it."
+    ? "An owner or manager will review it."
     : selfApprovalBlocked
       ? "Someone else must approve your post."
       : null;
 
-  // ── Mutations ────────────────────────────────────────────────────────
-  const onError = (e: unknown) => toast.error(e instanceof ApiError ? e.message : "Something went wrong.");
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: keys.post(id) });
+  // ── Saving ───────────────────────────────────────────────────────────
+  // Refs, so the debounce timer and the leave guard always see the latest values.
+  const createdIdRef = useRef<string | null>(null);
+  const postIdRef = useRef<string | undefined>(undefined);
+  postIdRef.current = id ?? createdIdRef.current ?? undefined;
+  const formRef = useRef(form);
+  formRef.current = form;
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const lastSentRef = useRef<string | null>(null);
+  const creatingRef = useRef<Promise<Post> | null>(null);
+  const skipBlockRef = useRef(false);
+  const [autosaveError, setAutosaveError] = useState<string | null>(null);
+
+  const errorText = (e: unknown) => (e instanceof ApiError ? e.message : "Something went wrong.");
+  const onError = (e: unknown) => toast.error(errorText(e));
+  const invalidate = (postId: string | undefined) => {
+    qc.invalidateQueries({ queryKey: keys.post(postId) });
     qc.invalidateQueries({ queryKey: ["ws-posts"] });
     qc.invalidateQueries({ queryKey: ["calendar"] });
   };
 
-  function payload(): Record<string, unknown> {
-    const targets: Form["targets"] = {};
-    for (const p of PLATFORMS) if (form.targets[p]) targets[p] = form.targets[p];
-    return {
-      title: form.title.trim() || null,
-      caption: form.caption,
-      hashtags: form.hashtags,
-      cta: form.cta.trim() || null,
-      platform_targets: targets,
-    };
-  }
-
   const create = useMutation({
-    mutationFn: () => api<Post>(`/brands/${brandId}/posts`, { method: "POST", body: payload() }),
-    onSuccess: (p) => {
-      toast.success("Draft saved.");
+    mutationFn: (v: SaveVars) => api<Post>(`/brands/${brandId}/posts`, { method: "POST", body: v.payload }),
+    onSuccess: (p, v) => {
+      createdIdRef.current = p.id;
+      // Seed the cache first: the editor at /posts/:id renders this at once.
+      qc.setQueryData(keys.post(p.id), p);
+      loadedRef.current = `${p.id}:${p.updated_at}`;
+      // Only the baseline moves: anything typed while this was saving stays on screen.
+      setBaseline(formFromPost(p));
+      setAutosaveError(null);
       qc.invalidateQueries({ queryKey: ["ws-posts"] });
-      navigate(`/posts/${p.id}`, { replace: true });
+      if (v.announce) toast.success("Draft saved.");
+      if (!v.leaving) {
+        skipBlockRef.current = true;
+        // Same screen, now with an address you can come back to.
+        navigate(`/posts/${p.id}`, { replace: true, state: { keepScreenFrom: location.pathname } });
+      }
     },
-    onError,
+    onError: (e, v) => (v.quietErrors ? setAutosaveError(errorText(e)) : onError(e)),
   });
   const save = useMutation({
-    mutationFn: () => api<Post>(`/posts/${id}`, { method: "PATCH", body: payload() }),
-    onSuccess: (p) => {
-      qc.setQueryData(keys.post(id), p);
-      const f = formFromPost(p);
+    mutationFn: (v: SaveVars & { postId: string }) => api<Post>(`/posts/${v.postId}`, { method: "PATCH", body: v.payload }),
+    onSuccess: (p, v) => {
+      const wasApproved = NEEDS_REAPPROVAL.includes(statusRef.current);
+      qc.setQueryData(keys.post(p.id), p);
       loadedRef.current = `${p.id}:${p.updated_at}`;
-      setForm(f);
-      setBaseline(f);
-      toast.success(NEEDS_REAPPROVAL.includes(status) ? "Saved. It needs approval again." : "Saved.");
-      invalidate();
-      qc.invalidateQueries({ queryKey: keys.history(id) });
+      setBaseline(formFromPost(p));
+      setAutosaveError(null);
+      if (v.announce) toast.success(wasApproved ? "Saved. It needs approval again." : "Saved.");
+      invalidate(p.id);
+      qc.invalidateQueries({ queryKey: keys.history(p.id) });
     },
-    onError,
+    onError: (e, v) => (v.quietErrors ? setAutosaveError(errorText(e)) : onError(e)),
   });
+  const saving = create.isPending || save.isPending;
+
+  /** Save what's on screen (creating the draft if needed). Resolves to the saved post, or null if it failed. */
+  async function persist(opts: Omit<SaveVars, "payload"> = {}): Promise<Post | null> {
+    const payload = toPayload(formRef.current);
+    lastSentRef.current = stableKey(payload);
+    try {
+      if (!postIdRef.current) {
+        if (creatingRef.current) {
+          await creatingRef.current; // a draft is already being created: wait, then save into it
+        } else {
+          const pending = create.mutateAsync({ ...opts, payload });
+          creatingRef.current = pending;
+          try {
+            return await pending;
+          } finally {
+            creatingRef.current = null;
+          }
+        }
+      }
+      return await save.mutateAsync({ ...opts, payload, postId: postIdRef.current! });
+    } catch {
+      return null;
+    }
+  }
+
+  // Drafts (and new posts with something in them) save themselves. Approved
+  // or scheduled posts never do: saving those sends them back for approval.
+  const hasContent = !!(form.caption.trim() || form.title.trim() || form.hashtags.length || form.cta.trim());
+  const autosaves = editable && (isNew ? hasContent : status === "draft");
+  useEffect(() => {
+    if (!autosaves || !dirty || saving) return;
+    if (formKey(form) === lastSentRef.current) return; // this exact text already failed once; wait for a change
+    const t = window.setTimeout(() => void persist({ quietErrors: true }), AUTOSAVE_MS);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persist reads refs
+  }, [form, autosaves, dirty, saving]);
+
+  // ── Leaving with unsaved edits ───────────────────────────────────────
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const editableRef = useRef(editable);
+  editableRef.current = editable;
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !skipBlockRef.current && editableRef.current && dirtyRef.current && currentLocation.pathname !== nextLocation.pathname,
+  );
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const handlingBlock = useRef(false);
+  useEffect(() => {
+    if (blocker.state !== "blocked" || handlingBlock.current) return;
+    handlingBlock.current = true;
+    if (autosaves) {
+      // A draft: save it and go. Only ask if the save fails.
+      void persist({ quietErrors: true, leaving: true }).then((p) => {
+        handlingBlock.current = false;
+        if (p) blocker.proceed?.();
+        else setLeaveOpen(true);
+      });
+    } else {
+      handlingBlock.current = false;
+      setLeaveOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when a navigation is blocked
+  }, [blocker.state]);
+  useEffect(() => {
+    skipBlockRef.current = false;
+  }, [location.pathname]);
+  // Closing the tab or reloading: the browser's own "Leave site?" prompt.
+  useEffect(() => {
+    if (!dirty || !editable) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, editable]);
+
+  // ── Send for approval ────────────────────────────────────────────────
   // Submitting goes through the reviewer picker (docs/client_approval_link_plan.md §5).
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [preparingSend, setPreparingSend] = useState(false);
+  function focusCaption() {
+    setTab("all");
+    window.setTimeout(() => {
+      captionRef.current?.focus();
+      captionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 30);
+  }
+  async function onSend() {
+    if (!form.caption.trim()) {
+      setCaptionError("Write a caption first — it’s what the reviewer approves.");
+      focusCaption();
+      return;
+    }
+    if (dirty || !postIdRef.current) {
+      setPreparingSend(true);
+      const saved = await persist();
+      setPreparingSend(false);
+      if (!saved) return;
+    }
+    setSubmitOpen(true);
+  }
+
   const remove = useMutation({
     mutationFn: () => api(`/posts/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       toast.success("Post deleted.");
       qc.invalidateQueries({ queryKey: ["ws-posts"] });
+      skipBlockRef.current = true;
       navigate("/posts");
     },
     onError,
@@ -247,9 +414,8 @@ export function PostStudioPage() {
   const [confirmReapproval, setConfirmReapproval] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   function onSave() {
-    if (isNew) create.mutate();
-    else if (NEEDS_REAPPROVAL.includes(status)) setConfirmReapproval(true);
-    else save.mutate();
+    if (NEEDS_REAPPROVAL.includes(status)) setConfirmReapproval(true);
+    else void persist({ announce: true });
   }
 
   // ── Templates ────────────────────────────────────────────────────────
@@ -259,12 +425,12 @@ export function PostStudioPage() {
   const templateParam = params.get("template");
   const fromLink = useTemplates({});
   useEffect(() => {
-    if (!templateParam || !fromLink.data) return;
+    if (!templateParam || !fromLink.data || !brand) return;
     const t = fromLink.data.items.find((x) => x.id === templateParam);
     if (t) setFilling(t);
     params.delete("template");
     setParams(params, { replace: true });
-  }, [templateParam, fromLink.data, params, setParams]);
+  }, [templateParam, fromLink.data, brand, params, setParams]);
 
   function applyTemplate(r: TemplateResult) {
     setForm((f) => ({
@@ -273,9 +439,19 @@ export function PostStudioPage() {
       hashtags: [...new Set([...f.hashtags, ...r.hashtags])].slice(0, 30),
       cta: f.cta || r.cta || "",
     }));
+    setCaptionError(null);
     setFilling(null);
     setBrowseOpen(false);
   }
+
+  // ── "Schedule" links land here with ?schedule=… ──────────────────────
+  const [initialWhen] = useState(() => scheduleValue(params.get("schedule")));
+  const wantSchedule = useRef(params.has("schedule"));
+  useEffect(() => {
+    if (!params.has("schedule")) return;
+    params.delete("schedule");
+    setParams(params, { replace: true });
+  }, [params, setParams]);
 
   // ── Per-platform text ────────────────────────────────────────────────
   const override = tab === "all" ? undefined : form.targets[tab];
@@ -309,6 +485,31 @@ export function PostStudioPage() {
   const media = useMemo(() => [...(post.data?.media ?? [])].sort((a, b) => a.sort_order - b.sort_order), [post.data?.media]);
   const firstImage = media.find((m) => m.media_type !== "video")?.media_url;
 
+  const p = post.data;
+  const showPublish = !!p && status === "approved";
+  // Arrived from a "Schedule" button: go straight to the scheduling panel.
+  useEffect(() => {
+    if (!showPublish || !wantSchedule.current) return;
+    wantSchedule.current = false;
+    window.setTimeout(focusPublishPanel, 50);
+  }, [showPublish]);
+
+  /** A pre-publish check asked for a fix: take the user to that part of the post. */
+  function goFix(target: "photos" | "caption") {
+    if (target === "caption") return focusCaption();
+    setTab("all");
+    document.getElementById("media-h")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Opening the file picker must happen inside the click, so this stays synchronous.
+    mediaInputRef.current?.click();
+  }
+
+  /** The draft's id, creating the draft first when a photo is added to a brand-new post. */
+  async function ensurePostId(): Promise<string | null> {
+    if (postIdRef.current) return postIdRef.current;
+    const saved = await persist();
+    return saved?.id ?? null;
+  }
+
   // ── Render ───────────────────────────────────────────────────────────
   if (!isNew && post.isLoading) {
     return (
@@ -322,36 +523,50 @@ export function PostStudioPage() {
   if (!isNew && post.isError) {
     return (
       <BentoGrid>
-        <div className="md:col-span-12">
-          <EmptyState title="We couldn’t open this post">
-            It may have been deleted, or it belongs to another workspace. <Link to="/posts">Back to posts</Link>
-          </EmptyState>
-        </div>
+        <Tile className="items-center text-center md:col-span-12">
+          <h1 className="m-0 text-lg font-semibold">We couldn’t open this post</h1>
+          <p className="m-0 text-muted-foreground">It may have been deleted, or it belongs to another workspace.</p>
+          <Button asChild variant="outline">
+            <Link to="/posts">Back to posts</Link>
+          </Button>
+        </Tile>
       </BentoGrid>
     );
   }
   if (isNew && !brand) {
+    const template = params.get("template");
     return (
       <BentoGrid>
-        <div className="md:col-span-12">
-          <EmptyState title="Pick a brand first">
-            Choose a brand with the brand button in the left rail, or go to <Link to="/posts">Posts</Link> and press “New post”.
-          </EmptyState>
-        </div>
+        <Tile className="mx-auto w-full max-w-lg md:col-span-12">
+          <div className="flex flex-col gap-1">
+            <h1 className="m-0 text-xl font-semibold">Which brand is this post for?</h1>
+            <p className="m-0 text-muted-foreground">Pick one to start writing. Its tone and audience shape the templates you see.</p>
+          </div>
+          {brands.length > 0 ? (
+            <BrandChoices onPick={(b) => navigate(`/posts/new?brand=${b.id}${template ? `&template=${template}` : ""}`, { replace: true })} />
+          ) : (
+            <Button asChild className="self-start">
+              <Link to="/brands">Add your first brand</Link>
+            </Button>
+          )}
+        </Tile>
       </BentoGrid>
     );
   }
 
-  const p = post.data;
-  const saving = create.isPending || save.isPending;
-  const showPublish = p && status === "approved";
-  const showJobs = p && ["scheduled", "publishing", "published", "partially_published", "failed"].includes(status);
   const latest = history.data?.[0];
   const changesRequested = status === "draft" && latest?.action === "rejected" ? latest : undefined;
   const title = form.title || (isNew ? "New post" : "Untitled post");
   const sealedHash = p && status !== "draft" ? p.content_hash : null;
   const meta = [brand?.name, languageName(brand?.language), brand?.target_audience].filter(Boolean);
   const captionLength = lengthOn(previewPlatform);
+  const showJobs = p && ["scheduled", "publishing", "published", "partially_published", "failed"].includes(status);
+  const canSend = isNew || status === "draft";
+
+  const publishPanel = showPublish && <PublishPanel post={p} brand={brand} onFix={goFix} initialWhen={initialWhen} />;
+  const mediaSection = (
+    <MediaSection post={p} media={media} editable={editable} inputRef={mediaInputRef} ensurePostId={ensurePostId} creating={create.isPending} />
+  );
 
   return (
     <div className="flex flex-col lg:h-svh">
@@ -389,37 +604,42 @@ export function PostStudioPage() {
 
         <div className="flex items-center gap-3" role="status">
           {p && <StatusBadge status={status} />}
-          {dirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
+          <SaveState saving={saving} error={autosaveError} dirty={dirty} autosaves={autosaves} saved={!!postIdRef.current} onRetry={() => void persist()} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {editable && (isNew || dirty) && (
-            <Button
-              variant={isNew ? "default" : "outline"}
-              className={cn(isNew && "btn-depth")}
-              onClick={onSave}
-              disabled={saving || (!dirty && !isNew)}
-            >
-              <Save aria-hidden="true" /> {saving ? "Saving…" : isNew ? "Save draft" : "Save changes"}
+          {isNew && !postIdRef.current && (
+            <Button variant="outline" onClick={() => void persist({ announce: true })} disabled={saving}>
+              <Save aria-hidden="true" /> {saving ? "Saving…" : "Save draft"}
             </Button>
           )}
-          {p && status === "draft" && (
-            <Button
-              className="btn-depth"
-              onClick={() => setSubmitOpen(true)}
-              disabled={dirty || !form.caption.trim()}
-              title={dirty ? "Save your changes first" : !form.caption.trim() ? "Write a caption first" : undefined}
-            >
-              <FileCheck aria-hidden="true" /> Send for approval
+          {!isNew && editable && !autosaves && dirty && (
+            <Button variant="outline" onClick={onSave} disabled={saving}>
+              <Save aria-hidden="true" /> {saving ? "Saving…" : "Save changes"}
+            </Button>
+          )}
+          {canSend && (
+            <Button className="btn-depth" onClick={() => void onSend()} disabled={preparingSend}>
+              <FileCheck aria-hidden="true" /> {preparingSend ? "Saving…" : "Send for approval"}
             </Button>
           )}
           {p && status === "pending_approval" && (
             <ApprovalActions post={p} canApprove={canApprove} canManage={canManage} approveBlockedReason={approveBlockedReason} />
           )}
-          {p && canManage && status !== "publishing" && (
-            <Button variant="ghost" size="icon" aria-label="Delete post" onClick={() => setConfirmDelete(true)}>
-              <Trash2 aria-hidden="true" />
+          {showPublish && (
+            <Button className="btn-depth" onClick={focusPublishPanel}>
+              <CalendarClock aria-hidden="true" /> Schedule
             </Button>
+          )}
+          {p && canManage && status !== "publishing" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Delete post" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Delete post</TooltipContent>
+            </Tooltip>
           )}
         </div>
       </header>
@@ -468,7 +688,7 @@ export function PostStudioPage() {
                   {changesRequested.rejection_reason && (
                     <blockquote className="m-0 mt-2 border-l-2 border-warning-border pl-3">{changesRequested.rejection_reason}</blockquote>
                   )}
-                  <span className="mt-2 block">Edit the post, save, then send it for approval again.</span>
+                  <span className="mt-2 block">Edit the post, then send it for approval again.</span>
                 </Banner>
               )}
               {expiring.length > 0 && (
@@ -532,7 +752,12 @@ export function PostStudioPage() {
                 </div>
 
                 <Section id="caption-h" title="Caption" aside="Shared by every channel without its own wording">
-                  <div className="rounded-xl border bg-card transition-colors duration-150 focus-within:border-primary/60">
+                  <div
+                    className={cn(
+                      "rounded-xl border bg-card transition-colors duration-150 focus-within:border-primary/60",
+                      captionError && "border-danger focus-within:border-danger",
+                    )}
+                  >
                     <div className="flex h-11 items-center justify-between gap-2 border-b px-2">
                       <Button variant="ghost" size="sm" className="text-secondary-foreground" disabled={!editable} onClick={() => setBrowseOpen(true)}>
                         <LayoutTemplate aria-hidden="true" /> Smart Template
@@ -550,11 +775,17 @@ export function PostStudioPage() {
                     </div>
                     <textarea
                       id="caption"
+                      ref={captionRef}
                       aria-labelledby="caption-h"
+                      aria-invalid={captionError ? true : undefined}
+                      aria-describedby={captionError ? "caption-error" : undefined}
                       rows={6}
                       value={form.caption}
                       disabled={!editable}
-                      onChange={(e) => setForm({ ...form, caption: e.target.value })}
+                      onChange={(e) => {
+                        setForm({ ...form, caption: e.target.value });
+                        if (captionError) setCaptionError(null);
+                      }}
                       placeholder="What do you want to say?"
                       className="block w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-6 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-80"
                     />
@@ -565,17 +796,12 @@ export function PostStudioPage() {
                       </span>
                     </div>
                   </div>
+                  {captionError && (
+                    <p id="caption-error" role="alert" className="m-0 text-sm text-danger">
+                      {captionError}
+                    </p>
+                  )}
                 </Section>
-
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="hashtags">Hashtags</Label>
-                  <HashtagInput id="hashtags" value={form.hashtags} disabled={!editable} onChange={(h) => setForm({ ...form, hashtags: h })} />
-                  <span className="num text-xs text-muted-foreground">{form.hashtags.length} of 30</span>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="cta">Button text (call to action)</Label>
-                  <Input id="cta" maxLength={255} value={form.cta} disabled={!editable} onChange={(e) => setForm({ ...form, cta: e.target.value })} className="h-11 bg-card" placeholder="e.g. Book your seat" />
-                </div>
               </>
             ) : (
               <Section id="own-h" title={`${platformName(tab)} wording`}>
@@ -616,7 +842,22 @@ export function PostStudioPage() {
               </Section>
             )}
 
-            <MediaSection post={p} media={media} editable={editable} />
+            {/* Photos right after the words: usually the first thing a business has ready. */}
+            {mediaSection}
+
+            {tab === "all" && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="hashtags">Hashtags</Label>
+                  <HashtagInput id="hashtags" value={form.hashtags} disabled={!editable} onChange={(h) => setForm({ ...form, hashtags: h })} />
+                  <span className="num text-xs text-muted-foreground">{form.hashtags.length} of 30</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="cta">Button text (call to action)</Label>
+                  <Input id="cta" maxLength={255} value={form.cta} disabled={!editable} onChange={(e) => setForm({ ...form, cta: e.target.value })} className="h-11 bg-card" placeholder="e.g. Book your seat" />
+                </div>
+              </>
+            )}
 
             {editable && (
               <Section
@@ -646,8 +887,11 @@ export function PostStudioPage() {
         </section>
 
         {/* ── Preview, publishing, approval record ──────────────── */}
-        <section aria-label="Preview and approval" className="bg-surface-subtle lg:w-[45%] lg:overflow-y-auto">
+        {/* An approved post's next step is scheduling: on narrow screens this column comes first. */}
+        <section aria-label="Preview and approval" className={cn("bg-surface-subtle lg:w-[45%] lg:overflow-y-auto", showPublish && "max-lg:order-first")}>
           <div className="mx-auto flex w-full max-w-xl flex-col gap-8 px-4 py-8 sm:px-6">
+            {publishPanel}
+
             <div className="flex items-center justify-between gap-4">
               <div role="tablist" aria-label="Preview channel" className="flex items-center gap-1 rounded-xl border bg-background p-1">
                 {CHANNELS.map((pl) => (
@@ -676,9 +920,7 @@ export function PostStudioPage() {
             {/* The moment: the post as followers will see it, lit by its own photo */}
             <div className="relative isolate py-4">
               <div aria-hidden="true" className="preview-glow pointer-events-none absolute -inset-x-16 -inset-y-12 -z-10 transition-opacity duration-500" style={{ opacity: previewPlatform === "linkedin" ? 0.3 : 1 }}>
-                {firstImage && (
-                  <img src={firstImage} alt="" className="size-full object-cover opacity-90" style={{ filter: "blur(56px) saturate(1.8) brightness(1.45)" }} />
-                )}
+                <SafeImage src={firstImage} alt="" className="size-full object-cover opacity-90" style={{ filter: "blur(56px) saturate(1.8) brightness(1.45)" }} />
                 <div className="absolute inset-[18%] rounded-full opacity-40" style={{ background: brandColor(brand), filter: "blur(48px)" }} />
               </div>
               <PlatformPreview
@@ -690,7 +932,6 @@ export function PostStudioPage() {
               />
             </div>
 
-            {showPublish && <PublishPanel post={p} />}
             {showJobs && <JobsPanel post={p} />}
             {p && <ReviewPanel post={p} brandName={brand?.name ?? "—"} canManage={canManage} />}
             {p && <ApprovalRecord post={p} brandName={brand?.name ?? "—"} imageUrl={firstImage} />}
@@ -716,7 +957,40 @@ export function PostStudioPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction onClick={() => save.mutate()}>Save anyway</AlertDialogAction>
+            <AlertDialogAction onClick={() => void persist({ announce: true })}>Save anyway</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={leaveOpen}
+        onOpenChange={(open) => {
+          if (open) return;
+          setLeaveOpen(false);
+          if (blocker.state === "blocked") blocker.reset?.();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave without saving?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {autosaves
+                ? `We couldn’t save your latest changes${autosaveError ? ` (${autosaveError})` : ""}. If you leave now, they’re lost.`
+                : "Your changes to this post aren’t saved. If you leave now, they’re lost. To keep them, stay and press “Save changes”."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                setLeaveOpen(false);
+                skipBlockRef.current = true;
+                blocker.proceed?.();
+              }}
+            >
+              Leave without saving
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -742,13 +1016,63 @@ export function PostStudioPage() {
   );
 }
 
-/** Photos and videos: upload, reorder (carousel order), remove. */
-function MediaSection({ post, media, editable }: { post: Post | undefined; media: Post["media"]; editable: boolean }) {
-  const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
+/** "Saving…", "Saved", "Unsaved changes" or "Couldn't save · Try again", next to the status. */
+function SaveState({
+  saving,
+  error,
+  dirty,
+  autosaves,
+  saved,
+  onRetry,
+}: {
+  saving: boolean;
+  error: string | null;
+  dirty: boolean;
+  autosaves: boolean;
+  saved: boolean;
+  onRetry: () => void;
+}) {
+  if (saving) return <span className="text-xs text-muted-foreground">Saving…</span>;
+  if (error && dirty)
+    return (
+      <span className="flex items-center gap-2 text-xs text-danger">
+        Couldn’t save.
+        <button type="button" onClick={onRetry} className="font-semibold underline underline-offset-4">
+          Try again
+        </button>
+      </span>
+    );
+  if (dirty) return <span className="text-xs text-muted-foreground">Unsaved changes</span>;
+  if (autosaves && saved)
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Check className="size-3.5" aria-hidden="true" /> Saved
+      </span>
+    );
+  return null;
+}
 
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: keys.post(post?.id) });
+/** Photos and videos: upload, reorder (carousel order), remove. */
+function MediaSection({
+  post,
+  media,
+  editable,
+  inputRef,
+  ensurePostId,
+  creating,
+}: {
+  post: Post | undefined;
+  media: Post["media"];
+  editable: boolean;
+  inputRef: RefObject<HTMLInputElement | null>;
+  /** Creates the draft first when a photo is added to a brand-new post. */
+  ensurePostId: () => Promise<string | null>;
+  creating: boolean;
+}) {
+  const qc = useQueryClient();
+
+  const refresh = (postId: string | undefined) => {
+    qc.invalidateQueries({ queryKey: keys.post(postId) });
     qc.invalidateQueries({ queryKey: ["ws-posts"] });
   };
   const onError = (e: unknown) => toast.error(e instanceof ApiError ? e.message : "Something went wrong.");
@@ -758,27 +1082,31 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
   // Ask first, exactly like saving a text change does.
   const resetsApproval = post?.status === "approved" || post?.status === "scheduled";
   const [pending, setPending] = useState<{ kind: "add"; file: File } | { kind: "remove"; id: string } | null>(null);
-  const afterChange = (done: string) => {
+  const afterChange = (done: string, postId: string | undefined) => {
     toast.success(resetsApproval ? `${done} It needs approval again.` : done);
-    refresh();
+    refresh(postId);
   };
 
   const upload = useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: async (file: File) => {
+      const postId = post?.id ?? (await ensurePostId());
+      if (!postId) throw new Error("not-saved");
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("post_id", post!.id);
-      return api(`/media/upload`, { method: "POST", body: fd });
+      fd.append("post_id", postId);
+      await api(`/media/upload`, { method: "POST", body: fd });
+      return postId;
     },
-    onSuccess: () => afterChange("Photo added."),
-    onError,
+    onSuccess: (postId) => afterChange("Photo added.", postId),
+    // "not-saved": creating the draft failed and already said why.
+    onError: (e) => (e instanceof Error && e.message === "not-saved" ? undefined : onError(e)),
   });
   const removeMedia = useMutation({
     mutationFn: (mediaId: string) => api(`/media/${mediaId}`, { method: "DELETE" }),
-    onSuccess: () => afterChange("Photo removed."),
+    onSuccess: () => afterChange("Photo removed.", post?.id),
     onError,
   });
-  const busy = upload.isPending || removeMedia.isPending;
+  const busy = upload.isPending || removeMedia.isPending || creating;
 
   function addFile(file: File) {
     if (resetsApproval) setPending({ kind: "add", file });
@@ -795,7 +1123,7 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
   }
   const reorder = useMutation({
     mutationFn: (ids: string[]) => api(`/media/reorder`, { method: "PATCH", body: { post_id: post!.id, media_ids: ids } }),
-    onSuccess: refresh,
+    onSuccess: () => refresh(post?.id),
     onError,
   });
 
@@ -807,81 +1135,77 @@ function MediaSection({ post, media, editable }: { post: Post | undefined; media
   }
 
   return (
-    <Section id="media-h" title="Photos and videos" aside={post ? `${media.length} of 10` : undefined}>
-      {!post ? (
-        <p className="m-0 rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">Save the draft first, then add photos.</p>
-      ) : (
-        <>
-          <ul className="m-0 grid grid-cols-2 gap-3 p-0 sm:grid-cols-4">
-            {media.map((m, i) => (
-              <li key={m.id} className="group relative list-none overflow-hidden rounded-xl border bg-card">
-                {m.media_type === "video" ? (
-                  <video src={m.media_url} className="aspect-square w-full bg-background object-cover" muted />
-                ) : (
-                  <img src={m.media_url} alt={m.alt_text ?? ""} className="aspect-square w-full object-cover" />
-                )}
-                <span className="absolute top-2 left-2 rounded-md bg-black/70 px-1.5 font-mono text-[11px] text-white">{i + 1}</span>
-                {editable && (
-                  <div className="flex justify-center gap-1 border-t p-1">
-                    <Button variant="ghost" size="icon" className="size-8" aria-label="Move earlier" disabled={i === 0 || reorder.isPending} onClick={() => move(i, -1)}>
-                      <ArrowLeft aria-hidden="true" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="size-8" aria-label="Move later" disabled={i === media.length - 1 || reorder.isPending} onClick={() => move(i, 1)}>
-                      <ArrowRight aria-hidden="true" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="size-8 hover:text-danger" aria-label="Remove photo" disabled={busy} onClick={() => removeFile(m.id)}>
-                      <Trash2 aria-hidden="true" />
-                    </Button>
-                  </div>
-                )}
-              </li>
-            ))}
-            {editable && media.length < 10 && (
-              <li className="list-none">
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={busy}
-                  className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-card text-[13px] text-muted-foreground transition-colors duration-150 hover:border-primary/60 hover:text-foreground"
-                >
-                  <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                  {upload.isPending ? "Uploading…" : "Add photo"}
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
-                  className="sr-only"
-                  aria-label="Choose a photo or video"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) addFile(f);
-                    e.target.value = "";
-                  }}
-                />
-              </li>
+    <Section id="media-h" title="Photos and videos" aside={`${media.length} of 10`}>
+      <ul className="m-0 grid grid-cols-2 gap-3 p-0 sm:grid-cols-4">
+        {media.map((m, i) => (
+          <li key={m.id} className="group relative list-none overflow-hidden rounded-xl border bg-card">
+            {m.media_type === "video" ? (
+              <video src={m.media_url} className="aspect-square w-full bg-background object-cover" muted />
+            ) : (
+              <SafeImage retry src={m.media_url} alt={m.alt_text ?? ""} className="aspect-square w-full object-cover" />
             )}
-          </ul>
-          <p className="m-0 text-xs leading-5 text-muted-foreground">
-            JPG, PNG, WEBP or GIF up to 25 MB; MP4, MOV or WEBM up to 100 MB. Location data is removed from photos. Instagram uses the first
-            photo; LinkedIn posts text only for now.
-          </p>
-          <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{pending?.kind === "add" ? "Add this photo" : "Remove this photo"} and send back for approval?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This post is {post.status === "scheduled" ? "scheduled" : "approved"}. Changing its photos moves it back to draft
-                  {post.status === "scheduled" ? " and cancels the schedule" : ""}. Someone will need to approve it again.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep it as it is</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmPending}>{pending?.kind === "add" ? "Add anyway" : "Remove anyway"}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
+            <span className="absolute top-2 left-2 rounded-md bg-black/70 px-1.5 font-mono text-[11px] text-white">{i + 1}</span>
+            {editable && (
+              <div className="flex justify-center gap-1 border-t p-1">
+                <Button variant="ghost" size="icon" className="size-8" aria-label="Move earlier" disabled={i === 0 || reorder.isPending} onClick={() => move(i, -1)}>
+                  <ArrowLeft aria-hidden="true" />
+                </Button>
+                <Button variant="ghost" size="icon" className="size-8" aria-label="Move later" disabled={i === media.length - 1 || reorder.isPending} onClick={() => move(i, 1)}>
+                  <ArrowRight aria-hidden="true" />
+                </Button>
+                <Button variant="ghost" size="icon" className="size-8 hover:text-danger" aria-label="Remove photo" disabled={busy} onClick={() => removeFile(m.id)}>
+                  <Trash2 aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+          </li>
+        ))}
+        {editable && media.length < 10 && (
+          <li className="list-none">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+              className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-card text-[13px] text-muted-foreground transition-colors duration-150 hover:border-primary/60 hover:text-foreground"
+            >
+              <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
+              {upload.isPending ? "Uploading…" : "Add photo"}
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+              className="sr-only"
+              aria-label="Choose a photo or video"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) addFile(f);
+                e.target.value = "";
+              }}
+            />
+          </li>
+        )}
+      </ul>
+      <p className="m-0 text-xs leading-5 text-muted-foreground">
+        JPG, PNG, WEBP or GIF up to 25 MB; MP4, MOV or WEBM up to 100 MB. Location data is removed from photos. Instagram uses the first
+        photo; LinkedIn posts text only for now.
+      </p>
+      {post && (
+        <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{pending?.kind === "add" ? "Add this photo" : "Remove this photo"} and send back for approval?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This post is {post.status === "scheduled" ? "scheduled" : "approved"}. Changing its photos moves it back to draft
+                {post.status === "scheduled" ? " and cancels the schedule" : ""}. Someone will need to approve it again.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it as it is</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmPending}>{pending?.kind === "add" ? "Add anyway" : "Remove anyway"}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </Section>
   );

@@ -12,6 +12,7 @@ import { formatDateTime, ROLE_LABEL } from "@/lib/format";
 import { keys, useMembers, type ApprovalLog } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
+import { focusPublishPanel } from "./PublishPanel";
 import { ApprovalCertificate, ApprovalSeal, shortHash } from "./Seal";
 
 const ACTION_ORDER: Record<string, number> = { submitted: 0, reassigned: 1, rejected: 2, approved: 2, invalidated: 3 };
@@ -216,7 +217,11 @@ export function ApprovalActions({
   const approve = useMutation({
     mutationFn: () => api<Post>(`/posts/${post.id}/approve`, { method: "POST" }),
     onSuccess: () => {
-      toast.success("Approved and sealed. It’s ready to schedule.");
+      // The scheduling panel appears once the post refreshes; the action takes the user straight to it.
+      toast.success("Approved. It’s ready to schedule.", {
+        action: { label: "Schedule now", onClick: () => focusPublishPanel() },
+        duration: 10_000,
+      });
       refresh();
     },
     onError,

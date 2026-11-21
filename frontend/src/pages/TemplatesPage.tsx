@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { BrandPickerDialog } from "@/components/BrandPicker";
 import { EmptyState, LoadError, PageHeader } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Brand } from "@/lib/api";
 import { humanize } from "@/lib/format";
 import { useTemplates, type Template } from "@/lib/queries";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
@@ -36,14 +38,18 @@ export function TemplatesPage() {
   const industries = all.data?.industries ?? [];
   const categories = all.data?.categories ?? [];
 
-  /** Open Post Studio with this template, for the brand that fits best. */
+  // With "All brands" showing and more than one brand, the brand is never
+  // guessed: an agency would start a post under the wrong client.
+  const [choosingFor, setChoosingFor] = useState<Template | null>(null);
+  const start = (brand: Brand, t: Template) => navigate(`/posts/new?brand=${brand.id}&template=${t.id}`);
+
+  /** Open Post Studio with this template, for a brand the user is sure about. */
   function use(t: Template) {
-    const brand =
-      (brandId !== ALL_BRANDS && brands.find((b) => b.id === brandId)) ||
-      brands.find((b) => b.industry === t.industry) ||
-      brands[0];
-    if (!brand) return;
-    navigate(`/posts/new?brand=${brand.id}&template=${t.id}`);
+    const selected = brandId !== ALL_BRANDS ? brands.find((b) => b.id === brandId) : undefined;
+    const only = brands.length === 1 ? brands[0] : undefined;
+    const brand = selected ?? only;
+    if (brand) start(brand, t);
+    else if (brands.length > 1) setChoosingFor(t);
   }
 
   return (
@@ -118,6 +124,15 @@ export function TemplatesPage() {
           </Tile>
         ))
       )}
+
+      <BrandPickerDialog
+        open={choosingFor !== null}
+        onOpenChange={(open) => !open && setChoosingFor(null)}
+        title="Which brand is this post for?"
+        description={choosingFor ? `“${choosingFor.title}” will be filled in with this brand’s details.` : undefined}
+        suggest={(b) => !!choosingFor && b.industry === choosingFor.industry}
+        onPick={(b) => choosingFor && start(b, choosingFor)}
+      />
     </BentoGrid>
   );
 }

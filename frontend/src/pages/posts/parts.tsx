@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState, type CSSProperties, type KeyboardEvent } from "react";
 
+import { SafeImage } from "@/components/SafeImage";
 import { initials } from "@/lib/brandColor";
 import { cn } from "@/lib/utils";
 
@@ -195,7 +196,7 @@ export function PlatformPreview(props: PreviewProps) {
           <Ellipsis className="size-5 text-white/80" aria-hidden="true" />
         </header>
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="aspect-square w-full bg-zinc-950 object-cover" />
+          <SafeImage retry src={imageUrl} alt="" className="aspect-square w-full bg-zinc-950 object-cover text-white/70" />
         ) : (
           <div className="grid aspect-square place-items-center bg-zinc-950 text-[13px] text-white/60">
             <span className="flex items-center gap-2">
@@ -247,7 +248,7 @@ export function PlatformPreview(props: PreviewProps) {
           {tags && <span className="block text-[#4599ff]">{tags}</span>}
           {ctaLine && <span className="block">{ctaLine}</span>}
         </div>
-        {imageUrl && <img src={imageUrl} alt="" className="aspect-square w-full bg-zinc-950 object-cover" />}
+        {imageUrl && <SafeImage retry src={imageUrl} alt="" className="aspect-square w-full bg-zinc-950 object-cover text-white/70" />}
         <div className="mx-4 flex h-11 items-center justify-around border-t border-white/10 text-[15px] text-[#b0b3b8]">
           <span className="flex items-center gap-2"><ThumbsUp className="size-[18px]" aria-hidden="true" />Like</span>
           <span className="flex items-center gap-2"><MessageCircle className="size-[18px]" aria-hidden="true" />Comment</span>

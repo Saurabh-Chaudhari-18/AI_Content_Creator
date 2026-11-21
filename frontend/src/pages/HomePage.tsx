@@ -4,15 +4,15 @@ import { useMemo } from "react";
 import { Link } from "react-router";
 
 import { EmptyState, InlineLoadError, LoadError, StatusBadge, TileTitle } from "@/components/common";
+import { BrandLogo, PostThumb } from "@/components/PostThumb";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type Post, type UsageSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { brandStyle } from "@/lib/brandColor";
-import { daysUntil, formatDateTime, humanize, initials, platformName } from "@/lib/format";
+import { daysUntil, formatDateTime, humanize, platformName } from "@/lib/format";
 import { useMyApprovals } from "@/lib/approvals";
-import { keys, useAccounts, useTemplates, useWorkspacePosts } from "@/lib/queries";
+import { keys, platformEnabled, useAccounts, useFeatures, useTemplates, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
 
@@ -55,6 +55,7 @@ export function HomePage() {
   const partial = useWorkspacePosts({ status: "partially_published", limit: 5 });
   const scheduled = useWorkspacePosts({ status: "scheduled", limit: 50 });
   const accounts = useAccounts();
+  const features = useFeatures();
   const usage = useQuery({
     queryKey: keys.usage(workspace?.id),
     queryFn: () => api<UsageSummary>(`/workspaces/${workspace!.id}/usage`, { query: { days: 30 } }),
@@ -276,18 +277,15 @@ export function HomePage() {
             <ul className="m-0 flex flex-col p-0">
               {attention.map(({ post, action }) => (
                 <li key={post.id} className="flex list-none flex-wrap items-center gap-3 border-t py-3">
-                  {post.media[0] ? (
-                    <img src={post.media[0].media_url} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
-                  ) : (
-                    <span aria-hidden="true" style={brandStyle(brands.find((b) => b.id === post.brand_id))} className="brand-tile flex size-10 shrink-0 items-center justify-center rounded-lg text-xs font-medium">{initials(brandName(post.brand_id))}</span>
-                  )}
+                  <PostThumb post={post} brand={brands.find((b) => b.id === post.brand_id)} className="size-10" />
                   <div className="flex min-w-0 flex-1 basis-40 flex-col">
                     <span className="font-semibold">{post.title || "Untitled post"} <span className="font-normal text-muted-foreground">· {brandName(post.brand_id)}</span></span>
                     <span className="line-clamp-1 text-[13px] text-muted-foreground">{post.caption || "No caption yet"}</span>
                   </div>
                   <StatusBadge status={post.status} />
                   <Button asChild size="sm" variant={action === "Try again" ? "default" : "outline"}>
-                    <Link to={`/posts/${post.id}`}>{action}</Link>
+                    {/* "Schedule" lands on the scheduling panel, not the top of the editor. */}
+                    <Link to={`/posts/${post.id}${action === "Schedule" ? "?schedule=1" : ""}`}>{action}</Link>
                   </Button>
                 </li>
               ))}
@@ -352,16 +350,18 @@ export function HomePage() {
               const days = daysUntil(a.token_expires_at);
               const soon = a.needs_reauth || (days !== null && days <= 7);
               const pct = days === null ? 100 : Math.max(4, Math.min(100, Math.round((days / 60) * 100)));
+              // Same answer as the Accounts page: off for this workspace beats any countdown.
+              const blocked = platformEnabled(features.data, a.platform) === false;
               return (
                 <li key={a.id} className="flex list-none flex-col gap-1">
                   <div className="flex justify-between gap-2 text-[13px]">
                     <span className="truncate">{platformName(a.platform)} · {a.account_name}</span>
-                    <span className={cn("shrink-0 font-semibold", soon ? "text-warning" : "text-success")}>
-                      {days === null ? "OK" : days <= 0 ? "Expired" : `${days}d`}
+                    <span className={cn("shrink-0 font-semibold", blocked ? "text-danger" : soon ? "text-warning" : "text-success")}>
+                      {blocked ? "Can’t post" : days === null ? "OK" : days <= 0 ? "Expired" : `${days}d`}
                     </span>
                   </div>
                   <div aria-hidden="true" className="h-1.5 rounded-full bg-muted">
-                    <div className={cn("h-1.5 rounded-full", soon ? "bg-amber-400" : "bg-emerald-400")} style={{ width: `${pct}%` }} />
+                    <div className={cn("h-1.5 rounded-full", blocked ? "bg-red-400" : soon ? "bg-amber-400" : "bg-emerald-400")} style={{ width: blocked ? "100%" : `${pct}%` }} />
                   </div>
                 </li>
               );
@@ -382,11 +382,7 @@ export function HomePage() {
               const c = perBrand.get(b.id) ?? { total: 0, scheduled: 0, drafts: 0 };
               return (
                 <li key={b.id} className="flex list-none items-center gap-3 rounded-xl border p-3">
-                  {b.logo_url ? (
-                    <img src={b.logo_url} alt="" className="size-11 shrink-0 rounded-xl object-cover" />
-                  ) : (
-                    <span aria-hidden="true" style={brandStyle(b)} className="brand-tile flex size-11 shrink-0 items-center justify-center rounded-xl font-medium">{initials(b.name)}</span>
-                  )}
+                  <BrandLogo brand={b} className="size-11 rounded-xl text-sm" />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-semibold">{b.name}</span>
                     <span className="text-xs text-muted-foreground">
@@ -438,11 +434,7 @@ export function HomePage() {
               const links = Object.values((p.publish_result ?? {}) as Record<string, { url?: string }>).map((r) => r.url).filter(Boolean) as string[];
               return (
                 <li key={p.id} className="flex list-none gap-3 rounded-xl border p-3">
-                  {p.media[0] ? (
-                    <img src={p.media[0].media_url} alt="" className="size-16 shrink-0 rounded-lg object-cover" />
-                  ) : (
-                    <span aria-hidden="true" className="size-16 shrink-0 rounded-lg bg-muted" />
-                  )}
+                  <PostThumb post={p} brand={brands.find((b) => b.id === p.brand_id)} className="size-16" />
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <Link to={`/posts/${p.id}`} className="truncate font-semibold text-foreground">{p.title || "Untitled post"}</Link>
                     <span className="text-xs text-muted-foreground">{brandName(p.brand_id)} · {formatDateTime(p.published_at)}</span>

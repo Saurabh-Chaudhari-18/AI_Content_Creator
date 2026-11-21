@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router";
+import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { Toaster } from "@/components/ui/sonner";
 import { ApiError } from "@/lib/api";
@@ -25,15 +25,24 @@ const queryClient = new QueryClient({
   },
 });
 
+// A data router (not <BrowserRouter>) so screens can use useBlocker to stop
+// navigation away from unsaved edits. App keeps its own <Routes> inside.
+const router = createBrowserRouter([
+  {
+    path: "*",
+    element: (
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    ),
+  },
+]);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
+        <RouterProvider router={router} />
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>
