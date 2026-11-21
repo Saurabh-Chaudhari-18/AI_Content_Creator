@@ -89,5 +89,6 @@ class LinkedInAdapter(SocialPublishAdapter):
         if resp.status_code in (401, 403):
             raise PermanentPublishError(f"LinkedIn auth/permission error: {resp.text[:300]}")
         if resp.status_code >= 500:
-            raise RetryablePublishError(f"LinkedIn server error: {resp.status_code}")
+            # The share may have been created before the error: a person checks.
+            raise UnknownOutcomePublishError(f"LinkedIn server error {resp.status_code} after the post was sent")
         raise PermanentPublishError(f"LinkedIn publish failed: {resp.text[:300]}")

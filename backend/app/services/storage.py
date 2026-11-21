@@ -7,11 +7,14 @@ content-hash can't be invalidated by URL rotation. URLs are resolved here:
   ingest-by-URL APIs (presigned S3 GET). Local storage cannot provide one,
   which is stated explicitly instead of failing deep inside an adapter.
 """
+import logging
 import os
 from functools import lru_cache
 
 from app.config import settings
 from app.core.exceptions import PermanentPublishError
+
+logger = logging.getLogger(__name__)
 
 LOCAL_UPLOAD_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads"
@@ -96,3 +99,31 @@ def get_storage():
     if settings.STORAGE_BACKEND == "s3":
         return S3Storage()
     return LocalStorage()
+
+
+async def delete_unreferenced_files(db, keys: list[str]) -> None:
+    """Remove stored files AFTER the rows pointing at them are committed.
+
+    Called once the database change is final, so a failed or slow delete can
+    never leave a post pointing at a missing photo; the worst case is an
+    orphaned file. A key some other row still uses is kept. Never raises:
+    the customer's delete already succeeded.
+    """
+    if not keys:
+        return
+    from sqlalchemy import select
+    from starlette.concurrency import run_in_threadpool
+
+    from app.models import PostMedia
+
+    still_used = set((await db.execute(
+        select(PostMedia.storage_key).where(PostMedia.storage_key.in_(keys))
+    )).scalars())
+    storage = get_storage()
+    for key in keys:
+        if key in still_used:
+            continue
+        try:
+            await run_in_threadpool(storage.delete, key)
+        except Exception:  # noqa: BLE001
+            logger.warning("could not delete stored file %s", key)

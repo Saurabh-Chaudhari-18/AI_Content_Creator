@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 
 import { AppShell } from "@/app/AppShell";
@@ -69,10 +69,20 @@ function RequireStaff({ children }: { children: ReactNode }) {
 
 /** A screen inside the app shell: a crash shows a message there, the navigation keeps working. */
 function Page({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
+  const location = useLocation();
   // Keyed by path: navigating away from a crashed screen clears the error.
+  // A navigation carrying { keepScreenFrom: <the path it left> } keeps the
+  // screen mounted: Post Studio uses it when a new post gets its id, so the
+  // editor (and what the user is typing) stays put instead of remounting.
+  // Only honoured when we really came from that path (not on a later Back).
+  const previous = useRef(location.pathname);
+  const keepFrom = (location.state as { keepScreenFrom?: string } | null)?.keepScreenFrom;
+  const key = keepFrom && keepFrom === previous.current ? previous.current : location.pathname;
+  useEffect(() => {
+    previous.current = key;
+  }, [key]);
   return (
-    <ErrorBoundary key={pathname}>
+    <ErrorBoundary key={key}>
       <Suspense fallback={<PageLoading />}>{children}</Suspense>
     </ErrorBoundary>
   );
@@ -94,7 +104,8 @@ export default function App() {
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={page(<HomePage />)} />
         <Route path="posts" element={page(<PostsPage />)} />
-        <Route path="posts/new" element={page(<PostStudioPage />)} />
+        {/* One route for new and existing posts ("/posts/new" is id "new"), so a
+            new post getting its id does not swap the screen out. */}
         <Route path="posts/:id" element={page(<PostStudioPage />)} />
         <Route path="calendar" element={page(<CalendarPage />)} />
         <Route path="templates" element={page(<TemplatesPage />)} />

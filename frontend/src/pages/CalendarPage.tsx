@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
-import { PageHeader, StatusBadge, TileTitle } from "@/components/common";
+import { InlineLoadError, PageHeader, StatusBadge, TileTitle } from "@/components/common";
+import { PostThumb } from "@/components/PostThumb";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-import { POST_STATUS, TONE_CLASS, timeZoneLabel } from "@/lib/format";
+import { POST_STATUS, TONE_CLASS, timeZoneLabel, toLocalInputValue } from "@/lib/format";
 import { keys, useWorkspacePosts, type CalendarPost } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
@@ -19,6 +21,7 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const monthFmt = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" });
 const timeFmt = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" });
 const weekdayFmt = new Intl.DateTimeFormat("en-IN", { weekday: "short" });
+const dayLabelFmt = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -71,6 +74,8 @@ export function CalendarPage() {
   const notOnCalendar = (unscheduled.data?.items ?? []).filter((p) => ["draft", "pending_approval", "approved"].includes(p.status));
 
   const today = dayKey(new Date());
+  const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const [planning, setPlanning] = useState<Date | null>(null);
   // Days of this month that have posts, in order, for the phone agenda.
   const agenda = days
     .filter((d) => d.getMonth() === month.getMonth() && byDay.has(dayKey(d)))
@@ -110,6 +115,8 @@ export function CalendarPage() {
           </div>
         </div>
 
+        {cal.isError && <InlineLoadError what="the calendar" onRetry={() => void cal.refetch()} />}
+
         {/* Phones: a day-by-day agenda, since seven columns don't fit. */}
         <div className="md:hidden">
           {cal.isLoading ? (
@@ -117,7 +124,7 @@ export function CalendarPage() {
               <Skeleton className="h-14" />
               <Skeleton className="h-14" />
             </div>
-          ) : agenda.length === 0 ? (
+          ) : cal.isError ? null : agenda.length === 0 ? (
             <p className="m-0 rounded-xl bg-muted/50 px-4 py-6 text-center text-muted-foreground">Nothing on the calendar in {monthFmt.format(month)}.</p>
           ) : (
             <ol className="m-0 flex flex-col gap-2 p-0">
@@ -165,17 +172,33 @@ export function CalendarPage() {
               const k = dayKey(d);
               const inMonth = d.getMonth() === month.getMonth();
               const items = byDay.get(k) ?? [];
+              // Today and later: the whole cell is a button that plans a post for that day.
+              const plannable = d.getTime() >= startOfToday;
               return (
                 <div
                   key={k}
                   className={cn(
-                    "flex min-h-[104px] flex-col gap-1 rounded-xl p-2",
+                    "group relative flex min-h-[104px] flex-col gap-1 rounded-xl p-2",
                     inMonth ? "bg-muted/50" : "border border-dashed",
                     k === today && "bg-card ring-2 ring-primary",
+                    plannable && "transition-colors hover:bg-surface-hover",
                   )}
                 >
-                  <span className={cn("text-[13px] font-semibold", !inMonth && "font-medium text-muted-foreground", k === today && "text-primary")}>
-                    {d.getDate()}
+                  {plannable && (
+                    <button
+                      type="button"
+                      onClick={() => setPlanning(d)}
+                      aria-label={`Plan a post for ${dayLabelFmt.format(d)}`}
+                      className="absolute inset-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    />
+                  )}
+                  <span className="pointer-events-none relative flex items-center justify-between">
+                    <span className={cn("text-[13px] font-semibold", !inMonth && "font-medium text-muted-foreground", k === today && "text-primary")}>
+                      {d.getDate()}
+                    </span>
+                    {plannable && (
+                      <Plus aria-hidden="true" className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
+                    )}
                   </span>
                   {cal.isLoading && inMonth && d.getDate() % 9 === 0 && <Skeleton className="h-5" />}
                   {items.map((p) => {
@@ -186,7 +209,7 @@ export function CalendarPage() {
                         key={p.id}
                         to={`/posts/${p.id}`}
                         title={`${p.title || "Untitled"} · ${brandName(p.brand_id)} · ${POST_STATUS[p.status]?.label ?? p.status}`}
-                        className={cn("block truncate rounded-md px-1.5 py-0.5 text-xs font-semibold no-underline", TONE_CLASS[tone])}
+                        className={cn("relative block truncate rounded-md px-1.5 py-0.5 text-xs font-semibold no-underline", TONE_CLASS[tone])}
                       >
                         {at ? timeFmt.format(new Date(at)) : ""} {p.title || "Untitled"}
                       </Link>
@@ -209,16 +232,23 @@ export function CalendarPage() {
           <TileTitle id="notyet-h">Not on the calendar yet</TileTitle>
           {unscheduled.isLoading ? (
             <Skeleton className="h-24" />
+          ) : unscheduled.isError ? (
+            <InlineLoadError what="these posts" onRetry={() => void unscheduled.refetch()} />
           ) : notOnCalendar.length === 0 ? (
             <p className="m-0 text-muted-foreground">Everything is scheduled.</p>
           ) : (
             <ul className="m-0 flex flex-col gap-2 p-0">
               {notOnCalendar.slice(0, 8).map((p) => (
-                <li key={p.id} className="list-none">
-                  <Link to={`/posts/${p.id}`} className="flex flex-col gap-1 rounded-xl border px-3 py-2.5 text-foreground no-underline hover:bg-muted/60">
-                    <span className="font-semibold">{p.title || "Untitled post"}</span>
+                <li key={p.id} className="flex list-none items-center gap-2 rounded-xl border px-3 py-2.5 hover:bg-muted/60">
+                  <Link to={`/posts/${p.id}`} className="flex min-w-0 flex-1 flex-col gap-1 text-foreground no-underline">
+                    <span className="truncate font-semibold">{p.title || "Untitled post"}</span>
                     <StatusBadge status={p.status} className="self-start" />
                   </Link>
+                  {p.status === "approved" && (
+                    <Button asChild size="sm" className="flex-none">
+                      <Link to={`/posts/${p.id}?schedule=1`}>Schedule</Link>
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -229,6 +259,80 @@ export function CalendarPage() {
           <p className="m-0 text-[13px]">Posts go out from our servers, so your computer can be off.</p>
         </Tile>
       </div>
+
+      <DayPlanner day={planning} onClose={() => setPlanning(null)} />
     </BentoGrid>
+  );
+}
+
+/** 10:00 that day, or the next full hour if that has already passed today. */
+function defaultTimeOn(day: Date): Date {
+  const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 10, 0);
+  const now = new Date();
+  if (at.getTime() > now.getTime() + 5 * 60_000) return at;
+  const next = new Date(now);
+  next.setHours(now.getHours() + 1, 0, 0, 0);
+  return next;
+}
+
+/** Clicking a day: put an approved post on it, or start a new one. */
+function DayPlanner({ day, onClose }: { day: Date | null; onClose: () => void }) {
+  const navigate = useNavigate();
+  const { brands, brandName } = useWorkspace();
+  const approved = useWorkspacePosts({ status: "approved", limit: 50 });
+  const at = day ? defaultTimeOn(day) : null;
+  const items = approved.data?.items ?? [];
+
+  return (
+    <Dialog open={day !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{day ? dayLabelFmt.format(day) : ""}</DialogTitle>
+          <DialogDescription>
+            Pick an approved post to go out on this day{at ? ` at ${timeFmt.format(at)}` : ""}. You choose the pages and can change the time
+            on the next screen.
+          </DialogDescription>
+        </DialogHeader>
+
+        <section aria-labelledby="day-approved-h" className="flex flex-col gap-2">
+          <h3 id="day-approved-h" className="m-0 text-xs font-medium text-muted-foreground">
+            Approved and ready to schedule
+          </h3>
+          {approved.isLoading ? (
+            <Skeleton className="h-14" />
+          ) : approved.isError ? (
+            <InlineLoadError what="approved posts" onRetry={() => void approved.refetch()} />
+          ) : items.length === 0 ? (
+            <p className="m-0 rounded-lg border border-dashed px-4 py-5 text-center text-sm text-muted-foreground">
+              Nothing approved yet. A post needs approval before it can be scheduled.
+            </p>
+          ) : (
+            <ul className="m-0 flex flex-col gap-2 p-0">
+              {items.map((p) => (
+                <li key={p.id} className="list-none">
+                  <button
+                    type="button"
+                    onClick={() => at && navigate(`/posts/${p.id}?schedule=${encodeURIComponent(toLocalInputValue(at))}`)}
+                    className="flex min-h-14 w-full items-center gap-3 rounded-xl border bg-card px-3 py-2 text-left transition-colors hover:border-primary/60 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <PostThumb post={p} brand={brands.find((b) => b.id === p.brand_id)} className="size-10" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{p.title || "Untitled post"}</span>
+                      <span className="block truncate text-[13px] text-muted-foreground">{brandName(p.brand_id)}</span>
+                    </span>
+                    <span className="flex-none text-[13px] font-semibold text-accent-foreground">Schedule</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <span className="text-sm text-muted-foreground">Or write something new for this day.</span>
+          <NewPostButton />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

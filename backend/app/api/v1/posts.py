@@ -45,7 +45,7 @@ from app.services.features import (
     resolve_features,
 )
 from app.services.publishing.factory import get_adapter
-from app.services.storage import get_storage
+from app.services.storage import delete_unreferenced_files, get_storage
 from app.core.constants import PLATFORM_CHAR_LIMITS
 
 logger = logging.getLogger(__name__)
@@ -303,8 +303,12 @@ async def delete_post(post_id: UUID, request: Request,
         user_name=user.full_name, changes={"before": {"title": post.title, "status": post.status.value}},
         ip_address=client_ip(request),
     )
+    file_keys = [m.storage_key for m in post.media]
     await db.delete(post)
     await db.commit()
+    # Its photos and videos go too (storage costs money, and a deleted post's
+    # files must not linger). Only after the commit: see the helper.
+    await delete_unreferenced_files(db, file_keys)
     return MessageResponse(message="Post deleted.")
 
 
@@ -521,7 +525,7 @@ async def approval_history(post_id: UUID, db: AsyncSession = Depends(get_db),
         select(ApprovalLog).where(ApprovalLog.post_id == post_id)
         .order_by(ApprovalLog.created_at.desc())
     )
-    return [ApprovalLogResponse.model_validate(l) for l in result.scalars().all()]
+    return [ApprovalLogResponse.model_validate(entry) for entry in result.scalars().all()]
 
 
 # ── Scheduling & publishing ───────────────────────────────────────────

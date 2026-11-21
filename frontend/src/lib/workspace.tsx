@@ -11,6 +11,9 @@ type WorkspaceContextValue = {
   workspace: Workspace | null;
   setWorkspaceId: (id: string) => void;
   brands: Brand[];
+  /** The brand list failed to load: show an error, not "no brands yet". */
+  brandsError: boolean;
+  retryBrands: () => void;
   /** "all" or a brand id */
   brandId: string;
   setBrandId: (id: string) => void;
@@ -68,12 +71,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       workspace,
       setWorkspaceId,
       brands,
+      brandsError: brandsQ.isError,
+      retryBrands: () => void brandsQ.refetch(),
       brandId,
       setBrandId,
       brandName,
       isLoading: workspacesQ.isLoading,
     }),
-    [workspaces, workspace, setWorkspaceId, brands, brandId, brandName, workspacesQ.isLoading],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch is stable
+    [workspaces, workspace, setWorkspaceId, brands, brandsQ.isError, brandId, brandName, workspacesQ.isLoading],
   );
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

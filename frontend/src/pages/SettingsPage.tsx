@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { Check, X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation } from "react-router";
 import { toast } from "sonner";
 
-import { PageHeader, TileTitle } from "@/components/common";
+import { InlineLoadError, PageHeader, TileTitle } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +16,17 @@ import { describeMinutes, useLinkOptions } from "@/lib/approvals";
 import { api, ApiError, type UsageSummary, type Workspace } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBytes, formatDate, initials, ROLE_LABEL } from "@/lib/format";
-import { keys, useMembers, useMyRole } from "@/lib/queries";
+import { keys, useFeatures, useMembers, useMyRole } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
+
+/** The plan items a customer cares about day to day (keys from backend app/core/features.py). */
+const PLAN_ITEMS = [
+  { key: "facebook_publishing", label: "Posting to Facebook" },
+  { key: "instagram_publishing", label: "Posting to Instagram" },
+  { key: "linkedin_publishing", label: "Posting to LinkedIn" },
+  { key: "scheduling", label: "Scheduling and calendar" },
+];
 
 const USAGE_LABEL: Record<string, string> = {
   post_created: "Posts written",
@@ -32,6 +43,13 @@ export function SettingsPage() {
   const isAdmin = isOwner || role === "admin";
   const members = useMembers();
   const linkOptions = useLinkOptions();
+  const features = useFeatures();
+  const location = useLocation();
+  // Arriving from a "See your plan" link: show that section.
+  useEffect(() => {
+    if (location.hash !== "#plan" || !features.data) return;
+    document.getElementById("plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [location.hash, features.data]);
 
   const onError = (e: unknown) => toast.error(e instanceof ApiError ? e.message : "Something went wrong.");
   const updateWorkspace = useMutation({
@@ -165,6 +183,38 @@ export function SettingsPage() {
         <p className="m-0 text-xs text-muted-foreground">
           {usage.data ? `${formatBytes(usage.data.media_bytes)} of photos and videos uploaded. ` : ""}AI writing arrives in the next
           phase; its usage will show here.
+        </p>
+      </Tile>
+
+      {/* "See your plan" links from the publish panel and Accounts land here. */}
+      <Tile id="plan" aria-labelledby="plan-h" className="scroll-mt-6 md:col-span-12">
+        <TileTitle id="plan-h">Your plan{features.data ? `: ${features.data.plan_name}` : ""}</TileTitle>
+        {features.isLoading ? (
+          <Skeleton className="h-10" />
+        ) : features.isError ? (
+          <InlineLoadError what="your plan" onRetry={() => void features.refetch()} />
+        ) : (
+          <ul className="m-0 flex flex-wrap gap-2 p-0">
+            {PLAN_ITEMS.map(({ key, label }) => {
+              const on = features.data?.features.find((f) => f.key === key)?.enabled ?? false;
+              return (
+                <li
+                  key={key}
+                  className={cn(
+                    "flex list-none items-center gap-1.5 rounded-full border px-3 py-1 text-[13px]",
+                    on ? "border-success-border bg-success-soft text-success" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {on ? <Check className="size-3.5" aria-hidden="true" /> : <X className="size-3.5" aria-hidden="true" />}
+                  {label}
+                  <span className="sr-only">{on ? "included" : "not available right now"}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <p className="m-0 text-xs text-muted-foreground">
+          Something not ticked is either not in your plan or paused for a while on our side. Posts already scheduled still go out.
         </p>
       </Tile>
 

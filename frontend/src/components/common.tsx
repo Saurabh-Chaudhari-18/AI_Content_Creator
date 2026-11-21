@@ -45,6 +45,32 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   );
 }
 
+/** Shown INSTEAD of an empty state when the list failed to load, so a
+ * network or server error never reads as "nothing here". */
+export function LoadError({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-center gap-2 rounded-[var(--radius-tile)] border border-dashed border-danger/50 px-6 py-12 text-center">
+      <p className="m-0 font-semibold">Couldn’t load {what}</p>
+      <p className="m-0 max-w-md text-muted-foreground">Check your connection and try again. Nothing you saved is lost.</p>
+      <button type="button" onClick={onRetry} className="mt-1 font-semibold text-accent-foreground underline underline-offset-4">
+        Try again
+      </button>
+    </div>
+  );
+}
+
+/** The one-line version, for small tiles. */
+export function InlineLoadError({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <p role="alert" className="m-0 text-danger">
+      Couldn’t load {what}.{" "}
+      <button type="button" onClick={onRetry} className="font-semibold underline underline-offset-4">
+        Try again
+      </button>
+    </p>
+  );
+}
+
 /** A section heading inside a tile. */
 export function TileTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (

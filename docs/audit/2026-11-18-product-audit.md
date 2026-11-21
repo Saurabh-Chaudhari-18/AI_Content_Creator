@@ -376,6 +376,24 @@ Full backend suite: **195 passed** (193 + 2 new). Frontend `tsc -b`, ESLint and 
 
 Still open from P1: CI (INF-04), admin powers vs policy (SEC-13), calendar window (PERF-04), media files on post delete (BIZ-04), 5xx after write (BIZ-03), error states (FE-03), media-change confirmation (FE-04/BIZ-06), keyboard notifications (FE-05).
 
+## 18. Remediation log — remaining P1 items (2026-11-19)
+
+| # | Finding | What changed | Files | Regression risk | Verified by |
+|---|---|---|---|---|---|
+| 1 | INF-04 | GitHub Actions on every PR and push to main: ruff, the full pytest suite against real Postgres 16 and Redis 7 services, pip-audit, `tsc -b`, ESLint, `vite build`, `npm audit --omit=dev`, and validation of both compose files. Existing lint fixed so CI starts green (unused imports, one import order, one variable name) | `.github/workflows/ci.yml`, small lint-only edits | None (lint fixes don't change behaviour) | ruff, ESLint, npm audit and compose validation run locally; **the workflow itself runs on GitHub on the next push** |
+| 2 | SEC-13 (part) | A platform-staff login can't be added to a customer workspace, whether by the admin panel or by a customer. The rule is in the shared `accounts.add_member`. Setup and reset links are unchanged: the owner chose admin-issued links, and no email sending exists yet | `services/accounts.py` | A staff person who also needs to work inside a customer workspace needs a second, ordinary login | `test_audit_p1.py::test_platform_staff_cannot_be_added_to_a_customer_workspace` |
+| 3 | BIZ-03 | On the request that creates the post (Facebook feed/photos, Instagram media_publish, LinkedIn ugcPosts), a 5xx or Meta code 1/2 is now an **unknown outcome** (needs review), never a retry. Rate limits and pre-publish steps still retry | `services/publishing/facebook.py`, `instagram.py`, `linkedin.py` | More jobs land in "needs review" during a Meta outage, each needing a person to check | `test_audit_p1_unit.py` (7 tests, faked HTTP responses) |
+| 4 | BIZ-04, DB-18 | Deleting a post deletes its stored files; deleting one photo deletes its file **after** the commit, not before. Files still referenced by another row are kept; failures are logged, never raised | `services/storage.py` (`delete_unreferenced_files`), `api/v1/posts.py`, `api/v1/media.py` | None expected | `test_audit_p1.py::test_deleting_a_post_deletes_its_stored_files` |
+| 5 | BIZ-06, FE-04 | Adding or removing a photo on an approved or scheduled post asks first ("…send back for approval?"). Photo buttons are disabled while one change is in flight | `frontend/src/pages/posts/PostStudioPage.tsx` | None | Browser: dialog shown on the approved demo post; cancelling left the post approved with no photo |
+| 6 | FE-03 | A failed load shows "Couldn't load … / Try again" instead of an empty state on Home (three tiles), Posts, Calendar (plus its side list), Accounts, Templates and Brands. The brand list now exposes its own error from the workspace context | `components/common.tsx` (`LoadError`, `InlineLoadError`), `lib/workspace.tsx`, those pages | None | Browser: API stopped → "Couldn't load templates"; API back + Try again → correct result |
+| 7 | FE-05 | Notifications and "Mark all as read" are real menu items: arrow keys move between them, Enter opens one | `frontend/src/app/NotificationBell.tsx` | None | Browser: keyboard only, focus reached each notification (role `menuitem`) |
+| 8 | PERF-04 | The calendar always uses a window: missing dates default to 6 weeks, more than 93 days is refused (400), dates without a timezone are taken as UTC, at most 1,000 posts | `api/v1/calendar.py` | An API client that asked for no window, or a year, now gets 6 weeks or a 400. The web app always asks for 6 weeks | `test_audit_p1.py::test_calendar_refuses_an_unbounded_window` |
+| 9 | BIZ-01 backstop | Migration 0008: a partial unique index allows only one queued or processing job per post and account; existing duplicates (none in the dev DB) become needs_review. Also declared on the model, so dev `create_all` matches | `alembic/versions/0008_one_live_job_per_account.py`, `models/social_account.py` | A future flow that legitimately needs two live jobs for the same account would be refused (none exists) | `test_audit_p1.py::test_database_refuses_a_second_live_job_for_the_same_post_and_account`; applied to the dev DB |
+
+Full backend suite: **206 passed** (195 + 11 new). Frontend `tsc -b`, ESLint (no errors) and `vite build` clean. Dev stack rebuilt; migration 0008 applied.
+
+All P1 items in the roadmap are now addressed, except one part of SEC-13: admin-issued password-reset links remain, by the owner's decision, until email sending exists.
+
 ## Audit progress checklist
 
 | Area | Status |

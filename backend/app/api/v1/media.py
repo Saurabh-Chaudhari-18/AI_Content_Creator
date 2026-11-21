@@ -28,7 +28,7 @@ from app.core.constants import (
     ALLOWED_IMAGE_EXTENSIONS, ALLOWED_IMAGE_MIMES,
     ALLOWED_VIDEO_EXTENSIONS, ALLOWED_VIDEO_MIMES,
 )
-from app.core.dependencies import client_ip, get_current_user, get_post_access
+from app.core.dependencies import get_current_user, get_post_access
 from app.core.security import post_content_hash
 from app.db.session import get_db
 from app.models import (
@@ -37,7 +37,7 @@ from app.models import (
 )
 from app.schemas.schemas import MediaReorderRequest, MediaUploadResponse, MessageResponse
 from app.services.features import enforce_limit, require_feature
-from app.services.storage import get_storage
+from app.services.storage import delete_unreferenced_files, get_storage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/media", tags=["Media"])
@@ -227,10 +227,11 @@ async def delete_media(media_id: UUID, db: AsyncSession = Depends(get_db),
     post = await get_post_access(item.post_id, db, user)
     assert_editable(post)
 
-    await run_in_threadpool(get_storage().delete, item.storage_key)
+    file_key = item.storage_key
     await db.delete(item)
     await db.flush()
     await db.refresh(post, ["media"])
     await _invalidate_if_approved(post, user, db, "Media removed after approval; reset to draft.")
     await db.commit()
+    await delete_unreferenced_files(db, [file_key])  # after the commit (DB-18)
     return MessageResponse(message="Media deleted.")

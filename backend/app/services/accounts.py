@@ -10,12 +10,13 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from sqlalchemy import delete, func, insert, select
 
 from app.config import settings
 from app.core.security import hash_refresh_token
 from app.models import (
-    SetupTokenPurpose, UserSetupToken, Workspace, WorkspaceMember, WorkspaceRole,
+    SetupTokenPurpose, User, UserSetupToken, Workspace, WorkspaceMember, WorkspaceRole,
 )
 from app.services.features import enforce_limit, get_feature
 from app.services.plans import get_default_plan_id
@@ -46,6 +47,11 @@ async def create_workspace(db, *, owner_id: UUID, name: str, plan_id: UUID | Non
     return workspace
 
 
+STAFF_NOT_MEMBER_DETAIL = (
+    "Platform staff logins can't be added to a customer workspace. Use a separate, ordinary login."
+)
+
+
 async def add_member(db, *, workspace_id: UUID, user_id: UUID, role: WorkspaceRole,
                      enable_review_on_second_member: bool) -> bool:
     """Add a user to a workspace, within the plan's member limit.
@@ -56,6 +62,13 @@ async def add_member(db, *, workspace_id: UUID, user_id: UUID, role: WorkspaceRo
     plan, and the customer API asks for it; the admin API does not, because
     that switch is the customer's own setting.
     """
+    # Platform staff observe every workspace from the admin panel and never
+    # act inside a customer's (no posting, approving or publishing), so a
+    # staff login is never ADDED to a workspace — by the admin panel or by a
+    # customer. (The workspace a login got when it signed up stays its own.)
+    if await db.scalar(select(User.platform_role).where(User.id == user_id)) is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STAFF_NOT_MEMBER_DETAIL)
+
     # Locked so two additions at once cannot both see "one member".
     workspace = await db.scalar(select(Workspace).where(Workspace.id == workspace_id).with_for_update())
 

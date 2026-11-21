@@ -1,6 +1,7 @@
 import { Printer } from "lucide-react";
 import { useId } from "react";
 
+import { SafeImage } from "@/components/SafeImage";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -127,7 +128,7 @@ export function ApprovalCertificate({ open, onOpenChange, data }: { open: boolea
           </header>
 
           <div className="mx-6 mt-8 flex gap-5 rounded-xl border border-[#e5e2da] bg-white p-4 sm:mx-10">
-            {data.imageUrl && <img src={data.imageUrl} alt="" className="size-24 flex-none rounded-lg object-cover" />}
+            <SafeImage src={data.imageUrl} alt="" className="size-24 flex-none rounded-lg object-cover" />
             <div className="min-w-0">
               <p className="m-0 text-xs text-[#6b7487]">Approved content</p>
               <p className="m-0 mt-1 text-sm leading-5 whitespace-pre-line text-[#141a29]">{data.caption}</p>

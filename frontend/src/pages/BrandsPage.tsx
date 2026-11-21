@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState, PageHeader } from "@/components/common";
+import { EmptyState, LoadError, PageHeader } from "@/components/common";
+import { BrandLogo } from "@/components/PostThumb";
 import { BentoGrid, Tile } from "@/components/Tile";
 import {
   AlertDialog,
@@ -21,8 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api, ApiError, type Brand } from "@/lib/api";
-import { brandStyle } from "@/lib/brandColor";
-import { humanize, initials } from "@/lib/format";
+import { humanize } from "@/lib/format";
 import { keys, useMyRole, useTemplates } from "@/lib/queries";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -52,7 +52,7 @@ function toForm(b?: Brand): BrandForm {
 }
 
 export function BrandsPage() {
-  const { brands, workspace } = useWorkspace();
+  const { brands, brandsError, retryBrands, workspace } = useWorkspace();
   const role = useMyRole();
   const isAdmin = role === "owner" || role === "admin";
   const [editing, setEditing] = useState<Brand | "new" | null>(null);
@@ -79,7 +79,11 @@ export function BrandsPage() {
         />
       </div>
 
-      {brands.length === 0 ? (
+      {brandsError ? (
+        <div className="md:col-span-12">
+          <LoadError what="your brands" onRetry={retryBrands} />
+        </div>
+      ) : brands.length === 0 ? (
         <div className="md:col-span-12">
           <EmptyState title="No brands yet">Add your business, or each client if you’re an agency.</EmptyState>
         </div>
@@ -87,13 +91,7 @@ export function BrandsPage() {
         brands.map((b) => (
           <Tile key={b.id} className="md:col-span-4">
             <div className="flex items-center gap-3">
-              {b.logo_url ? (
-                <img src={b.logo_url} alt="" className="size-12 rounded-[14px] object-cover" />
-              ) : (
-                <span aria-hidden="true" style={brandStyle(b)} className="brand-tile flex size-12 items-center justify-center rounded-[14px] font-medium">
-                  {initials(b.name)}
-                </span>
-              )}
+              <BrandLogo brand={b} className="size-12 rounded-[14px] text-sm" />
               <div className="flex flex-col">
                 <span className="text-base font-semibold">{b.name}</span>
                 <span className="text-[13px] text-muted-foreground">
@@ -264,11 +262,7 @@ function BrandDialog({ brand, onClose }: { brand?: Brand; onClose: () => void })
           </div>
           {brand && (
             <div className="flex items-center gap-3">
-              {brand.logo_url ? (
-                <img src={brand.logo_url} alt="Current logo" className="size-12 rounded-[14px] object-cover" />
-              ) : (
-                <span aria-hidden="true" className="size-12 rounded-[14px] bg-muted" />
-              )}
+              <BrandLogo brand={brand} className="size-12 rounded-[14px] text-sm" />
               <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={logo.isPending}>
                 {logo.isPending ? "Uploading…" : brand.logo_url ? "Change logo" : "Add logo"}
               </Button>

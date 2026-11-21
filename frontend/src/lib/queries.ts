@@ -66,6 +66,34 @@ export function useMyRole(): "owner" | "admin" | "member" | null {
   return (me?.role as "owner" | "admin" | "member" | undefined) ?? null;
 }
 
+export type WorkspaceFeatures = Schemas["WorkspaceFeaturesResponse"];
+
+/** What the workspace's plan allows right now (display only — the API enforces it). */
+export function useFeatures() {
+  const { workspace } = useWorkspace();
+  return useQuery({
+    queryKey: ["features", workspace?.id],
+    queryFn: () => api<WorkspaceFeatures>(`/workspaces/${workspace!.id}/features`),
+    enabled: !!workspace,
+    staleTime: 60_000,
+  });
+}
+
+/** The feature that lets a workspace publish to each platform (backend: PLATFORM_FEATURE). */
+export const PLATFORM_FEATURE: Record<string, string> = {
+  facebook: "facebook_publishing",
+  instagram: "instagram_publishing",
+  linkedin: "linkedin_publishing",
+};
+
+/** Can this workspace post to `platform` right now? undefined while unknown. */
+export function platformEnabled(features: WorkspaceFeatures | undefined, platform: string): boolean | undefined {
+  if (!features) return undefined;
+  const key = PLATFORM_FEATURE[platform];
+  if (!key) return true;
+  return features.features.find((f) => f.key === key)?.enabled ?? false;
+}
+
 export function useTemplates(filters: { industry?: string; category?: string; search?: string } = {}) {
   return useQuery({
     queryKey: ["templates", filters],

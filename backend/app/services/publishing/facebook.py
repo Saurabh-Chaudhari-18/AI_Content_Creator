@@ -18,11 +18,26 @@ _AUTH_CODES = {190, 102}
 _TRANSIENT_CODES = {1, 2, 4, 17, 341}
 
 
-def _classify_meta_error(status_code: int, err: dict, context: str):
+# Meta's "something went wrong on our side" codes. On the call that actually
+# creates the post they mean the post MAY exist (1 = unknown error,
+# 2 = service unavailable); rate limits (4, 17, 341) are refused up front.
+_SERVER_SIDE_CODES = {1, 2}
+
+
+def _classify_meta_error(status_code: int, err: dict, context: str, *, final_write: bool = False):
+    """Raise the right publish error for a failed Graph API call.
+
+    final_write=True for the request that creates the post itself (Facebook
+    /feed or /photos, Instagram media_publish): a server-side failure there
+    can arrive AFTER the post was created, so it is an unknown outcome for a
+    person to check, never an automatic retry that could post twice."""
     code = err.get("code")
     msg = err.get("message", f"{context} failed")
     if code in _AUTH_CODES or (isinstance(code, int) and 200 <= code <= 299):
         raise PermanentPublishError(f"{context}: Facebook auth/permission error ({code}): {msg}")
+    if final_write and (status_code >= 500 or code in _SERVER_SIDE_CODES):
+        raise UnknownOutcomePublishError(
+            f"{context}: Facebook server error ({status_code}, code {code}) after the post was sent: {msg}")
     if code in _TRANSIENT_CODES or status_code >= 500:
         raise RetryablePublishError(f"{context}: Facebook transient error ({code}): {msg}")
     raise PermanentPublishError(f"{context}: {msg}")
@@ -91,8 +106,8 @@ class FacebookAdapter(SocialPublishAdapter):
                 try:
                     err = resp.json().get("error", {})
                 except Exception:  # noqa: BLE001 — non-JSON body (e.g. HTML 502)
-                    raise RetryablePublishError(f"Facebook returned non-JSON {resp.status_code}") from None
-                _classify_meta_error(resp.status_code, err, "Facebook publish")
+                    err = {}
+                _classify_meta_error(resp.status_code, err, "Facebook publish", final_write=True)
 
         except httpx.TimeoutException as exc:
             raise RetryablePublishError(f"Facebook request timed out: {exc}") from exc

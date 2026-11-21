@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import { EmptyState, PageHeader, TileTitle } from "@/components/common";
+import { EmptyState, LoadError, PageHeader, TileTitle } from "@/components/common";
 import { BentoGrid, Tile } from "@/components/Tile";
 import {
   AlertDialog,
@@ -23,14 +23,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError, type Schemas, type SocialAccount } from "@/lib/api";
 import { daysUntil, formatDateTime, PLATFORMS, platformName } from "@/lib/format";
-import { keys, useAccounts, useMyRole, useWorkspacePosts } from "@/lib/queries";
+import { keys, platformEnabled, useAccounts, useFeatures, useMyRole, useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { PlatformMark } from "@/pages/posts/parts";
 import { useWorkspace } from "@/lib/workspace";
 
-function health(a: SocialAccount): { label: string; tone: "success" | "warning" | "danger" | "neutral"; days: number | null } {
+/**
+ * One account's state, in the same words the pre-publish check uses: an
+ * account that is connected but can't be posted to (plan or a pause on our
+ * side) must never read as "Working".
+ */
+function health(a: SocialAccount, canPost: boolean | undefined): { label: string; tone: "success" | "warning" | "danger" | "neutral"; days: number | null } {
   const days = daysUntil(a.token_expires_at);
   if (days !== null && days <= 0) return { label: "Expired", tone: "danger", days };
+  if (canPost === false) return { label: "Can’t post right now", tone: "danger", days };
   if (a.needs_reauth || (days !== null && days <= 7)) return { label: "Refresh soon", tone: "warning", days };
   return { label: "Working", tone: "success", days };
 }
@@ -41,6 +47,7 @@ export function AccountsPage() {
   const role = useMyRole();
   const isAdmin = role === "owner" || role === "admin";
   const accounts = useAccounts();
+  const features = useFeatures();
   const failed = useWorkspacePosts({ status: "failed", limit: 3 });
   const [params, setParams] = useSearchParams();
 
@@ -113,6 +120,10 @@ export function AccountsPage() {
 
       {accounts.isLoading ? (
         [0, 1, 2].map((i) => <Skeleton key={i} className="h-48 md:col-span-4" />)
+      ) : accounts.isError ? (
+        <div className="md:col-span-12">
+          <LoadError what="your connected accounts" onRetry={() => void accounts.refetch()} />
+        </div>
       ) : (accounts.data ?? []).length === 0 ? (
         <div className="md:col-span-12">
           <EmptyState title="No accounts connected">
@@ -122,7 +133,8 @@ export function AccountsPage() {
         </div>
       ) : (
         accounts.data!.map((a) => {
-          const h = health(a);
+          const canPost = platformEnabled(features.data, a.platform);
+          const h = health(a, canPost);
           const isTest = a.platform_account_id.startsWith("mock") || a.account_type === "test";
           const pct = h.days === null ? 100 : Math.max(4, Math.min(100, Math.round((h.days / 60) * 100)));
           return (
@@ -157,6 +169,15 @@ export function AccountsPage() {
                     <div className={cn("h-1.5 rounded-full", h.tone === "success" ? "bg-emerald-400" : "bg-amber-400")} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
+              )}
+              {canPost === false && (
+                <p className="m-0 text-[13px]">
+                  Posting to {platformName(a.platform)} is off for this workspace right now — it isn’t in your plan, or it’s paused for a
+                  while on our side.{" "}
+                  <Link to="/settings#plan" className="font-semibold underline underline-offset-4">
+                    See your plan
+                  </Link>
+                </p>
               )}
               {isTest && <p className="m-0 text-[13px] opacity-80">Posts here are practice runs — nothing reaches the real page.</p>}
               {a.platform === "linkedin" && <p className="m-0 text-[13px] opacity-80">LinkedIn posts text only for now; photos are skipped.</p>}

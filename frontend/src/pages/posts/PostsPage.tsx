@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { EmptyState, PageHeader, StatusBadge } from "@/components/common";
+import { BrandPickerDialog } from "@/components/BrandPicker";
+import { EmptyState, LoadError, PageHeader, StatusBadge } from "@/components/common";
+import { PostThumb } from "@/components/PostThumb";
 import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Post } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -41,33 +42,13 @@ export function NewPostButton({ size = "default" }: { size?: "default" | "lg" })
       <Button size={size} onClick={start} disabled={brands.length === 0}>
         New post
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Which brand is this post for?</DialogTitle>
-            <DialogDescription>The brand’s tone and audience shape the templates you see.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            {brands.map((b) => (
-              <Button
-                key={b.id}
-                variant="outline"
-                className="h-12 justify-start"
-                onClick={() => navigate(`/posts/new?brand=${b.id}`)}
-              >
-                <span className="font-semibold">{b.name}</span>
-                {b.industry && <span className="text-muted-foreground"> · {b.industry.replace(/_/g, " ")}</span>}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <BrandPickerDialog open={open} onOpenChange={setOpen} onPick={(b) => navigate(`/posts/new?brand=${b.id}`)} />
     </>
   );
 }
 
 export function PostsPage() {
-  const { brandName, brands, setBrandId } = useWorkspace();
+  const { brandName, brands, brandsError, retryBrands, setBrandId } = useWorkspace();
   const [params] = useSearchParams();
   const initial = params.get("status") as Post["status"] | null;
   const [filter, setFilter] = useState<Post["status"] | "all">(
@@ -124,6 +105,8 @@ export function PostsPage() {
               <Skeleton key={i} className="h-16" />
             ))}
           </div>
+        ) : posts.isError || brandsError ? (
+          <LoadError what="your posts" onRetry={() => (brandsError ? retryBrands() : void posts.refetch())} />
         ) : brands.length === 0 ? (
           <EmptyState title="Add a brand first">
             Posts belong to a brand. <Link to="/brands" className="font-semibold text-accent-foreground">Create a brand</Link>{" "}
@@ -134,7 +117,6 @@ export function PostsPage() {
         ) : (
           <ul className="flex flex-col">
             {posts.data!.items.map((p) => {
-              const thumb = p.media[0];
               const when = p.published_at ?? p.scheduled_at;
               return (
                 <li key={p.id}>
@@ -142,11 +124,7 @@ export function PostsPage() {
                     to={`/posts/${p.id}`}
                     className="flex items-center gap-3 rounded-xl border-t px-2 py-3.5 text-foreground no-underline hover:bg-muted/60 md:gap-4"
                   >
-                    {thumb ? (
-                      <img src={thumb.media_url} alt="" className="size-12 shrink-0 self-start rounded-lg object-cover md:self-center" />
-                    ) : (
-                      <span aria-hidden="true" className="size-12 shrink-0 self-start rounded-lg bg-muted md:self-center" />
-                    )}
+                    <PostThumb post={p} brand={brands.find((b) => b.id === p.brand_id)} className="size-12 self-start md:self-center" />
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate font-semibold">{p.title || "Untitled post"}</span>
                       <span className="line-clamp-1 text-[13px] text-muted-foreground">{p.caption || "No caption yet"}</span>

@@ -21,7 +21,7 @@ from app.api.v1.admin.common import (
 from app.core.dependencies import require_super_admin
 from app.db.session import get_admin_db
 from app.models import (
-    AuditAction, PlatformRole, RefreshToken, SetupTokenPurpose, User, UserSetupToken,
+    AuditAction, RefreshToken, SetupTokenPurpose, User, UserSetupToken,
     Workspace, WorkspaceMember, WorkspaceRole,
 )
 from app.schemas.admin import (
