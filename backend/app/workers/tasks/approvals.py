@@ -7,10 +7,13 @@
                             write customer content, so this sweep does it.
 - scan_approval_link_abuse  every 15 minutes: link-guessing and volume alerts
 - cleanup_notifications     daily: drop bell entries older than 90 days
+- send_approval_reminders   every 5 minutes: deadline reminders and escalation
+                            (docs/approval_reminders_certificate_plan.md §2)
 
 Plan: docs/client_approval_link_plan.md §4.6, §4.6b.
 """
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, delete, exists, func, or_, select
@@ -21,10 +24,13 @@ from app.core.dependencies import APPROVER_ROLES
 from app.core.settings_registry import SETTINGS_BY_KEY
 from app.db.session import worker_session
 from app.models import (
-    AdminAlert, AdminAlertType, AlertSeverity, ApprovalLink, Brand, BrandContact, NotificationType,
-    PlatformSetting, Post, PostStatus, User, Workspace, WorkspaceMember,
+    AdminAlert, AdminAlertType, AlertSeverity, ApprovalAction, ApprovalLink, ApprovalLog, ApprovalReminder,
+    Brand, BrandContact, NotificationType, PlatformSetting, Post, PostStatus, ReminderChannel,
+    ReminderStage, User, Workspace, WorkspaceMember, WorkspaceStatus,
 )
+from app.services import approval_deadlines as deadlines
 from app.services import approvals as reviewers
+from app.services.features import resolve_features_bulk_sync
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -175,3 +181,142 @@ def cleanup_notifications() -> dict:
     with worker_session() as db:
         deleted = db.execute(delete(Notification).where(Notification.created_at < cutoff)).rowcount
     return {"deleted": deleted}
+
+
+# ── Approval deadlines (0009) ──────────────────────────────────────────
+_STAGE_NOTIFICATION = {
+    ReminderStage.DUE_SOON: NotificationType.APPROVAL_DUE_SOON,
+    ReminderStage.OVERDUE: NotificationType.APPROVAL_OVERDUE,
+    ReminderStage.ESCALATED: NotificationType.APPROVAL_ESCALATED,
+}
+
+
+def _latest_submission_id():
+    return (select(ApprovalLog.id)
+            .where(ApprovalLog.post_id == Post.id, ApprovalLog.action == ApprovalAction.SUBMITTED)
+            .order_by(ApprovalLog.created_at.desc()).limit(1)
+            .correlate(Post).scalar_subquery())
+
+
+def _managers(db, workspace: Workspace, cache: dict) -> list:
+    if workspace.id not in cache:
+        cache[workspace.id] = list(db.scalars(
+            select(WorkspaceMember.user_id)
+            .join(User, User.id == WorkspaceMember.user_id)
+            .where(WorkspaceMember.workspace_id == workspace.id,
+                   WorkspaceMember.role.in_(APPROVER_ROLES), User.is_active.is_(True))
+        ).all())
+    return cache[workspace.id]
+
+
+def _client_status(db, post: Post) -> tuple[list, str]:
+    """Who shared the post's open links, and whether the client opened one."""
+    links = db.scalars(
+        select(ApprovalLink).where(ApprovalLink.post_id == post.id, ApprovalLink.decided_at.is_(None),
+                                   ApprovalLink.revoked_at.is_(None),
+                                   ApprovalLink.content_hash_at_share == post.content_hash)
+    ).all()
+    sharers = [link.created_by for link in links] or [post.created_by]
+    if any(link.first_viewed_at for link in links):
+        seen = "They opened the link but haven't decided."
+    elif links:
+        seen = "They haven't opened the link yet."
+    else:
+        seen = "There's no open link for them."
+    return sharers, seen
+
+
+def _reminder(db, *, post: Post, workspace: Workspace, stage: ReminderStage, when: str,
+              managers: list) -> tuple[list, str]:
+    """(recipients, message) for one stage. Reminders go to people who can
+    act: the assigned manager, the managers, or (for a client) whoever
+    shared the link, since only they can nudge the client (plan R1a)."""
+    assignee = reviewers.current_assignee(post)
+    label = reviewers.post_label(post)
+    deciders = [m for m in managers if workspace.allow_self_approval or m != post.created_by]
+    waiting_for = assignee.name or reviewers.ANY_MANAGER
+    if stage == ReminderStage.ESCALATED:
+        return deciders + [post.created_by], (
+            f"Overdue: {label} passed its deadline ({when}) and is still waiting for {waiting_for}. "
+            "Any manager can approve it."
+        )
+    if assignee.contact_id:
+        sharers, seen = _client_status(db, post)
+        if stage == ReminderStage.DUE_SOON:
+            return sharers, (f"{assignee.name} hasn't answered {label} yet. It's needed by {when}. "
+                             f"{seen} Send a reminder?")
+        return sharers, f"{assignee.name} missed the deadline for {label} ({when}). {seen} Send a reminder?"
+    recipients = [assignee.user_id] if assignee.user_id else deciders
+    if stage == ReminderStage.DUE_SOON:
+        return recipients, f"Reminder: {label} needs approval by {when}."
+    return recipients, f"{label} was due for approval at {when} and is now overdue."
+
+
+@celery_app.task(name="app.workers.tasks.approvals.send_approval_reminders")
+def send_approval_reminders() -> dict:
+    now = datetime.now(timezone.utc)
+    sent = released = 0
+    with worker_session() as db:
+        bounds = deadlines.due_bounds_sync(db)
+        submission = _latest_submission_id()
+        escalated_already = exists().where(ApprovalReminder.submission_log_id == submission,
+                                           ApprovalReminder.stage == ReminderStage.ESCALATED)
+        rows = db.execute(
+            select(Post, Brand, Workspace, submission.label("submission_id"))
+            .join(Brand, Brand.id == Post.brand_id)
+            .join(Workspace, Workspace.id == Brand.workspace_id)
+            .where(Post.status == PostStatus.PENDING_APPROVAL,
+                   Post.approval_due_at.is_not(None),
+                   Post.approval_due_at <= now + deadlines.DUE_SOON_WINDOW,
+                   Brand.is_active.is_(True),
+                   Workspace.status != WorkspaceStatus.SUSPENDED,
+                   ~escalated_already)
+            .order_by(Post.approval_due_at)
+            .with_for_update(of=Post, skip_locked=True)
+            .limit(500)
+        ).all()
+        if not rows:
+            return {"sent": 0, "released": 0}
+
+        features = resolve_features_bulk_sync(db, list({ws.id for _p, _b, ws, _s in rows}),
+                                              ("approval_reminders",))
+        submitted_at = dict(db.execute(
+            select(ApprovalLog.id, ApprovalLog.created_at)
+            .where(ApprovalLog.id.in_([sid for *_x, sid in rows if sid is not None]))
+        ).all())
+        managers_cache: dict = {}
+        for post, brand, workspace, submission_id in rows:
+            if submission_id is None or not features[workspace.id]["approval_reminders"].enabled:
+                continue
+            stage = deadlines.current_stage(
+                due_at=post.approval_due_at, submitted_at=submitted_at[submission_id],
+                escalate_after_hours=deadlines.escalate_hours(bounds, brand), now=now,
+            )
+            if stage is None:
+                continue
+            # The unique index is the gate: a stage already sent this round
+            # (or being sent by another worker right now) inserts nothing.
+            inserted = db.execute(
+                pg_insert(ApprovalReminder)
+                .values(id=uuid.uuid4(), post_id=post.id, workspace_id=workspace.id,
+                        submission_log_id=submission_id, stage=stage, channel=ReminderChannel.IN_APP,
+                        recipient_name=post.assigned_name)
+                .on_conflict_do_nothing(index_elements=["submission_log_id", "stage"],
+                                        index_where=ApprovalReminder.stage != ReminderStage.MANUAL_NUDGE)
+                .returning(ApprovalReminder.id)
+            ).scalar()
+            if inserted is None:
+                continue
+            when = deadlines.format_deadline(post.approval_due_at, post.approval_due_tz)
+            recipients, message = _reminder(db, post=post, workspace=workspace, stage=stage, when=when,
+                                            managers=_managers(db, workspace, managers_cache))
+            reviewers.notify(db, workspace_id=workspace.id, user_ids=recipients,
+                             type=_STAGE_NOTIFICATION[stage], post_id=post.id, message=message)
+            sent += 1
+            if (stage == ReminderStage.ESCALATED and brand.approval_release_when_overdue
+                    and reviewers.current_assignee(post).is_set):
+                reviewers.release_one(db, post, workspace_id=workspace.id, reason="overdue", overdue=True)
+                released += 1
+    if sent:
+        logger.info("[Approvals] sent %d deadline reminders, released %d", sent, released)
+    return {"sent": sent, "released": released}

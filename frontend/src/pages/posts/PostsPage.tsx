@@ -8,15 +8,22 @@ import { BentoGrid, Tile } from "@/components/Tile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Post } from "@/lib/api";
+import { useDeadlineOptions } from "@/lib/approvals";
 import { formatDateTime } from "@/lib/format";
 import { useWorkspacePosts } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
 
-const FILTERS: { value: Post["status"] | "all"; label: string }[] = [
+import { DueChip } from "./ReviewerDialogs";
+
+type Filter = Post["status"] | "all" | "overdue";
+
+const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "draft", label: "Drafts" },
   { value: "pending_approval", label: "Waiting for approval" },
+  // Waiting past their "Needed by" (shown only when the plan has deadlines).
+  { value: "overdue", label: "Overdue" },
   { value: "approved", label: "Approved" },
   { value: "scheduled", label: "Scheduled" },
   { value: "published", label: "Published" },
@@ -62,8 +69,10 @@ export function PostsPage() {
   // The status filter lives in the address (?status=…), so the sidebar's "To approve"
   // and Home's links switch it even when this page is already open.
   const raw = params.get("status");
-  const filter: Post["status"] | "all" = raw && FILTERS.some((f) => f.value === raw) ? (raw as Post["status"]) : "all";
-  function setFilter(value: Post["status"] | "all") {
+  const filter: Filter = raw && FILTERS.some((f) => f.value === raw) ? (raw as Filter) : "all";
+  const deadlines = useDeadlineOptions();
+  const shownFilters = FILTERS.filter((f) => f.value !== "overdue" || deadlines.data?.enabled || filter === "overdue");
+  function setFilter(value: Filter) {
     const next = new URLSearchParams(params);
     if (value === "all") next.delete("status");
     else next.set("status", value);
@@ -76,7 +85,12 @@ export function PostsPage() {
   }, [brandParam, setBrandId]);
   const [page, setPage] = useState(1);
   useEffect(() => setPage(1), [filter]);
-  const posts = useWorkspacePosts({ status: filter === "all" ? undefined : filter, limit: PAGE_SIZE, page });
+  const posts = useWorkspacePosts({
+    status: filter === "all" || filter === "overdue" ? undefined : filter,
+    overdue: filter === "overdue",
+    limit: PAGE_SIZE,
+    page,
+  });
 
   const total = posts.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -87,7 +101,7 @@ export function PostsPage() {
         <PageHeader
           eyebrow="Everything your team is working on"
           title="All Posts"
-          accent={filter === "pending_approval" ? "To approve" : "& Drafts"}
+          accent={filter === "pending_approval" ? "To approve" : filter === "overdue" ? "Overdue" : "& Drafts"}
           actions={<NewPostButton size="lg" />}
         />
       </div>
@@ -99,7 +113,7 @@ export function PostsPage() {
           aria-label="Filter by status"
           className="-mx-5 flex gap-1 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
         >
-          {FILTERS.map((f) => (
+          {shownFilters.map((f) => (
             <button
               key={f.value}
               type="button"
@@ -133,7 +147,11 @@ export function PostsPage() {
             to get started.
           </EmptyState>
         ) : (posts.data?.items.length ?? 0) === 0 ? (
-          <EmptyState title="No posts here yet">Start one with “New post”, or pick a Smart Template.</EmptyState>
+          filter === "overdue" ? (
+            <EmptyState title="Nothing overdue">Every post waiting for approval is still inside its deadline.</EmptyState>
+          ) : (
+            <EmptyState title="No posts here yet">Start one with “New post”, or pick a Smart Template.</EmptyState>
+          )
         ) : (
           <ul className="flex flex-col">
             {posts.data!.items.map((p) => {
@@ -152,13 +170,15 @@ export function PostsPage() {
                       {/* Phones: brand, time and status fold under the title. */}
                       <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground md:hidden">
                         <StatusBadge status={p.status} />
+                        <DueChip post={p} />
                         <span>{brandName(p.brand_id)} · {when ? formatDateTime(when) : "Not scheduled"}</span>
                       </span>
                     </div>
                     <span className="hidden w-32 shrink-0 truncate text-[13px] text-muted-foreground md:block">{brandName(p.brand_id)}</span>
                     <span className="hidden w-40 shrink-0 text-[13px] text-muted-foreground md:block">{when ? formatDateTime(when) : "Not scheduled"}</span>
-                    <span className="hidden w-44 shrink-0 md:block">
+                    <span className="hidden w-44 shrink-0 flex-col items-start gap-1 md:flex">
                       <StatusBadge status={p.status} />
+                      <DueChip post={p} />
                     </span>
                     {/* The whole row opens the post; this names what you'll do there. */}
                     <span

@@ -18,6 +18,7 @@ from app.schemas.schemas import (
     AddMemberRequest, MemberResponse, MessageResponse, UsageSummaryResponse,
     WorkspaceCreate, WorkspaceFeature, WorkspaceFeaturesResponse, WorkspaceResponse, WorkspaceUpdate,
 )
+from app.services import approval_deadlines as deadlines
 from app.services.approval_links import describe_minutes, expiry_bounds
 from app.services.audit import record_audit_event
 from app.services import accounts
@@ -104,6 +105,21 @@ async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Re
         before["approval_link_default_minutes"] = workspace.approval_link_default_minutes
         workspace.approval_link_default_minutes = minutes
         after["approval_link_default_minutes"] = minutes
+    if req.approval_due_default_hours is not None:
+        # Default approval deadline, inside the platform range. 0 = platform default.
+        hours = req.approval_due_default_hours or None
+        if hours is not None:
+            await require_feature(db, workspace_id, "approval_reminders")
+            deadlines.check_hours_in_range(await deadlines.due_bounds(db), hours)
+        before["approval_due_default_hours"] = workspace.approval_due_default_hours
+        workspace.approval_due_default_hours = hours
+        after["approval_due_default_hours"] = hours
+    if req.certificate_verification_enabled is not None:
+        # Who may check this agency's certificates is the owner's call.
+        require_role(member, WorkspaceRole.OWNER)
+        before["certificate_verification_enabled"] = workspace.certificate_verification_enabled
+        workspace.certificate_verification_enabled = req.certificate_verification_enabled
+        after["certificate_verification_enabled"] = req.certificate_verification_enabled
     if after:
         record_audit_event(
             db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,

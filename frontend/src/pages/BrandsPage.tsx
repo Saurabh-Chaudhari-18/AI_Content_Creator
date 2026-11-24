@@ -20,7 +20,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { deadlineHourPresets, describeHours, useDeadlineOptions } from "@/lib/approvals";
 import { api, ApiError, type Brand } from "@/lib/api";
 import { humanize } from "@/lib/format";
 import { keys, useMyRole, useTemplates } from "@/lib/queries";
@@ -57,8 +59,10 @@ export function BrandsPage() {
   const isAdmin = role === "owner" || role === "admin";
   const [editing, setEditing] = useState<Brand | "new" | null>(null);
   const [contactsOf, setContactsOf] = useState<Brand | null>(null);
+  const [rulesOf, setRulesOf] = useState<Brand | null>(null);
   const [toRemove, setToRemove] = useState<Brand | null>(null);
   const qc = useQueryClient();
+  const deadlines = useDeadlineOptions();
 
   const deactivate = useMutation({
     mutationFn: (id: string) => api(`/brands/${id}`, { method: "DELETE" }),
@@ -112,6 +116,15 @@ export function BrandsPage() {
                 <dt className="text-muted-foreground">Tone of voice</dt>
                 <dd className="m-0">{b.tone_of_voice || "—"}</dd>
               </div>
+              {deadlines.data?.enabled && (
+                <div>
+                  <dt className="text-muted-foreground">Approvals needed within</dt>
+                  <dd className="m-0">
+                    {b.approval_due_hours ? describeHours(b.approval_due_hours) : "Workspace default"}
+                    {b.approval_release_when_overdue ? " · then any manager" : ""}
+                  </dd>
+                </div>
+              )}
             </dl>
             <div className="mt-auto flex gap-3">
               <button type="button" className="font-semibold text-accent-foreground" onClick={() => setEditing(b)}>
@@ -120,6 +133,11 @@ export function BrandsPage() {
               <button type="button" className="font-semibold text-accent-foreground" onClick={() => setContactsOf(b)}>
                 Client contacts
               </button>
+              {isAdmin && deadlines.data?.enabled && (
+                <button type="button" className="font-semibold text-accent-foreground" onClick={() => setRulesOf(b)}>
+                  Approval rules
+                </button>
+              )}
               {isAdmin && (
                 <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setToRemove(b)}>
                   Remove
@@ -132,6 +150,7 @@ export function BrandsPage() {
 
       {contactsOf && <BrandContactsDialog brand={contactsOf} canEdit={isAdmin} onClose={() => setContactsOf(null)} />}
       {editing && <BrandDialog brand={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
+      {rulesOf && <ApprovalRulesDialog brand={rulesOf} onClose={() => setRulesOf(null)} />}
 
       <AlertDialog open={!!toRemove} onOpenChange={(o) => !o && setToRemove(null)}>
         <AlertDialogContent>
@@ -291,6 +310,99 @@ function BrandDialog({ brand, onClose }: { brand?: Brand; onClose: () => void })
           </Button>
           <Button onClick={() => save.mutate()} disabled={!form.name.trim() || save.isPending}>
             {brand ? "Save" : "Add brand"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const ESCALATE_HOURS = [2, 4, 8, 12, 24, 48, 72];
+
+/** Per-brand deadline, escalation delay and what happens when nobody answers. */
+function ApprovalRulesDialog({ brand, onClose }: { brand: Brand; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { workspace } = useWorkspace();
+  const options = useDeadlineOptions();
+  const [due, setDue] = useState(String(brand.approval_due_hours ?? 0));
+  const [escalate, setEscalate] = useState(String(brand.approval_escalate_after_hours ?? 0));
+  const [release, setRelease] = useState(brand.approval_release_when_overdue);
+
+  const save = useMutation({
+    mutationFn: () =>
+      api<Brand>(`/brands/${brand.id}`, {
+        method: "PATCH",
+        body: { approval_due_hours: Number(due), approval_escalate_after_hours: Number(escalate), approval_release_when_overdue: release },
+      }),
+    onSuccess: () => {
+      toast.success("Approval rules saved.");
+      qc.invalidateQueries({ queryKey: keys.brands(workspace?.id) });
+      qc.invalidateQueries({ queryKey: ["approval-deadline-options"] });
+      onClose();
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn’t save."),
+  });
+
+  const data = options.data;
+  const workspaceDefault = data ? describeHours(data.workspace_default_hours ?? data.platform_default_hours) : "…";
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Approval rules for {brand.name}</DialogTitle>
+          <DialogDescription>How fast posts for this brand need an answer, and what happens when nobody answers.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rule-due">Approvals are needed within</Label>
+            <Select value={due} onValueChange={setDue}>
+              <SelectTrigger id="rule-due" className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Workspace default ({workspaceDefault})</SelectItem>
+                {(data ? deadlineHourPresets(data) : []).map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {describeHours(h)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rule-escalate">Tell every manager when it’s overdue by</Label>
+            <Select value={escalate} onValueChange={setEscalate}>
+              <SelectTrigger id="rule-escalate" className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Default (24 hours)</SelectItem>
+                {ESCALATE_HOURS.map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {describeHours(h)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-start justify-between gap-4 rounded-[12px] bg-muted px-4 py-3.5">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="rule-release" className="font-semibold">
+                Then open it to any manager
+              </Label>
+              <span className="text-[13px] text-muted-foreground">
+                At that point the post stops waiting for its reviewer and any manager can approve it. A post is never approved by itself.
+              </span>
+            </div>
+            <Switch id="rule-release" checked={release} onCheckedChange={setRelease} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            Save rules
           </Button>
         </DialogFooter>
       </DialogContent>

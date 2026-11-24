@@ -59,6 +59,10 @@ FEATURES: tuple[FeatureDef, ...] = (
     FeatureDef("max_open_approval_links", "Open client links",
                "How many unexpired, undecided client links the workspace can have at once.",
                _LIMIT, "Approvals"),
+    # ── Approval deadlines (0009) ─────────────────────────────────────
+    FeatureDef("approval_reminders", "Approval deadlines and reminders",
+               "Give each post sent for approval a deadline, remind reviewers before and after it, "
+               "and escalate overdue posts to the managers.", _BOOL, "Approvals"),
     # ── Workspace ─────────────────────────────────────────────────────
     FeatureDef("max_brands", "Brands",
                "How many brands the workspace can manage.", _LIMIT, "Workspace"),

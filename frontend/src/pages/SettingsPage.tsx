@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { describeMinutes, useLinkOptions } from "@/lib/approvals";
+import { deadlineHourPresets, describeHours, describeMinutes, useDeadlineOptions, useLinkOptions } from "@/lib/approvals";
 import { api, ApiError, type UsageSummary, type Workspace } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBytes, formatDate, initials, ROLE_LABEL } from "@/lib/format";
@@ -43,6 +43,7 @@ export function SettingsPage() {
   const isAdmin = isOwner || role === "admin";
   const members = useMembers();
   const linkOptions = useLinkOptions();
+  const deadlineOptions = useDeadlineOptions();
   const features = useFeatures();
   const location = useLocation();
   // Arriving from a "See your plan" link: show that section.
@@ -53,12 +54,18 @@ export function SettingsPage() {
 
   const onError = (e: unknown) => toast.error(e instanceof ApiError ? e.message : "Something went wrong.");
   const updateWorkspace = useMutation({
-    mutationFn: (body: { name?: string; allow_self_approval?: boolean; approval_link_default_minutes?: number }) =>
-      api<Workspace>(`/workspaces/${workspace!.id}`, { method: "PATCH", body }),
+    mutationFn: (body: {
+      name?: string;
+      allow_self_approval?: boolean;
+      approval_link_default_minutes?: number;
+      approval_due_default_hours?: number;
+      certificate_verification_enabled?: boolean;
+    }) => api<Workspace>(`/workspaces/${workspace!.id}`, { method: "PATCH", body }),
     onSuccess: () => {
       toast.success("Saved.");
       qc.invalidateQueries({ queryKey: keys.workspaces() });
       qc.invalidateQueries({ queryKey: ["approval-link-options"] });
+      qc.invalidateQueries({ queryKey: ["approval-deadline-options"] });
     },
     onError,
   });
@@ -163,6 +170,55 @@ export function SettingsPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {deadlineOptions.data?.enabled && (
+          <div className="flex flex-wrap items-start justify-between gap-4 rounded-[12px] bg-muted px-4 py-3.5">
+            <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
+              <Label htmlFor="due-default" className="font-semibold">
+                Approvals are needed within
+              </Label>
+              <span className="text-[13px] text-muted-foreground">
+                The deadline a post gets when it’s sent for approval. Reviewers are reminded before it, and every manager is told if it
+                passes. A brand can set its own; the sender can always pick another.
+              </span>
+            </div>
+            <Select
+              value={String(workspace?.approval_due_default_hours ?? 0)}
+              disabled={!isAdmin || updateWorkspace.isPending}
+              onValueChange={(v) => updateWorkspace.mutate({ approval_due_default_hours: Number(v) })}
+            >
+              <SelectTrigger id="due-default" className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Platform default ({describeHours(deadlineOptions.data.platform_default_hours)})</SelectItem>
+                {deadlineHourPresets(deadlineOptions.data).map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {describeHours(h)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="flex items-start justify-between gap-4 rounded-[12px] bg-muted px-4 py-3.5">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="cert-verify" className="font-semibold">
+              Anyone can check our approval certificates
+            </Label>
+            <span className="text-[13px] text-muted-foreground">
+              A client or auditor types the certificate number on the verify page and sees that it’s genuine: who approved, when, and the
+              fingerprint. Never the post itself. Only the owner can change it.
+            </span>
+          </div>
+          <Switch
+            id="cert-verify"
+            checked={workspace?.certificate_verification_enabled ?? true}
+            disabled={!isOwner || updateWorkspace.isPending}
+            onCheckedChange={(v) => updateWorkspace.mutate({ certificate_verification_enabled: v })}
+          />
         </div>
       </Tile>
 

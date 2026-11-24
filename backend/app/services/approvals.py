@@ -177,17 +177,23 @@ async def release_contact_assignments(db, contact: BrandContact, *, reason: str)
     return len(posts)
 
 
-def release_one(db, post: Post, *, workspace_id: UUID, reason: str) -> None:
-    """Shared by the API (async) and the Beat sweep (sync): only add()s."""
+def release_one(db, post: Post, *, workspace_id: UUID, reason: str, overdue: bool = False) -> None:
+    """Shared by the API (async) and the Beat sweeps (sync): only add()s.
+    `overdue`: the reviewer didn't answer by the deadline (brand setting),
+    rather than losing the right to approve."""
     previous = current_assignee(post)
+    who = previous.name or "The reviewer"
     clear_assignee(post)
+    if overdue:
+        history = f"{who} didn't answer by the deadline. Moved to {ANY_MANAGER}."
+        message = f"{who} didn't answer {post_label(post)} by the deadline. It's now open to {ANY_MANAGER}."
+    else:
+        history = f"{who} can no longer approve ({reason}). Moved to {ANY_MANAGER}."
+        message = f"{who} can no longer approve {post_label(post)}. It's now open to {ANY_MANAGER}."
     db.add(snapshot(ApprovalLog(
         post_id=post.id, user_id=None, actor_name="System",
         action=ApprovalAction.REASSIGNED, content_hash_at_action=post.content_hash,
-        rejection_reason=f"{previous.name or 'The reviewer'} can no longer approve ({reason}). "
-                         f"Moved to {ANY_MANAGER}.",
+        rejection_reason=history,
     ), Assignee()))
     notify(db, workspace_id=workspace_id, user_ids=[post.created_by],
-           type=NotificationType.ASSIGNMENT_RELEASED, post_id=post.id,
-           message=f"{previous.name or 'The reviewer'} can no longer approve {post_label(post)}. "
-                   f"It's now open to {ANY_MANAGER}.")
+           type=NotificationType.ASSIGNMENT_RELEASED, post_id=post.id, message=message)

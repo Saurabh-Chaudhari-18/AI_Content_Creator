@@ -58,6 +58,10 @@ class Post(Base):
     assigned_contact_id = Column(UUID(as_uuid=True), ForeignKey("brand_contacts.id", ondelete="SET NULL"),
                                  nullable=True)
     assigned_name = Column(String(120), nullable=True)  # display snapshot of the assignee
+    # "Needed by" of the current (or latest) review round, and the submitter's
+    # IANA zone for reminder text (0009). Only meaningful while pending.
+    approval_due_at = Column(DateTime(timezone=True), nullable=True)
+    approval_due_tz = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -118,6 +122,8 @@ class ApprovalLog(Base):
     assigned_name = Column(String(120), nullable=True)
     # approved / rejected rows: False when someone other than the assignee acted.
     acted_by_assignee = Column(Boolean, nullable=True)
+    # submitted rows: the deadline of that review round (0009).
+    due_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     post = relationship("Post", back_populates="approval_logs")

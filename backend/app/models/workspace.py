@@ -40,6 +40,9 @@ class Workspace(Base):
     # Agency's default client-link lifetime in minutes. NULL = platform
     # default. Always clamped into the platform min/max when a link is made.
     approval_link_default_minutes = Column(Integer, nullable=True)
+    # Approval deadlines & certificates (0009). NULL = the platform default.
+    approval_due_default_hours = Column(Integer, nullable=True)
+    certificate_verification_enabled = Column(Boolean, nullable=False, server_default="true", default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

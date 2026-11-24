@@ -32,6 +32,10 @@ class ReviewerChoice(BaseModel):
     assign_to_contact_id: Optional[UUID] = None
     # Only used when a client contact is chosen (a link is created).
     expires_in_minutes: Optional[int] = Field(None, ge=1)
+    # "Needed by" (with its UTC offset). Omitted = the brand / workspace default.
+    due_at: Optional[datetime] = None
+    # The submitter's IANA zone, e.g. "Asia/Kolkata" — for reminder wording only.
+    due_tz: Optional[str] = Field(None, max_length=50)
 
     @model_validator(mode="after")
     def one_reviewer(self):
@@ -242,6 +246,7 @@ class PublicReceipt(BaseModel):
     decided_at: datetime
     version: int
     fingerprint: str         # first 12 characters of the content hash
+    certificate_id: Optional[str] = None   # "K7Q2-M9XD-4TPA" once approved (receipt, verify page)
 
 
 class PublicViewResponse(BaseModel):
@@ -257,3 +262,31 @@ class PublicViewResponse(BaseModel):
     platforms: list[PublicPlatformPreview] = []
     media: list[PublicMedia] = []
     receipt: Optional[PublicReceipt] = None
+
+
+# ── Approval deadlines: reminders (0009) ──────────────────────────────
+class DeadlineOptionsResponse(BaseModel):
+    enabled: bool                 # the plan includes deadlines and reminders
+    default_hours: int            # for this brand (brand → workspace → platform)
+    min_hours: int
+    max_hours: int
+    escalate_after_hours: int     # for this brand
+    workspace_default_hours: Optional[int] = None   # NULL = following the platform default
+    platform_default_hours: int
+
+
+class ReminderCreate(BaseModel):
+    """A person tapped "Send reminder": WhatsApp / email open on THEIR device
+    (or the text was copied). We record that it was sent, not delivered."""
+    channel: Literal["whatsapp", "email", "copy"]
+
+
+class ReminderResponse(BaseModel):
+    id: UUID
+    stage: str               # due_soon | overdue | escalated | manual_nudge
+    channel: str             # in_app | whatsapp | email | copy
+    recipient_name: Optional[str] = None
+    created_by: Optional[UUID] = None       # None = sent by the system
+    created_by_name: Optional[str] = None
+    submission_log_id: UUID
+    created_at: datetime

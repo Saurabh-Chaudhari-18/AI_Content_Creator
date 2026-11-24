@@ -16,8 +16,8 @@ from app.core.dependencies import client_ip
 from app.core.rate_limit import public_link_rate_limit, record_invalid_token
 from app.db.session import get_db
 from app.models import (
-    ApprovalAction, ApprovalLinkDecision, ApprovalLog, AuditAction, NotificationType, PostStatus,
-    SocialAccount, SocialPlatform,
+    ApprovalAction, ApprovalCertificate, ApprovalLinkDecision, ApprovalLog, AuditAction, NotificationType,
+    PostStatus, SocialPlatform,
 )
 from app.core.security import resolve_platform_content
 from app.schemas.approvals import (
@@ -25,6 +25,7 @@ from app.schemas.approvals import (
     PublicViewResponse,
 )
 from app.services import approvals as reviewers
+from app.services import certificates
 from app.services.approval_links import LinkProblem, check_usable, resolve_public_link, utcnow
 from app.services.audit import record_audit_event
 from app.services.publishing.factory import get_adapter
@@ -41,23 +42,24 @@ def _problem(exc: LinkProblem) -> JSONResponse:
                         headers=_HEADERS)
 
 
-def _receipt(link, version_hash: str) -> PublicReceipt | None:
+def _receipt(link, version_hash: str, certificate_id: str | None = None) -> PublicReceipt | None:
     if link.decision is None:
         return None
     return PublicReceipt(decision=link.decision.value, name=link.recipient_name, decided_at=link.decided_at,
-                         version=link.version_at_share, fingerprint=version_hash[:12])
+                         version=link.version_at_share, fingerprint=version_hash[:12],
+                         certificate_id=certificates.display_id(certificate_id) if certificate_id else None)
 
 
-async def _platforms(db, post, workspace_id) -> list[str]:
-    """The platforms the client should see (D7): every platform with an
-    override, plus every platform the workspace has an active account on;
-    all three when neither tells us."""
-    chosen = {k for k in (post.platform_targets or {}) if k in {p.value for p in SocialPlatform}}
-    accounts = (await db.scalars(select(SocialAccount.platform).where(
-        SocialAccount.workspace_id == workspace_id, SocialAccount.is_active.is_(True)))).all()
-    chosen |= {p.value for p in accounts}
-    order = [p.value for p in SocialPlatform]
-    return [p for p in order if p in chosen] or order
+async def _certificate_for(db, link) -> str | None:
+    """The certificate this link's approval produced (receipt, R6)."""
+    return await db.scalar(
+        select(ApprovalCertificate.public_id)
+        .join(ApprovalLog, ApprovalLog.id == ApprovalCertificate.approval_log_id)
+        .where(ApprovalLog.approval_link_id == link.id, ApprovalLog.action == ApprovalAction.APPROVED)
+    )
+
+
+_platforms = certificates.platforms_for
 
 
 @router.post("/view", response_model=PublicViewResponse)
@@ -88,7 +90,9 @@ async def view(req: PublicTokenRequest, request: Request, response: Response, db
     body = PublicViewResponse(
         state=state, message=message, agency_name=workspace.name, brand_name=brand.name,
         brand_logo_url=brand.logo_url, recipient_name=link.recipient_name, version=link.version_at_share,
-        expires_at=link.expires_at, server_now=now, receipt=_receipt(link, link.content_hash_at_share),
+        expires_at=link.expires_at, server_now=now,
+        receipt=_receipt(link, link.content_hash_at_share,
+                         await _certificate_for(db, link) if link.decision is not None else None),
     )
     # The content itself only while the link can still be acted on, or to
     # remind the client what THEY decided. Never after someone else decided
@@ -141,6 +145,11 @@ async def decide(req: PublicDecideRequest, request: Request, response: Response,
     ), assignee)
     log.acted_by_assignee = by_assignee
     db.add(log)
+    certificate_id = None
+    if approve:
+        await db.flush()   # the certificate needs the row's id and time
+        certificate_id = (await certificates.issue(db, post=post, brand=brand, workspace=workspace,
+                                                   approval=log, link=link)).public_id
     record_audit_event(
         db, action=AuditAction.APPROVE if approve else AuditAction.REJECT, entity_type="Post",
         entity_id=post.id, workspace_id=workspace.id, user_id=None, user_email="",
@@ -160,4 +169,4 @@ async def decide(req: PublicDecideRequest, request: Request, response: Response,
     await db.commit()
     for key, value in _HEADERS.items():
         response.headers[key] = value
-    return _receipt(link, link.content_hash_at_share)
+    return _receipt(link, link.content_hash_at_share, certificate_id)

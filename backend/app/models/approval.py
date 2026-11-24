@@ -5,19 +5,23 @@
 - ApprovalLink: one shareable link for one pending post. Only the SHA-256 of
   the token is stored; the raw token is shown once, at creation.
 - Notification: the in-app bell.
+- ApprovalReminder (0009): one row per reminder of a review round.
+- ApprovalCertificate (0009): written once, at approval; outlives the post.
 
-Plan: docs/client_approval_link_plan.md.
+Plans: docs/client_approval_link_plan.md, docs/approval_reminders_certificate_plan.md.
 """
 import uuid
 
 from sqlalchemy import (
     Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, func, text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-from app.models.enums import ApprovalLinkDecision, NotificationType, pg_enum
+from app.models.enums import (
+    ApprovalLinkDecision, NotificationType, ReminderChannel, ReminderStage, pg_enum,
+)
 
 
 class BrandContact(Base):
@@ -95,3 +99,52 @@ class Notification(Base):
     message = Column(String(300), nullable=False)
     read_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+
+
+class ApprovalReminder(Base):
+    """Append-only. The partial unique index (submission_log_id, stage) for
+    system stages is what makes the Beat job send each stage once per round,
+    even with two workers running."""
+    __tablename__ = "approval_reminders"
+    __table_args__ = (
+        Index("uq_approval_reminders_stage_once", "submission_log_id", "stage", unique=True,
+              postgresql_where=text("stage <> 'manual_nudge'")),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    submission_log_id = Column(UUID(as_uuid=True), ForeignKey("approval_logs.id", ondelete="CASCADE"),
+                               nullable=False)
+    stage = Column(pg_enum(ReminderStage, "reminder_stage"), nullable=False)
+    channel = Column(pg_enum(ReminderChannel, "reminder_channel"), nullable=False)
+    recipient_name = Column(String(120), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ApprovalCertificate(Base):
+    """Proof of exactly what was approved. Written in the approval's own
+    transaction and never updated: "superseded" and the publish outcome are
+    worked out when it is read. post_id / approval_log_id go NULL when the
+    post is deleted; the snapshot keeps the certificate meaningful."""
+    __tablename__ = "approval_certificates"
+    __table_args__ = (
+        Index("uq_approval_certificates_log", "approval_log_id", unique=True,
+              postgresql_where=text("approval_log_id IS NOT NULL")),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    public_id = Column(String(16), nullable=False, unique=True, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey("brands.id", ondelete="SET NULL"), nullable=True)
+    post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="SET NULL"), nullable=True, index=True)
+    approval_log_id = Column(UUID(as_uuid=True), ForeignKey("approval_logs.id", ondelete="SET NULL"),
+                             nullable=True)
+    content_hash = Column(String(64), nullable=False)
+    version = Column(Integer, nullable=False)
+    approved_at = Column(DateTime(timezone=True), nullable=False)
+    snapshot = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

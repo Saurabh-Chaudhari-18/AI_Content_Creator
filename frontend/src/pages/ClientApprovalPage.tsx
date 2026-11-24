@@ -5,7 +5,7 @@
  * server; this page posts it in a request body instead. Light theme, built
  * for a phone first. Plan: docs/client_approval_link_plan.md §6.
  */
-import { Check, CircleAlert, Clock, MessageSquareText, ShieldCheck, TimerOff } from "lucide-react";
+import { Check, CircleAlert, Clock, MessageSquareText, Printer, ShieldCheck, TimerOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SafeImage } from "@/components/SafeImage";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Schemas } from "@/lib/api";
 import { deadlineLabel } from "@/lib/approvals";
+import { usePublicPageChrome } from "@/lib/publicPage";
 import { cn } from "@/lib/utils";
 
 type View = Schemas["PublicViewResponse"];
@@ -46,28 +47,6 @@ async function post<T>(path: string, body: unknown): Promise<{ ok: true; data: T
   } catch {
     return { ok: false, status: 0, error: { code: "offline", detail: "Can’t reach the server. Check your connection and try again." } };
   }
-}
-
-/** Clients aren't app users: always the light theme, never indexed. */
-function usePublicPageChrome() {
-  useEffect(() => {
-    const root = document.documentElement;
-    const wasDark = root.classList.contains("dark");
-    // After the app's theme effect has run on first paint.
-    const t = window.setTimeout(() => root.classList.remove("dark"), 0);
-    const meta = document.createElement("meta");
-    meta.name = "robots";
-    meta.content = "noindex, nofollow";
-    document.head.appendChild(meta);
-    const title = document.title;
-    document.title = "Review a post";
-    return () => {
-      window.clearTimeout(t);
-      meta.remove();
-      document.title = title;
-      if (wasDark) root.classList.add("dark");
-    };
-  }, []);
 }
 
 function useCountdown(expiresAt: string | undefined, serverNow: string | undefined) {
@@ -143,14 +122,38 @@ function ReceiptCard({ receipt, agency }: { receipt: Receipt; agency: string }) 
         <dd className="m-0 text-foreground">{receipt.version}</dd>
         <dt className="text-muted-foreground">Fingerprint</dt>
         <dd className="m-0 font-mono text-foreground">{receipt.fingerprint}</dd>
+        {receipt.certificate_id && (
+          <>
+            <dt className="text-muted-foreground">Certificate</dt>
+            <dd className="m-0 font-mono text-foreground">{receipt.certificate_id}</dd>
+          </>
+        )}
       </dl>
-      <p className="m-0 mt-3 text-xs">Keep this screen if you need proof of what you {approved ? "approved" : "reviewed"}.</p>
+      {receipt.certificate_id ? (
+        <>
+          <p className="m-0 mt-3 text-xs">
+            Save your receipt. Anyone can check this certificate number on the verify page, and see who approved it and when.
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2 print:hidden">
+            <Button asChild variant="outline" size="sm">
+              <a href={`/verify/${receipt.certificate_id}`} target="_blank" rel="noopener noreferrer">
+                <ShieldCheck aria-hidden="true" /> Check the certificate
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer aria-hidden="true" /> Print or save as PDF
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="m-0 mt-3 text-xs">Keep this screen if you need proof of what you {approved ? "approved" : "reviewed"}.</p>
+      )}
     </Notice>
   );
 }
 
 export function ClientApprovalPage() {
-  usePublicPageChrome();
+  usePublicPageChrome("Review a post");
   const token = useMemo(() => decodeURIComponent(window.location.hash.replace(/^#/, "")), []);
   const [view, setView] = useState<View | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);

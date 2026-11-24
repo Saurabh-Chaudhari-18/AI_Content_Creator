@@ -1,9 +1,13 @@
 import { Printer } from "lucide-react";
 import { useId } from "react";
+import { toast } from "sonner";
 
 import { SafeImage } from "@/components/SafeImage";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { ApiError } from "@/lib/api";
+import { useCertificate, verifyUrl, type Certificate } from "@/lib/approvals";
+import { PLATFORM_NAME, ROLE_LABEL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** "e82f…91a" — the readable short form of a content fingerprint. */
@@ -85,81 +89,282 @@ export function ApprovalSeal({
   );
 }
 
-export type CertificateData = {
-  brandName: string;
-  postTitle: string;
-  version: number;
-  caption: string;
-  hashtags: string[];
-  imageUrl?: string;
-  submittedBy: string;
-  approvedBy: string;
-  approvedAt: string;
-  hash: string;
-};
+type CertificateView = Certificate;
 
 const certDate = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeStyle: "short" });
+const shortDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-/** A one-page approval certificate. "Print or save as PDF" prints only this page. */
-export function ApprovalCertificate({ open, onOpenChange, data }: { open: boolean; onOpenChange: (o: boolean) => void; data: CertificateData }) {
-  const tags = data.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ");
+function fmt(iso: string | null | undefined, style: Intl.DateTimeFormat = certDate): string {
+  return iso ? style.format(new Date(iso)) : "—";
+}
+
+/** "3 h 20 min", "2 days 4 h" — how long a decision took. */
+function duration(fromIso: string | null | undefined, toIso: string | null | undefined): string | null {
+  if (!fromIso || !toIso) return null;
+  const min = Math.max(0, Math.round((new Date(toIso).getTime() - new Date(fromIso).getTime()) / 60_000));
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 48) return `${h} h${min % 60 ? ` ${min % 60} min` : ""}`;
+  return `${Math.floor(h / 24)} days${h % 24 ? ` ${h % 24} h` : ""}`;
+}
+
+const TRAIL_TEXT: Record<string, string> = {
+  submitted: "Sent for approval",
+  approved: "Approved",
+  rejected: "Changes requested",
+  invalidated: "Back to draft",
+  reassigned: "Reviewer changed",
+};
+
+type Approval = {
+  brand_name?: string;
+  workspace_name?: string;
+  submitted_by?: string | null;
+  submitted_at?: string | null;
+  due_at?: string | null;
+  approver?: { name: string; kind: string; role: string | null };
+  assigned_name?: string | null;
+  acted_by_assignee?: boolean | null;
+  link?: { recipient_name: string; sent_by: string; sent_at: string; first_viewed_at: string | null; decided_at: string | null } | null;
+  reminders?: { system: number; manual: number };
+  backfilled?: boolean;
+};
+
+type Content = { title?: string | null; caption?: string; hashtags?: string[]; cta?: string | null; platforms?: { platform: string; text: string }[] };
+
+function CertificateBody({ cert, onCopy }: { cert: CertificateView; onCopy: () => void }) {
+  const a = cert.approval as Approval;
+  const c = cert.content as Content;
+  const tags = (c.hashtags ?? []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ");
+  const approver = a.approver;
+  const approverText = approver
+    ? approver.kind === "client"
+      ? `${approver.name} (client, through an approval link)`
+      : `${approver.name}${approver.role ? `, ${ROLE_LABEL[approver.role] ?? approver.role}` : ""}`
+    : "—";
+  const onTime = a.due_at ? new Date(cert.approved_at) <= new Date(a.due_at) : null;
   const rows: [string, string][] = [
-    ["Brand", data.brandName],
-    ["Post", `${data.postTitle} · version ${data.version}`],
-    ["Submitted by", data.submittedBy],
-    ["Approved by", data.approvedBy],
-    ["Approved on", certDate.format(new Date(data.approvedAt))],
+    ["Brand", a.brand_name ?? "—"],
+    ["Post", `${c.title || "Untitled post"} · version ${cert.version}`],
+    ["Sent by", `${a.submitted_by ?? "—"}${a.submitted_at ? ` · ${fmt(a.submitted_at)}` : ""}`],
   ];
+  if (a.due_at) rows.push(["Needed by", `${fmt(a.due_at)}${onTime === null ? "" : onTime ? " · approved in time" : " · approved after the deadline"}`]);
+  rows.push(["Approved by", approverText]);
+  if (a.acted_by_assignee === false && a.assigned_name) rows.push(["On behalf of", a.assigned_name]);
+  rows.push(["Approved on", fmt(cert.approved_at)]);
+  const took = duration(a.submitted_at, cert.approved_at);
+  if (took) rows.push(["Time to approve", took]);
+  const reminders = a.reminders && a.reminders.system + a.reminders.manual > 0
+    ? [a.reminders.system && `${a.reminders.system} automatic`, a.reminders.manual && `${a.reminders.manual} sent by the team`].filter(Boolean).join(", ")
+    : null;
+  if (reminders) rows.push(["Reminders", reminders]);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="cert-print gap-0 border-0 bg-transparent p-0 text-[#1a2030] shadow-none sm:max-w-[760px]">
-        <article className="overflow-hidden rounded-2xl bg-[#fbfaf6] shadow-[0_32px_64px_-24px_rgb(0_0_0/0.7)] print:shadow-none">
-          <header className="flex items-start justify-between gap-6 px-6 pt-8 sm:px-10 sm:pt-10">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-medium text-[#3730a3]">
-                <span className="grid size-6 place-items-center rounded-md bg-[#4f46e5] text-xs text-white">O</span>OmniPost
-              </p>
-              <DialogTitle className="mt-6 font-serif text-4xl leading-[1.05] font-normal tracking-[-0.02em] text-[#141a29] sm:text-[44px]">
-                Approval certificate
-              </DialogTitle>
-              <DialogDescription className="mt-2 text-sm text-[#4b5565]">Proof of exactly what was approved, by whom, and when</DialogDescription>
-            </div>
-            <ApprovalSeal hash={data.hash} version={data.version} state="approved" className="-mt-2 hidden size-[136px] flex-none sm:block" />
-          </header>
+    <article className="overflow-hidden rounded-2xl bg-[#fbfaf6] shadow-[0_32px_64px_-24px_rgb(0_0_0/0.7)] print:rounded-none print:shadow-none">
+      <header className="flex items-start justify-between gap-6 px-6 pt-8 sm:px-10 sm:pt-10">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-medium text-[#3730a3]">
+            <span className="grid size-6 place-items-center rounded-md bg-[#4f46e5] text-xs text-white">O</span>OmniPost
+          </p>
+          <DialogTitle className="mt-6 font-serif text-4xl leading-[1.05] font-normal tracking-[-0.02em] text-[#141a29] sm:text-[44px]">
+            Approval certificate
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-[#4b5565]">Proof of exactly what was approved, by whom, and when</DialogDescription>
+          <p className="m-0 mt-3 font-mono text-xs tracking-wide text-[#3730a3]">No. {cert.id}</p>
+        </div>
+        <ApprovalSeal hash={cert.fingerprint} version={cert.version} state="approved" className="-mt-2 hidden size-[136px] flex-none sm:block" />
+      </header>
 
-          <div className="mx-6 mt-8 flex gap-5 rounded-xl border border-[#e5e2da] bg-white p-4 sm:mx-10">
-            <SafeImage src={data.imageUrl} alt="" className="size-24 flex-none rounded-lg object-cover" />
-            <div className="min-w-0">
-              <p className="m-0 text-xs text-[#6b7487]">Approved content</p>
-              <p className="m-0 mt-1 text-sm leading-5 whitespace-pre-line text-[#141a29]">{data.caption}</p>
-              {tags && <p className="m-0 mt-1 text-sm text-[#3d5bd9]">{tags}</p>}
-            </div>
+      {cert.status !== "current" && (
+        <p className="mx-6 mt-6 rounded-lg border border-[#e8c98a] bg-[#fdf3dc] px-4 py-2.5 text-sm text-[#7a4a00] sm:mx-10">
+          {cert.status === "post_deleted"
+            ? "The post has since been deleted. This record of the approval is kept."
+            : `Superseded: the post changed after this approval${cert.superseded_by ? ` and was approved again (No. ${cert.superseded_by})` : ""}.`}
+        </p>
+      )}
+
+      <section className="mx-6 mt-8 rounded-xl border border-[#e5e2da] bg-white p-4 [break-inside:avoid] sm:mx-10">
+        <p className="m-0 text-xs text-[#6b7487]">Approved content</p>
+        {cert.media.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {cert.media.map((m) =>
+              m.url ? (
+                <SafeImage
+                  key={m.order}
+                  src={m.url}
+                  alt={m.alt_text ?? ""}
+                  className="size-20 rounded-lg object-cover"
+                  fallback={
+                    <span className="grid size-20 place-items-center rounded-lg border border-dashed border-[#d6d2c8] text-center text-[10px] text-[#6b7487]">
+                      {m.media_type} {m.order + 1}
+                      <br />
+                      couldn’t load
+                    </span>
+                  }
+                />
+              ) : (
+                <span key={m.order} className="grid size-20 place-items-center rounded-lg border border-dashed border-[#d6d2c8] text-center text-[10px] text-[#6b7487]">
+                  {m.media_type} {m.order + 1}
+                  <br />
+                  removed
+                </span>
+              ),
+            )}
           </div>
+        )}
+        <p className="m-0 mt-2 text-sm leading-5 whitespace-pre-line text-[#141a29]">{c.caption}</p>
+        {tags && <p className="m-0 mt-1 text-sm text-[#3d5bd9]">{tags}</p>}
+        {c.cta && <p className="m-0 mt-1 text-sm text-[#141a29]">Call to action: {c.cta}</p>}
+      </section>
 
-          <dl className="mx-6 mt-6 grid grid-cols-[120px_1fr] gap-x-6 gap-y-3 text-sm sm:mx-10 sm:grid-cols-[140px_1fr]">
-            {rows.map(([k, v]) => (
-              <div key={k} className="contents">
-                <dt className="text-[#6b7487]">{k}</dt>
-                <dd className="m-0 text-[#141a29]">{v}</dd>
+      {(c.platforms?.length ?? 0) > 0 && (
+        <section className="mx-6 mt-4 sm:mx-10">
+          <p className="m-0 text-xs text-[#6b7487]">Exactly as it goes out on each channel</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {c.platforms!.map((p) => (
+              <div key={p.platform} className="rounded-lg border border-[#e5e2da] bg-white px-3 py-2 [break-inside:avoid]">
+                <p className="m-0 text-xs font-medium text-[#3730a3]">{PLATFORM_NAME[p.platform] ?? p.platform}</p>
+                <p className="m-0 mt-1 line-clamp-6 text-xs leading-5 whitespace-pre-line text-[#141a29] print:line-clamp-none">{p.text}</p>
               </div>
             ))}
-            <dt className="text-[#6b7487]">Fingerprint</dt>
-            <dd className="m-0 font-mono text-xs leading-5 break-all text-[#141a29]">{data.hash}</dd>
-          </dl>
+          </div>
+        </section>
+      )}
 
-          <footer className="mx-6 mt-8 mb-8 flex flex-wrap items-end justify-between gap-6 border-t border-[#e5e2da] pt-5 sm:mx-10 sm:mb-10">
-            <p className="m-0 max-w-md text-xs leading-5 text-[#4b5565]">
-              The fingerprint is a SHA-256 of the caption, hashtags, call to action, media and per-channel wording. OmniPost checks it
-              again right before publishing. If anything changed, nothing is published and the post returns for approval.
-            </p>
-            <p className="m-0 flex-none font-mono text-xs text-[#6b7487]">No. OP-{data.hash.slice(0, 8).toUpperCase()}</p>
-          </footer>
-        </article>
+      <dl className="mx-6 mt-6 grid grid-cols-[120px_1fr] gap-x-6 gap-y-3 text-sm sm:mx-10 sm:grid-cols-[150px_1fr]">
+        {rows.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-[#6b7487]">{k}</dt>
+            <dd className="m-0 text-[#141a29]">{v}</dd>
+          </div>
+        ))}
+        {a.link && (
+          <>
+            <dt className="text-[#6b7487]">Client link</dt>
+            <dd className="m-0 text-[#141a29]">
+              Sent to {a.link.recipient_name} by {a.link.sent_by} on {fmt(a.link.sent_at, shortDate)}
+              {a.link.first_viewed_at ? `, first opened ${fmt(a.link.first_viewed_at, shortDate)}` : ""}
+              {a.link.decided_at ? `, answered ${fmt(a.link.decided_at, shortDate)}` : ""}
+            </dd>
+          </>
+        )}
+        <dt className="text-[#6b7487]">Fingerprint</dt>
+        <dd className="m-0 font-mono text-xs leading-5 break-all text-[#141a29]">{cert.fingerprint}</dd>
+      </dl>
+
+      {cert.trail.length > 0 && (
+        <section className="mx-6 mt-6 [break-inside:avoid] sm:mx-10">
+          <p className="m-0 text-xs text-[#6b7487]">Review history</p>
+          <ol className="m-0 mt-2 flex flex-col gap-1.5 p-0">
+            {(cert.trail as unknown as { action: string; by: string; at: string; note: string | null; via_link: boolean }[]).map((s, i) => (
+              <li key={i} className="flex list-none flex-wrap gap-x-3 text-xs text-[#141a29]">
+                <span className="w-32 flex-none font-mono text-[#6b7487]">{fmt(s.at, shortDate)}</span>
+                <span>
+                  {TRAIL_TEXT[s.action] ?? s.action} · {s.by}
+                  {s.via_link ? " (client link)" : ""}
+                  {s.note ? <span className="text-[#6b7487]"> — “{s.note}”</span> : null}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      <section className="mx-6 mt-6 [break-inside:avoid] sm:mx-10">
+        <p className="m-0 text-xs text-[#6b7487]">Published</p>
+        {cert.published.length === 0 ? (
+          <p className="m-0 mt-1 text-sm text-[#4b5565]">Not published yet.</p>
+        ) : (
+          <ul className="m-0 mt-2 flex flex-col gap-1.5 p-0">
+            {cert.published.map((p, i) => (
+              <li key={i} className="flex list-none flex-wrap items-baseline gap-x-2 text-sm text-[#141a29]">
+                <span className="font-medium">{PLATFORM_NAME[p.platform] ?? p.platform}</span>
+                {p.account_name && <span className="text-[#6b7487]">{p.account_name}</span>}
+                <span>
+                  {p.status === "completed"
+                    ? `went out ${fmt(p.published_at, shortDate)}`
+                    : p.status === "needs_review"
+                      ? "outcome unknown, being checked"
+                      : p.status === "failed"
+                        ? "didn’t publish"
+                        : "waiting to publish"}
+                </span>
+                {p.matched_fingerprint && <span className="text-xs text-[#15803d]">· matched the approved fingerprint</span>}
+                {p.url && (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#3d5bd9] print:hidden">
+                    View post
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <footer className="mx-6 mt-8 mb-8 flex flex-wrap items-end justify-between gap-6 border-t border-[#e5e2da] pt-5 sm:mx-10 sm:mb-10">
+        <p className="m-0 max-w-md text-xs leading-5 text-[#4b5565]">
+          The fingerprint is a SHA-256 of the caption, hashtags, call to action, media and per-channel wording. OmniPost checks it again right
+          before publishing. If anything changed, nothing is published and the post returns for approval.
+          {cert.verification_enabled && (
+            <>
+              {" "}
+              Anyone can check this certificate at <span className="font-mono break-all text-[#3730a3]">{verifyUrl(cert.id)}</span>
+            </>
+          )}
+        </p>
+        <div className="flex flex-col items-end gap-1">
+          <p className="m-0 flex-none font-mono text-xs text-[#6b7487]">Issued {fmt(cert.issued_at, shortDate)}</p>
+          {a.backfilled && <p className="m-0 text-[10px] text-[#6b7487]">Issued from the approval record</p>}
+          {cert.verification_enabled && (
+            <button type="button" onClick={onCopy} className="no-print text-xs text-[#3d5bd9] underline-offset-2 hover:underline">
+              Copy verify link
+            </button>
+          )}
+        </div>
+      </footer>
+    </article>
+  );
+}
+
+/** The approval certificate, built by the server from the approval record.
+ * "Print or save as PDF" prints only this sheet. */
+export function ApprovalCertificate({ open, onOpenChange, postId }: { open: boolean; onOpenChange: (o: boolean) => void; postId: string }) {
+  const cert = useCertificate(postId, open);
+  async function copyVerify() {
+    if (!cert.data) return;
+    try {
+      await navigator.clipboard.writeText(verifyUrl(cert.data.id));
+      toast.success("Verify link copied.");
+    } catch {
+      toast.error("Couldn’t copy the link.");
+    }
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="cert-print max-h-[92svh] gap-0 overflow-y-auto border-0 bg-transparent p-0 text-[#1a2030] shadow-none sm:max-w-[760px]"
+      >
+        {cert.isLoading ? (
+          <div className="rounded-2xl bg-[#fbfaf6] p-10 text-sm text-[#4b5565]">
+            <DialogTitle className="sr-only">Approval certificate</DialogTitle>
+            <DialogDescription>Loading the certificate…</DialogDescription>
+          </div>
+        ) : cert.isError || !cert.data ? (
+          <div className="rounded-2xl bg-[#fbfaf6] p-10 text-sm text-[#4b5565]">
+            <DialogTitle className="sr-only">Approval certificate</DialogTitle>
+            <DialogDescription>
+              {cert.error instanceof ApiError ? cert.error.message : "Couldn’t load the certificate. Try again in a moment."}
+            </DialogDescription>
+          </div>
+        ) : (
+          <CertificateBody cert={cert.data} onCopy={copyVerify} />
+        )}
         <div className="no-print mt-4 flex justify-end gap-2">
           <Button variant="outline" className="h-10 text-foreground" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button className="btn-depth h-10" onClick={() => window.print()}>
+          <Button className="btn-depth h-10" disabled={!cert.data} onClick={() => window.print()}>
             <Printer aria-hidden="true" /> Print or save as PDF
           </Button>
         </div>

@@ -644,6 +644,26 @@ export interface paths {
         patch: operations["update_contact_api_v1_brands__brand_id__contacts__contact_id__patch"];
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/approval-deadline-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Deadline Options
+         * @description What the "Needed by" picker and the deadline settings may offer.
+         */
+        get: operations["deadline_options_api_v1_workspaces__workspace_id__approval_deadline_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/approval-link-options": {
         parameters: {
             query?: never;
@@ -791,6 +811,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/posts/{post_id}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reminders
+         * @description Every reminder for the post, all review rounds, newest first.
+         */
+        get: operations["list_reminders_api_v1_posts__post_id__reminders_get"];
+        put?: never;
+        /**
+         * Record Reminder
+         * @description Record that someone nudged the reviewer from their own WhatsApp or
+         *     email. Managers, the author, or whoever shared one of the post's links.
+         */
+        post: operations["record_reminder_api_v1_posts__post_id__reminders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/approval/view": {
         parameters: {
             query?: never;
@@ -823,6 +868,65 @@ export interface paths {
          *     checked here, on the server's clock, at the moment of deciding (D5).
          */
         post: operations["decide_api_v1_public_approval_decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/posts/{post_id}/certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Post Certificate
+         * @description The post's latest certificate (issued now for posts approved before
+         *     certificates existed, if their content still matches).
+         */
+        get: operations["post_certificate_api_v1_posts__post_id__certificate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/certificates/{certificate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Certificate By Id
+         * @description Any certificate of the caller's own workspaces, also after its post
+         *     was deleted. Another workspace's number answers 404, like an unknown one.
+         */
+        get: operations["certificate_by_id_api_v1_certificates__certificate_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/certificates/{certificate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify */
+        get: operations["verify_api_v1_public_certificates__certificate_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2452,6 +2556,8 @@ export interface components {
             assigned_name?: string | null;
             /** Acted By Assignee */
             acted_by_assignee?: boolean | null;
+            /** Due At */
+            due_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -2579,18 +2685,12 @@ export interface components {
         };
         /** Body_upload_brand_logo_api_v1_brands__brand_id__logo_post */
         Body_upload_brand_logo_api_v1_brands__brand_id__logo_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_upload_media_api_v1_media_upload_post */
         Body_upload_media_api_v1_media_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
             /**
              * Post Id
@@ -2713,6 +2813,15 @@ export interface components {
             brand_guidelines?: Record<string, never> | null;
             /** Is Active */
             is_active: boolean;
+            /** Approval Due Hours */
+            approval_due_hours?: number | null;
+            /** Approval Escalate After Hours */
+            approval_escalate_after_hours?: number | null;
+            /**
+             * Approval Release When Overdue
+             * @default false
+             */
+            approval_release_when_overdue: boolean;
             /**
              * Created At
              * Format: date-time
@@ -2740,6 +2849,12 @@ export interface components {
             logo_url?: string | null;
             /** Brand Guidelines */
             brand_guidelines?: Record<string, never> | null;
+            /** Approval Due Hours */
+            approval_due_hours?: number | null;
+            /** Approval Escalate After Hours */
+            approval_escalate_after_hours?: number | null;
+            /** Approval Release When Overdue */
+            approval_release_when_overdue?: boolean | null;
         };
         /** CalendarPost */
         CalendarPost: {
@@ -2811,6 +2926,48 @@ export interface components {
             /** Is Active */
             is_active: boolean;
         };
+        /** CertificateMedia */
+        CertificateMedia: {
+            /** Media Type */
+            media_type: string;
+            /** Order */
+            order: number;
+            /** Alt Text */
+            alt_text?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** CertificateResponse */
+        CertificateResponse: {
+            /** Id */
+            id: string;
+            /** Post Id */
+            post_id?: string | null;
+            /** Fingerprint */
+            fingerprint: string;
+            /** Version */
+            version: number;
+            /** Approved At */
+            approved_at: string;
+            /** Issued At */
+            issued_at: string;
+            /** Status */
+            status: string;
+            /** Superseded By */
+            superseded_by?: string | null;
+            /** Verification Enabled */
+            verification_enabled: boolean;
+            /** Content */
+            content: Record<string, never>;
+            /** Media */
+            media: components["schemas"]["CertificateMedia"][];
+            /** Approval */
+            approval: Record<string, never>;
+            /** Trail */
+            trail: Record<string, never>[];
+            /** Published */
+            published: components["schemas"]["PublishedEntry"][];
+        };
         /** ConnectStartResponse */
         ConnectStartResponse: {
             /** Authorization Url */
@@ -2831,6 +2988,23 @@ export interface components {
             phone?: string | null;
             /** Email */
             email?: string | null;
+        };
+        /** DeadlineOptionsResponse */
+        DeadlineOptionsResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Default Hours */
+            default_hours: number;
+            /** Min Hours */
+            min_hours: number;
+            /** Max Hours */
+            max_hours: number;
+            /** Escalate After Hours */
+            escalate_after_hours: number;
+            /** Workspace Default Hours */
+            workspace_default_hours?: number | null;
+            /** Platform Default Hours */
+            platform_default_hours: number;
         };
         /** FeatureOverride */
         FeatureOverride: {
@@ -3223,6 +3397,10 @@ export interface components {
             assigned_contact_id?: string | null;
             /** Assigned Name */
             assigned_name?: string | null;
+            /** Approval Due At */
+            approval_due_at?: string | null;
+            /** Approval Due Tz */
+            approval_due_tz?: string | null;
         };
         /**
          * PostStatus
@@ -3241,6 +3419,34 @@ export interface components {
             cta?: string | null;
             /** Platform Targets */
             platform_targets?: Record<string, never> | null;
+        };
+        /** PublicCertificateResponse */
+        PublicCertificateResponse: {
+            /**
+             * Valid
+             * @default true
+             */
+            valid: boolean;
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /** Agency Name */
+            agency_name: string;
+            /** Brand Name */
+            brand_name: string;
+            /** Version */
+            version: number;
+            /** Approved At */
+            approved_at: string;
+            /** Approved By */
+            approved_by: string;
+            /** Approver Kind */
+            approver_kind: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /** Published */
+            published: Record<string, never>[];
         };
         /** PublicDecideRequest */
         PublicDecideRequest: {
@@ -3289,6 +3495,8 @@ export interface components {
             version: number;
             /** Fingerprint */
             fingerprint: string;
+            /** Certificate Id */
+            certificate_id?: string | null;
         };
         /** PublicTokenRequest */
         PublicTokenRequest: {
@@ -3338,6 +3546,21 @@ export interface components {
             /** Social Account Ids */
             social_account_ids: string[];
         };
+        /** PublishedEntry */
+        PublishedEntry: {
+            /** Platform */
+            platform: string;
+            /** Account Name */
+            account_name?: string | null;
+            /** Status */
+            status: string;
+            /** Url */
+            url?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Matched Fingerprint */
+            matched_fingerprint: boolean;
+        };
         /** Reasoned */
         Reasoned: {
             /** Reason */
@@ -3359,6 +3582,46 @@ export interface components {
         RejectRequest: {
             /** Reason */
             reason: string;
+        };
+        /**
+         * ReminderCreate
+         * @description A person tapped "Send reminder": WhatsApp / email open on THEIR device
+         *     (or the text was copied). We record that it was sent, not delivered.
+         */
+        ReminderCreate: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "whatsapp" | "email" | "copy";
+        };
+        /** ReminderResponse */
+        ReminderResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Stage */
+            stage: string;
+            /** Channel */
+            channel: string;
+            /** Recipient Name */
+            recipient_name?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /**
+             * Submission Log Id
+             * Format: uuid
+             */
+            submission_log_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * RetryRequest
@@ -3388,6 +3651,10 @@ export interface components {
             assign_to_contact_id?: string | null;
             /** Expires In Minutes */
             expires_in_minutes?: number | null;
+            /** Due At */
+            due_at?: string | null;
+            /** Due Tz */
+            due_tz?: string | null;
         };
         /** ScheduleRequest */
         ScheduleRequest: {
@@ -3554,6 +3821,10 @@ export interface components {
             assigned_contact_id?: string | null;
             /** Assigned Name */
             assigned_name?: string | null;
+            /** Approval Due At */
+            approval_due_at?: string | null;
+            /** Approval Due Tz */
+            approval_due_tz?: string | null;
             approval_link?: components["schemas"]["NewLinkResponse"] | null;
         };
         /** SuggestedReviewer */
@@ -3723,6 +3994,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /** WorkspaceCreate */
         WorkspaceCreate: {
@@ -3781,6 +4056,13 @@ export interface components {
             allow_self_approval: boolean;
             /** Approval Link Default Minutes */
             approval_link_default_minutes?: number | null;
+            /** Approval Due Default Hours */
+            approval_due_default_hours?: number | null;
+            /**
+             * Certificate Verification Enabled
+             * @default true
+             */
+            certificate_verification_enabled: boolean;
             /**
              * Created At
              * Format: date-time
@@ -3805,6 +4087,10 @@ export interface components {
             allow_self_approval?: boolean | null;
             /** Approval Link Default Minutes */
             approval_link_default_minutes?: number | null;
+            /** Approval Due Default Hours */
+            approval_due_default_hours?: number | null;
+            /** Certificate Verification Enabled */
+            certificate_verification_enabled?: boolean | null;
         };
     };
     responses: never;
@@ -4571,6 +4857,8 @@ export interface operations {
                 brand_id?: string | null;
                 /** @description `me`: posts waiting for MY approval */
                 assigned_to?: string | null;
+                /** @description Only posts waiting for approval past their deadline */
+                overdue?: boolean;
                 page?: number;
                 limit?: number;
             };
@@ -5269,6 +5557,39 @@ export interface operations {
             };
         };
     };
+    deadline_options_api_v1_workspaces__workspace_id__approval_deadline_options_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineOptionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     link_options_api_v1_workspaces__workspace_id__approval_link_options_get: {
         parameters: {
             query?: never;
@@ -5557,6 +5878,72 @@ export interface operations {
             };
         };
     };
+    list_reminders_api_v1_posts__post_id__reminders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_reminder_api_v1_posts__post_id__reminders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     view_api_v1_public_approval_view_post: {
         parameters: {
             query?: never;
@@ -5610,6 +5997,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_certificate_api_v1_posts__post_id__certificate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    certificate_by_id_api_v1_certificates__certificate_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                certificate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_api_v1_public_certificates__certificate_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                certificate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCertificateResponse"];
                 };
             };
             /** @description Validation Error */

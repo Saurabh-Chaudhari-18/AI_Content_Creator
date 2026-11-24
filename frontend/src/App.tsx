@@ -21,6 +21,7 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ de
 const SetPasswordPage = lazy(() => import("@/pages/auth/SetPasswordPage").then((m) => ({ default: m.SetPasswordPage })));
 // The client approval page is public and tiny: its own chunk.
 const ClientApprovalPage = lazy(() => import("@/pages/ClientApprovalPage").then((m) => ({ default: m.ClientApprovalPage })));
+const VerifyCertificatePage = lazy(() => import("@/pages/VerifyCertificatePage").then((m) => ({ default: m.VerifyCertificatePage })));
 // The staff console is its own chunk: customers never download it.
 const AdminRoutes = lazy(() => import("@/admin/AdminRoutes"));
 
@@ -100,6 +101,9 @@ export default function App() {
       <Route path="/set-password" element={<Suspense fallback={<FullPageLoading />}><SetPasswordPage /></Suspense>} />
       {/* Client approval links (/a#<token>): no sign-in, the token stays in the fragment. */}
       <Route path="/a" element={<Suspense fallback={<FullPageLoading />}><ClientApprovalPage /></Suspense>} />
+      {/* Public: anyone holding a certificate number can check it (no account). */}
+      <Route path="/verify" element={<Suspense fallback={<FullPageLoading />}><VerifyCertificatePage /></Suspense>} />
+      <Route path="/verify/:id" element={<Suspense fallback={<FullPageLoading />}><VerifyCertificatePage /></Suspense>} />
       <Route path="/admin/*" element={<RequireStaff><Suspense fallback={<FullPageLoading />}><AdminRoutes /></Suspense></RequireStaff>} />
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={page(<HomePage />)} />

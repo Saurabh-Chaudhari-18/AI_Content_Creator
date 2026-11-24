@@ -104,6 +104,26 @@ class NotificationType(str, enum.Enum):
     MANAGER_REJECTED = "manager_rejected"
     LINK_EXPIRED = "link_expired"
     ASSIGNMENT_RELEASED = "assignment_released"
+    # Approval deadlines (0009)
+    APPROVAL_DUE_SOON = "approval_due_soon"
+    APPROVAL_OVERDUE = "approval_overdue"
+    APPROVAL_ESCALATED = "approval_escalated"
+
+
+class ReminderStage(str, enum.Enum):
+    """One row per stage per review round (0009). manual_nudge = a person
+    tapped "Send reminder"; it may repeat, the system stages may not."""
+    DUE_SOON = "due_soon"
+    OVERDUE = "overdue"
+    ESCALATED = "escalated"
+    MANUAL_NUDGE = "manual_nudge"
+
+
+class ReminderChannel(str, enum.Enum):
+    IN_APP = "in_app"
+    WHATSAPP = "whatsapp"   # the agency's own WhatsApp (wa.me) — we never send it
+    EMAIL = "email"         # the agency's own mail app (mailto:)
+    COPY = "copy"           # copied to the clipboard
 
 
 class SocialPlatform(str, enum.Enum):

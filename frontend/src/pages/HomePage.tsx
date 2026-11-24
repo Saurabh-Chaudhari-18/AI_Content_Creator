@@ -51,6 +51,8 @@ export function HomePage() {
   // One wide read of recent posts drives most cards; per-status totals stay exact.
   const recent = useWorkspacePosts({ limit: 100 });
   const pending = useWorkspacePosts({ status: "pending_approval", limit: 5 });
+  // Waiting past their "Needed by" (approval deadlines).
+  const overdue = useWorkspacePosts({ overdue: true, limit: 1 });
   const approved = useWorkspacePosts({ status: "approved", limit: 5 });
   const failed = useWorkspacePosts({ status: "failed", limit: 5 });
   const partial = useWorkspacePosts({ status: "partially_published", limit: 5 });
@@ -297,6 +299,14 @@ export function HomePage() {
               <Stat value={scheduled.isLoading ? "–" : String(upcoming.length)} label="Next 7 days" />
               <Stat value={pending.isLoading ? "–" : String(pending.data?.total ?? 0)} label="Waiting for you" to={`/posts?status=pending_approval${brandQuery}`} />
             </div>
+            {(overdue.data?.total ?? 0) > 0 && (
+              <Link
+                to={`/posts?status=overdue${brandQuery}`}
+                className="-mt-1 rounded-xl border border-danger-border bg-danger-soft px-3 py-2 text-sm text-danger no-underline hover:opacity-90"
+              >
+                {overdue.data!.total} {overdue.data!.total === 1 ? "post is" : "posts are"} past the approval deadline. See them
+              </Link>
+            )}
           </Tile>
 
           <Tile aria-labelledby="activity-h" className="gap-4 p-6">
