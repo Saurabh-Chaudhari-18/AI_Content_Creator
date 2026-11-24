@@ -31,7 +31,7 @@ from app.models import (
     Post, PostStatus, PublishJob, SocialAccount, UsageLog, User, Workspace,
 )
 from app.schemas.schemas import (
-    AccountValidation, ApprovalLogResponse, JobResponse, MessageResponse, PostCreate,
+    AccountValidation, ApprovalLogResponse, HomeResponse, JobResponse, MessageResponse, PostCreate,
     PostListResponse, PostMediaResponse, PostResponse, PostUpdate,
     PublishNowRequest, RejectRequest, RetryRequest, ScheduleRequest, ScheduleResponse,
     ValidateRequest, ValidateResponse,
@@ -189,6 +189,49 @@ async def list_workspace_posts(
     )
     return PostListResponse(items=[post_schema(p) for p in result.scalars().all()],
                             total=total, page=page, limit=limit)
+
+
+@router.get("/workspaces/{workspace_id}/home", response_model=HomeResponse)
+async def workspace_home(
+    workspace_id: UUID,
+    brand_id: Optional[UUID] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Home's post cards in one round trip (it used to make seven requests).
+    Same tenancy as the list above: membership in the PATH workspace; a
+    brand_id from another workspace simply matches nothing."""
+    await get_workspace_member(workspace_id, db, user)
+    scope = [Brand.workspace_id == workspace_id]
+    if brand_id:
+        scope.append(Post.brand_id == brand_id)
+
+    def posts(*where, order=Post.updated_at.desc(), limit: int = 5):
+        return (select(Post).join(Brand, Brand.id == Post.brand_id).where(*scope, *where)
+                .options(selectinload(Post.media)).order_by(order).limit(limit))
+
+    counts = {status.value: count for status, count in (await db.execute(
+        select(Post.status, func.count(Post.id)).join(Brand, Brand.id == Post.brand_id)
+        .where(*scope).group_by(Post.status)
+    )).all()}
+    counts["overdue"] = await db.scalar(
+        select(func.count(Post.id)).join(Brand, Brand.id == Post.brand_id)
+        .where(*scope, Post.status == PostStatus.PENDING_APPROVAL, Post.approval_due_at < func.now())
+    ) or 0
+
+    async def listed(stmt) -> list[PostResponse]:
+        return [post_schema(p) for p in (await db.scalars(stmt)).all()]
+
+    return HomeResponse(
+        counts=counts,
+        recent=await listed(posts(limit=100)),
+        pending_approval=await listed(posts(Post.status == PostStatus.PENDING_APPROVAL)),
+        approved=await listed(posts(Post.status == PostStatus.APPROVED)),
+        failed=await listed(posts(Post.status == PostStatus.FAILED)),
+        partially_published=await listed(posts(Post.status == PostStatus.PARTIALLY_PUBLISHED)),
+        scheduled=await listed(posts(Post.status == PostStatus.SCHEDULED,
+                                     order=Post.scheduled_at.asc().nulls_last(), limit=50)),
+    )
 
 
 @router.post("/brands/{brand_id}/posts", response_model=PostResponse,

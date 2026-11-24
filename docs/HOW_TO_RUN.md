@@ -64,13 +64,23 @@ The first output is `SECRET_KEY`, the second is `FERNET_KEY`.
 
 > ⚠️ Never commit `.env` (git already ignores it). Never change `FERNET_KEY` after social accounts are connected — the saved tokens can no longer be read.
 
-### A3. Install backend packages
+### A3. Install backend packages (in the project's own Python environment)
 
 **Where:** `backend`
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 ```
+
+The packages go into `backend\.venv`, not your computer's Python, so other projects can't break this one (and the reverse).
+`scripts\setup.ps1` does the same. **Run `.\.venv\Scripts\Activate.ps1` in every new backend terminal** before the
+`python …` commands below; the prompt then starts with `(.venv)`.
+
+> After pulling new code, run `python -m pip install -r requirements.txt` again (with the environment active):
+> new features sometimes need new packages. A `ModuleNotFoundError` such as `No module named 'sentry_sdk'` means
+> this step was missed, or the command ran without `(.venv)`.
 
 ### A4. Start the database and create the tables
 
@@ -325,6 +335,7 @@ docker compose stop
 | `Port 5173 is in use` | Same as above for the web app | Same fix with `:5173` |
 | API stops at startup with `SECRET_KEY` / `FERNET_KEY` / `DATABASE_URL` error | `.env` missing or wrong | Redo A2 |
 | `relation "…" does not exist` | Tables not created / not updated | `python -m alembic upgrade head` |
+| `ModuleNotFoundError: No module named '…'` | Packages missing, or the command ran outside `backend\.venv` | `.\.venv\Scripts\Activate.ps1`, then `python -m pip install -r requirements.txt` |
 | Worker starts but posts never publish | Missing `--pool=solo`, or scheduler not running | Use the exact B5 command; start B6 |
 | Blank web page the first time | Vite still preparing files | Wait 5 s, reload |
 | Browser console shows `POST /api/v1/auth/refresh 403` on the sign-in page | Normal: you are not signed in yet | Nothing to fix |

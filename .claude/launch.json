@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "api",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
       "runtimeArgs": [
         "-c",
         "import os, sys; os.chdir('backend'); sys.path.insert(0, '.'); import uvicorn; uvicorn.run('app.main:app', host='127.0.0.1', port=8000)"
@@ -24,7 +24,7 @@
     },
     {
       "name": "worker",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
       "runtimeArgs": [
         "-c",
         "import os, sys; os.chdir('backend'); sys.path.insert(0, '.'); from app.workers.celery_app import celery_app; celery_app.worker_main(['worker', '--loglevel=info', '--pool=solo'])"
@@ -32,7 +32,7 @@
     },
     {
       "name": "beat",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
       "runtimeArgs": [
         "-c",
         "import os, sys; os.chdir('backend'); sys.path.insert(0, '.'); from app.workers.celery_app import celery_app; celery_app.start(['beat', '--loglevel=info'])"

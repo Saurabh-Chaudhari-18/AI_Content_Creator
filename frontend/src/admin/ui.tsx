@@ -4,6 +4,7 @@ import { createContext, Fragment, useContext, useEffect, useId, type ReactNode }
 import { Link } from "react-router";
 
 import { ApiError } from "@/lib/api";
+import { PRODUCT_NAME } from "@/lib/product";
 
 import { useWorkspaceNames, type AuditRow } from "./api";
 
@@ -44,7 +45,7 @@ export function useCrumbs(crumbs: Crumb[]) {
   useEffect(() => {
     set(JSON.parse(key) as Crumb[]);
     const last = (JSON.parse(key) as Crumb[]).at(-1)?.[0];
-    document.title = last ? `${last}, OmniPost staff console` : "OmniPost staff console";
+    document.title = last ? `${last}, ${PRODUCT_NAME} staff console` : `${PRODUCT_NAME} staff console`;
   }, [key, set]);
 }
 

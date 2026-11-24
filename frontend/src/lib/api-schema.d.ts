@@ -373,6 +373,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Workspace Home
+         * @description Home's post cards in one round trip (it used to make seven requests).
+         *     Same tenancy as the list above: membership in the PATH workspace; a
+         *     brand_id from another workspace simply matches nothing.
+         */
+        get: operations["workspace_home_api_v1_workspaces__workspace_id__home_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/posts/{post_id}": {
         parameters: {
             query?: never;
@@ -3125,6 +3147,28 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HomeResponse
+         * @description Everything Home shows about posts, in one request.
+         */
+        HomeResponse: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Recent */
+            recent: components["schemas"]["PostResponse"][];
+            /** Pending Approval */
+            pending_approval: components["schemas"]["PostResponse"][];
+            /** Approved */
+            approved: components["schemas"]["PostResponse"][];
+            /** Failed */
+            failed: components["schemas"]["PostResponse"][];
+            /** Partially Published */
+            partially_published: components["schemas"]["PostResponse"][];
+            /** Scheduled */
+            scheduled: components["schemas"]["PostResponse"][];
+        };
         /** JobResponse */
         JobResponse: {
             /**
@@ -5000,6 +5044,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workspace_home_api_v1_workspaces__workspace_id__home_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeResponse"];
                 };
             };
             /** @description Validation Error */

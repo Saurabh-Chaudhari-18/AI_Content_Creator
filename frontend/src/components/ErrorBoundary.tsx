@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { reportError } from "@/lib/monitoring";
+import { PRODUCT_NAME } from "@/lib/product";
 
 const RELOAD_FLAG = "omnipost:chunk-reload";
 
@@ -68,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
         className={`mx-auto flex max-w-md flex-col items-center gap-3 px-4 text-center ${this.props.fullPage ? "min-h-svh justify-center" : "pt-16"}`}
       >
         <h1 className="m-0 text-lg font-semibold">
-          {updated ? "OmniPost was updated" : "Something went wrong on this screen"}
+          {updated ? `${PRODUCT_NAME} was updated` : "Something went wrong on this screen"}
         </h1>
         <p className="m-0 text-muted-foreground">
           {updated

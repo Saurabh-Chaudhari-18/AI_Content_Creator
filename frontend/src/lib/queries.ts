@@ -40,6 +40,19 @@ export function useWorkspacePosts(opts: { status?: Post["status"]; overdue?: boo
   });
 }
 
+export type Home = Schemas["HomeResponse"];
+
+/** Home's post cards in one request, honouring the brand filter. */
+export function useHome() {
+  const { workspace, brandId } = useWorkspace();
+  return useQuery({
+    queryKey: [...keys.wsPosts(workspace?.id), brandId, "home"],
+    queryFn: () =>
+      api<Home>(`/workspaces/${workspace!.id}/home`, { query: { brand_id: brandId === ALL_BRANDS ? undefined : brandId } }),
+    enabled: !!workspace,
+  });
+}
+
 export function useAccounts() {
   const { workspace } = useWorkspace();
   return useQuery({

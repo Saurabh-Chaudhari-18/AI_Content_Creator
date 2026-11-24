@@ -408,6 +408,17 @@ class PostListResponse(BaseModel):
     limit: int
 
 
+class HomeResponse(BaseModel):
+    """Everything Home shows about posts, in one request."""
+    counts: dict[str, int]              # posts per status, plus "overdue"
+    recent: list[PostResponse]          # the 100 most recently changed
+    pending_approval: list[PostResponse]
+    approved: list[PostResponse]
+    failed: list[PostResponse]
+    partially_published: list[PostResponse]
+    scheduled: list[PostResponse]       # up to 50, soonest first
+
+
 class RejectRequest(BaseModel):
     reason: str = Field(..., max_length=2_000)
 

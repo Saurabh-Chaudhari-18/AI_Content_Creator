@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ApprovalSeal } from "@/pages/posts/Seal";
+import { PRODUCT_INITIAL, PRODUCT_NAME } from "@/lib/product";
 
 /** Sign-in / register frame: the "Sign in" artboard of the chosen design. */
 export function AuthLayout({ children }: { children: ReactNode }) {
@@ -9,8 +10,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <main className="mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-4 md:grid-cols-12">
         <section className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-[var(--radius-tile)] border bg-card p-8 md:col-span-7 md:row-span-2 md:p-9">
           <div className="flex items-center gap-2.5">
-            <span aria-hidden="true" className="grid size-9 place-items-center rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground">O</span>
-            <span className="text-base font-semibold">OmniPost</span>
+            <span aria-hidden="true" className="grid size-9 place-items-center rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground">{PRODUCT_INITIAL}</span>
+            <span className="text-base font-semibold">{PRODUCT_NAME}</span>
           </div>
           <ApprovalSeal
             hash="e82f4c1b9a7d03e65f28c4b1d9e07a3f6b25c8d14e9f702a6b3c58d1e4f791a"

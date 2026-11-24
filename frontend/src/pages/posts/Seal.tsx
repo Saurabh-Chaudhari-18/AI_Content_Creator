@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api";
 import { useCertificate, verifyUrl, type Certificate } from "@/lib/approvals";
 import { PLATFORM_NAME, ROLE_LABEL } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { PRODUCT_INITIAL, PRODUCT_NAME } from "@/lib/product";
 
 /** "e82f…91a" — the readable short form of a content fingerprint. */
 export function shortHash(hash: string | null | undefined): string {
@@ -34,7 +35,7 @@ export function ApprovalSeal({
 }) {
   const id = useId().replace(/:/g, "");
   const ring = state === "approved"
-    ? `APPROVED · V${version} · ${shortHash(hash).toUpperCase()} · OMNIPOST ·`
+    ? `APPROVED · V${version} · ${shortHash(hash).toUpperCase()} · ${PRODUCT_NAME.toUpperCase()} ·`
     : `AWAITING APPROVAL · V${version} · ${shortHash(hash).toUpperCase()} ·`;
   return (
     <svg
@@ -164,7 +165,8 @@ function CertificateBody({ cert, onCopy }: { cert: CertificateView; onCopy: () =
       <header className="flex items-start justify-between gap-6 px-6 pt-8 sm:px-10 sm:pt-10">
         <div>
           <p className="flex items-center gap-2 text-sm font-medium text-[#3730a3]">
-            <span className="grid size-6 place-items-center rounded-md bg-[#4f46e5] text-xs text-white">O</span>OmniPost
+            <span className="grid size-6 place-items-center rounded-md bg-[#4f46e5] text-xs text-white">{PRODUCT_INITIAL}</span>
+              {PRODUCT_NAME}
           </p>
           <DialogTitle className="mt-6 font-serif text-4xl leading-[1.05] font-normal tracking-[-0.02em] text-[#141a29] sm:text-[44px]">
             Approval certificate
@@ -303,7 +305,7 @@ function CertificateBody({ cert, onCopy }: { cert: CertificateView; onCopy: () =
 
       <footer className="mx-6 mt-8 mb-8 flex flex-wrap items-end justify-between gap-6 border-t border-[#e5e2da] pt-5 sm:mx-10 sm:mb-10">
         <p className="m-0 max-w-md text-xs leading-5 text-[#4b5565]">
-          The fingerprint is a SHA-256 of the caption, hashtags, call to action, media and per-channel wording. OmniPost checks it again right
+          The fingerprint is a SHA-256 of the caption, hashtags, call to action, media and per-channel wording. {PRODUCT_NAME} checks it again right
           before publishing. If anything changed, nothing is published and the post returns for approval.
           {cert.verification_enabled && (
             <>

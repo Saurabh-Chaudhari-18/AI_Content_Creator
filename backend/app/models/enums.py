@@ -108,6 +108,8 @@ class NotificationType(str, enum.Enum):
     APPROVAL_DUE_SOON = "approval_due_soon"
     APPROVAL_OVERDUE = "approval_overdue"
     APPROVAL_ESCALATED = "approval_escalated"
+    # Publishing (0011): a post failed or only partly went out.
+    PUBLISH_FAILED = "publish_failed"
 
 
 class ReminderStage(str, enum.Enum):

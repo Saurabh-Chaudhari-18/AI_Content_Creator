@@ -164,26 +164,31 @@ export function PostsPage() {
                     className="group flex items-center gap-3 rounded-xl border-t px-2 py-3.5 text-foreground no-underline hover:bg-muted/60 md:gap-4"
                   >
                     <PostThumb post={p} brand={brands.find((b) => b.id === p.brand_id)} className="size-12 self-start md:self-center" />
-                    <div className="flex min-w-0 flex-1 flex-col">
+                    {/* The title always keeps room: the columns beside it are what give way. */}
+                    <div className="flex min-w-[9rem] flex-1 flex-col">
                       <span className="truncate font-semibold">{p.title || "Untitled post"}</span>
                       <span className="line-clamp-1 text-[13px] text-muted-foreground">{p.caption || "No caption yet"}</span>
-                      {/* Phones: brand, time and status fold under the title. */}
-                      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground md:hidden">
-                        <StatusBadge status={p.status} />
-                        <DueChip post={p} />
+                      {/* Narrower screens: brand and time fold under the title (and the status, on phones). */}
+                      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground lg:hidden">
+                        <span className="contents md:hidden">
+                          <StatusBadge status={p.status} />
+                          <DueChip post={p} />
+                        </span>
                         <span>{brandName(p.brand_id)} · {when ? formatDateTime(when) : "Not scheduled"}</span>
                       </span>
                     </div>
-                    <span className="hidden w-32 shrink-0 truncate text-[13px] text-muted-foreground md:block">{brandName(p.brand_id)}</span>
-                    <span className="hidden w-40 shrink-0 text-[13px] text-muted-foreground md:block">{when ? formatDateTime(when) : "Not scheduled"}</span>
-                    <span className="hidden w-44 shrink-0 flex-col items-start gap-1 md:flex">
+                    <span className="hidden w-44 min-w-0 shrink flex-col text-[13px] text-muted-foreground lg:flex">
+                      <span className="truncate">{brandName(p.brand_id)}</span>
+                      <span className="truncate">{when ? formatDateTime(when) : "Not scheduled"}</span>
+                    </span>
+                    <span className="hidden w-40 shrink-0 flex-col items-start gap-1 md:flex">
                       <StatusBadge status={p.status} />
                       <DueChip post={p} />
                     </span>
                     {/* The whole row opens the post; this names what you'll do there. */}
                     <span
                       aria-hidden="true"
-                      className="hidden h-9 w-28 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold text-accent-foreground group-hover:bg-surface-active lg:inline-flex"
+                      className="hidden h-9 w-28 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold text-accent-foreground group-hover:bg-surface-active xl:inline-flex"
                     >
                       {next}
                     </span>

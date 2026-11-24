@@ -12,7 +12,7 @@ import { accountHealth } from "@/lib/accountHealth";
 import { api, type Post, type UsageSummary } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatDateTime, humanize, platformName } from "@/lib/format";
-import { keys, platformEnabled, useAccounts, useFeatures, useTemplates, useWorkspacePosts } from "@/lib/queries";
+import { keys, platformEnabled, useAccounts, useFeatures, useHome, useTemplates } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
 
@@ -48,15 +48,23 @@ export function HomePage() {
   const { workspace, brands, brandId, brandName } = useWorkspace();
   const firstName = user?.full_name.split(" ")[0] ?? "";
 
-  // One wide read of recent posts drives most cards; per-status totals stay exact.
-  const recent = useWorkspacePosts({ limit: 100 });
-  const pending = useWorkspacePosts({ status: "pending_approval", limit: 5 });
-  // Waiting past their "Needed by" (approval deadlines).
-  const overdue = useWorkspacePosts({ overdue: true, limit: 1 });
-  const approved = useWorkspacePosts({ status: "approved", limit: 5 });
-  const failed = useWorkspacePosts({ status: "failed", limit: 5 });
-  const partial = useWorkspacePosts({ status: "partially_published", limit: 5 });
-  const scheduled = useWorkspacePosts({ status: "scheduled", limit: 50 });
+  // One request for every post card: recent posts, a preview per status with
+  // exact totals, and the overdue count (it used to be seven requests).
+  const home = useHome();
+  const part = (items: Post[] | undefined, total?: number) => ({
+    data: home.data && items ? { items, total: total ?? items.length } : undefined,
+    isLoading: home.isLoading,
+    isError: home.isError,
+    refetch: home.refetch,
+  });
+  const counts = home.data?.counts ?? {};
+  const recent = part(home.data?.recent);
+  const pending = part(home.data?.pending_approval, counts.pending_approval ?? 0);
+  const overdue = part(home.data ? [] : undefined, counts.overdue ?? 0);
+  const approved = part(home.data?.approved, counts.approved ?? 0);
+  const failed = part(home.data?.failed, counts.failed ?? 0);
+  const partial = part(home.data?.partially_published, counts.partially_published ?? 0);
+  const scheduled = part(home.data?.scheduled, counts.scheduled ?? 0);
   const accounts = useAccounts();
   const features = useFeatures();
   const usage = useQuery({

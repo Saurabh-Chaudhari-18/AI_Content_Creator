@@ -14,6 +14,7 @@ import type { Schemas } from "@/lib/api";
 import { PLATFORM_NAME } from "@/lib/format";
 import { usePublicPageChrome } from "@/lib/publicPage";
 import { cn } from "@/lib/utils";
+import { PRODUCT_INITIAL, PRODUCT_NAME } from "@/lib/product";
 
 type PublicCertificate = Schemas["PublicCertificateResponse"];
 type Lookup = { state: "idle" | "loading" } | { state: "found"; cert: PublicCertificate } | { state: "missing" | "error"; message: string };
@@ -64,7 +65,8 @@ export function VerifyCertificatePage() {
       <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-10 pb-20">
         <header className="flex flex-col gap-2">
           <p className="m-0 flex items-center gap-2 text-sm font-medium text-primary">
-            <span className="grid size-6 place-items-center rounded-md bg-primary text-xs text-primary-foreground">O</span>OmniPost
+            <span className="grid size-6 place-items-center rounded-md bg-primary text-xs text-primary-foreground">{PRODUCT_INITIAL}</span>
+            {PRODUCT_NAME}
           </p>
           <h1 className="m-0 font-serif text-4xl leading-tight font-normal">Check an approval certificate</h1>
           <p className="m-0 text-sm text-muted-foreground">
