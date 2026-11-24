@@ -21,6 +21,8 @@ class User(Base):
     # Granted from the command line / admin panel, never by the customer API.
     platform_role = Column(pg_enum(PlatformRole, "platform_role"), nullable=True)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
+    # "Email me about approvals" (0010). In-app notifications are not affected.
+    email_notifications = Column(Boolean, nullable=False, server_default="true", default=True)
     # UI preference, restored on every login on any device.
     theme_preference = Column(
         pg_enum(ThemePreference, "theme_preference"), nullable=False,

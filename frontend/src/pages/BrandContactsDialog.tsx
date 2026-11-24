@@ -144,6 +144,7 @@ export function BrandContactsDialog({ brand, canEdit, onClose }: { brand: Brand;
                           <Mail className="size-3" aria-hidden="true" /> {c.email}
                         </span>
                       )}
+                      {c.email_opted_out && <span className="text-warning">Asked us to stop reminder emails</span>}
                     </p>
                   </div>
                   {canEdit && (

@@ -43,6 +43,9 @@ class Workspace(Base):
     # Approval deadlines & certificates (0009). NULL = the platform default.
     approval_due_default_hours = Column(Integer, nullable=True)
     certificate_verification_enabled = Column(Boolean, nullable=False, server_default="true", default=True)
+    # Email deadline reminders to client contacts automatically (0010). Off
+    # until the agency decides we may write to its clients.
+    email_client_reminders = Column(Boolean, nullable=False, server_default="false", default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

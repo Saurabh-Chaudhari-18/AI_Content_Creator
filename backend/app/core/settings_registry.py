@@ -106,6 +106,12 @@ SETTINGS: tuple[SettingDef, ...] = (
         minimum=1, maximum=2160,
     ),
     SettingDef(
+        "max_emails_per_workspace_per_day", "integer", 200,
+        "The most emails one workspace may send in 24 hours (reminders and notifications). "
+        "Emails over the cap are skipped; in-app notifications still arrive.",
+        minimum=10, maximum=10000,
+    ),
+    SettingDef(
         "approval_escalate_default_hours", "integer", 24,
         "How long after the deadline an unanswered post is escalated to all managers, "
         "when the brand has not set its own delay, in hours.",

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 import { WorkspaceProvider } from "@/lib/workspace";
 import { LoginPage } from "@/pages/auth/LoginPage";
+import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 
 // Each screen is its own chunk: the sign-in page doesn't download Post Studio.
@@ -21,6 +22,7 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ de
 const SetPasswordPage = lazy(() => import("@/pages/auth/SetPasswordPage").then((m) => ({ default: m.SetPasswordPage })));
 // The client approval page is public and tiny: its own chunk.
 const ClientApprovalPage = lazy(() => import("@/pages/ClientApprovalPage").then((m) => ({ default: m.ClientApprovalPage })));
+const EmailStopPage = lazy(() => import("@/pages/EmailStopPage").then((m) => ({ default: m.EmailStopPage })));
 const VerifyCertificatePage = lazy(() => import("@/pages/VerifyCertificatePage").then((m) => ({ default: m.VerifyCertificatePage })));
 // The staff console is its own chunk: customers never download it.
 const AdminRoutes = lazy(() => import("@/admin/AdminRoutes"));
@@ -97,11 +99,14 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+      <Route path="/forgot-password" element={<GuestOnly><ForgotPasswordPage /></GuestOnly>} />
       {/* Setup links from the staff console point here; open to anyone holding a link. */}
       <Route path="/set-password" element={<Suspense fallback={<FullPageLoading />}><SetPasswordPage /></Suspense>} />
       {/* Client approval links (/a#<token>): no sign-in, the token stays in the fragment. */}
       <Route path="/a" element={<Suspense fallback={<FullPageLoading />}><ClientApprovalPage /></Suspense>} />
       {/* Public: anyone holding a certificate number can check it (no account). */}
+      {/* Public: a client stops reminder emails from the link in one of them. */}
+      <Route path="/email/stop" element={<Suspense fallback={<FullPageLoading />}><EmailStopPage /></Suspense>} />
       <Route path="/verify" element={<Suspense fallback={<FullPageLoading />}><VerifyCertificatePage /></Suspense>} />
       <Route path="/verify/:id" element={<Suspense fallback={<FullPageLoading />}><VerifyCertificatePage /></Suspense>} />
       <Route path="/admin/*" element={<RequireStaff><Suspense fallback={<FullPageLoading />}><AdminRoutes /></Suspense></RequireStaff>} />

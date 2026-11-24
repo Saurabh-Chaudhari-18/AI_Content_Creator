@@ -386,10 +386,14 @@ async def submit_for_approval(post_id: UUID, request: Request,
             expires_at=created.link.expires_at, expiry_minutes=created.link.expiry_minutes,
         )
     elif assignee.user_id:
+        asked = f"{user.full_name} asked you to approve {reviewers.post_label(post)}"
         reviewers.notify(db, workspace_id=member.workspace_id, user_ids=[assignee.user_id],
                          type=NotificationType.ASSIGNED, post_id=post.id, actor_name=user.full_name,
-                         exclude=user.id,
-                         message=f"{user.full_name} asked you to approve {reviewers.post_label(post)}.")
+                         exclude=user.id, message=f"{asked}.")
+        needed = f" It's needed by {deadlines.format_deadline(due_at, post.approval_due_tz)}." if due_at else ""
+        await reviewers.email_users(db, workspace=workspace, user_ids=[assignee.user_id], exclude=user.id,
+                                    kind="approval_assigned", post_id=post.id,
+                                    headline=f"{asked} for {brand.name}.{needed}")
     await db.commit()
     await db.refresh(post)
     return SubmitResponse(**post_schema(post).model_dump(), approval_link=new_link)

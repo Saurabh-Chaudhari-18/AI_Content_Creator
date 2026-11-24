@@ -5,6 +5,7 @@ from app.models.enums import (
     AlertStatus,
     ApprovalAction,
     ApprovalLinkDecision,
+    EmailStatus,
     NotificationType,
     AuditAction,
     FeatureValueType,
@@ -33,7 +34,7 @@ from app.models.platform import (
     UserSetupToken, WorkspaceFeatureOverride,
 )
 from app.models.approval import (
-    ApprovalCertificate, ApprovalLink, ApprovalReminder, BrandContact, Notification,
+    ApprovalCertificate, ApprovalLink, ApprovalReminder, BrandContact, EmailOutbox, Notification,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "UserSetupToken", "UsageDaily", "AdminAlert",
     "ApprovalLinkDecision", "NotificationType", "ApprovalLink", "BrandContact", "Notification",
     "ApprovalReminder", "ApprovalCertificate", "ReminderStage", "ReminderChannel",
+    "EmailOutbox", "EmailStatus",
 ]

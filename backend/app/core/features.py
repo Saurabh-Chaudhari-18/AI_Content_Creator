@@ -63,6 +63,10 @@ FEATURES: tuple[FeatureDef, ...] = (
     FeatureDef("approval_reminders", "Approval deadlines and reminders",
                "Give each post sent for approval a deadline, remind reviewers before and after it, "
                "and escalate overdue posts to the managers.", _BOOL, "Approvals"),
+    # ── Notifications (0010) ──────────────────────────────────────────
+    FeatureDef("email_notifications", "Email notifications",
+               "Email managers about posts waiting for them, deadline reminders and overdue posts, "
+               "and (when the workspace switches it on) remind clients by email.", _BOOL, "Notifications"),
     # ── Workspace ─────────────────────────────────────────────────────
     FeatureDef("max_brands", "Brands",
                "How many brands the workspace can manage.", _LIMIT, "Workspace"),

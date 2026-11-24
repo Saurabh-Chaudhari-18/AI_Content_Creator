@@ -16,7 +16,9 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, delete, exists, func, or_, select
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import and_, delete, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import aliased
 
@@ -30,6 +32,7 @@ from app.models import (
 )
 from app.services import approval_deadlines as deadlines
 from app.services import approvals as reviewers
+from app.services import email as mailer
 from app.services.features import resolve_features_bulk_sync
 from app.workers.celery_app import celery_app
 
@@ -209,13 +212,19 @@ def _managers(db, workspace: Workspace, cache: dict) -> list:
     return cache[workspace.id]
 
 
-def _client_status(db, post: Post) -> tuple[list, str]:
-    """Who shared the post's open links, and whether the client opened one."""
-    links = db.scalars(
+def _open_links(db, post: Post) -> list:
+    """The post's undecided, unrevoked links for its current content, newest first."""
+    return list(db.scalars(
         select(ApprovalLink).where(ApprovalLink.post_id == post.id, ApprovalLink.decided_at.is_(None),
                                    ApprovalLink.revoked_at.is_(None),
                                    ApprovalLink.content_hash_at_share == post.content_hash)
-    ).all()
+        .order_by(ApprovalLink.created_at.desc())
+    ).all())
+
+
+def _client_status(db, post: Post) -> tuple[list, str]:
+    """Who shared the post's open links, and whether the client opened one."""
+    links = _open_links(db, post)
     sharers = [link.created_by for link in links] or [post.created_by]
     if any(link.first_viewed_at for link in links):
         seen = "They opened the link but haven't decided."
@@ -252,6 +261,35 @@ def _reminder(db, *, post: Post, workspace: Workspace, stage: ReminderStage, whe
     return recipients, f"{label} was due for approval at {when} and is now overdue."
 
 
+def _email_client(db, *, post: Post, brand: Brand, workspace: Workspace, stage: ReminderStage,
+                  when: str, now: datetime) -> bool:
+    """Remind the client contact by email (plan R1b). Only when the agency
+    switched it on, the client has an email and hasn't opted out, and they
+    still hold a link that works — otherwise the sharer's reminder (above)
+    is the one that matters. The link is never repeated: we don't have it."""
+    if not workspace.email_client_reminders or post.assigned_contact_id is None:
+        return False
+    contact = db.get(BrandContact, post.assigned_contact_id)
+    if not mailer.contact_can_be_emailed(contact):
+        return False
+    link = next((l for l in _open_links(db, post) if l.contact_id == contact.id and l.expires_at > now), None)
+    if link is None:
+        return False
+    sender = db.get(User, link.created_by)
+    zone = ZoneInfo(deadlines.valid_zone(post.approval_due_tz) or "UTC")
+    sent_on = link.created_at.astimezone(zone)
+    to = mailer.Recipient(contact.email, contact.name)
+    subject, text = mailer.client_reminder_email(
+        to=to, agency=workspace.name, brand=brand.name,
+        post_title=(post.title or "Untitled post").strip(), when=when,
+        overdue=stage == ReminderStage.OVERDUE, sent_by=sender.full_name if sender else None,
+        sent_on=f"{sent_on.day} {sent_on:%b}", stop_url=mailer.opt_out_url(contact.id),
+    )
+    mailer.queue(db, kind="client_reminder", to=to, subject=subject, text=text, workspace_id=workspace.id,
+                 post_id=post.id, reply_to=sender.email if sender and sender.is_active else None)
+    return True
+
+
 @celery_app.task(name="app.workers.tasks.approvals.send_approval_reminders")
 def send_approval_reminders() -> dict:
     now = datetime.now(timezone.utc)
@@ -279,7 +317,7 @@ def send_approval_reminders() -> dict:
             return {"sent": 0, "released": 0}
 
         features = resolve_features_bulk_sync(db, list({ws.id for _p, _b, ws, _s in rows}),
-                                              ("approval_reminders",))
+                                              ("approval_reminders", "email_notifications"))
         submitted_at = dict(db.execute(
             select(ApprovalLog.id, ApprovalLog.created_at)
             .where(ApprovalLog.id.in_([sid for *_x, sid in rows if sid is not None]))
@@ -312,6 +350,14 @@ def send_approval_reminders() -> dict:
                                             managers=_managers(db, workspace, managers_cache))
             reviewers.notify(db, workspace_id=workspace.id, user_ids=recipients,
                              type=_STAGE_NOTIFICATION[stage], post_id=post.id, message=message)
+            if features[workspace.id]["email_notifications"].enabled:
+                reviewers.email_users_sync(db, workspace=workspace, user_ids=recipients, post_id=post.id,
+                                           kind=f"approval_{stage.value}", headline=message)
+                if stage != ReminderStage.ESCALATED and _email_client(
+                        db, post=post, brand=brand, workspace=workspace, stage=stage, when=when, now=now):
+                    # Same transaction as the insert above: the row now says the client was emailed.
+                    db.execute(update(ApprovalReminder).where(ApprovalReminder.id == inserted)
+                               .values(channel=ReminderChannel.EMAIL))
             sent += 1
             if (stage == ReminderStage.ESCALATED and brand.approval_release_when_overdue
                     and reviewers.current_assignee(post).is_set):

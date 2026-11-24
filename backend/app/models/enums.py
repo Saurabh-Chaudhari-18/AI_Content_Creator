@@ -119,6 +119,13 @@ class ReminderStage(str, enum.Enum):
     MANUAL_NUDGE = "manual_nudge"
 
 
+class EmailStatus(str, enum.Enum):
+    QUEUED = "queued"
+    SENT = "sent"
+    FAILED = "failed"      # gave up after the retries
+    SKIPPED = "skipped"    # email is switched off, or the daily cap was reached
+
+
 class ReminderChannel(str, enum.Enum):
     IN_APP = "in_app"
     WHATSAPP = "whatsapp"   # the agency's own WhatsApp (wa.me) — we never send it

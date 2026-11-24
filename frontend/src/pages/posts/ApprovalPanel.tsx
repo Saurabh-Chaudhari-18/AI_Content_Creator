@@ -94,9 +94,9 @@ function ReminderEntry({ r }: { r: Reminder }) {
     r.stage === "manual_nudge"
       ? `${r.created_by_name ?? "Someone"} reminded ${who} ${CHANNEL_TEXT[r.channel] ?? ""}`.trim()
       : r.stage === "due_soon"
-        ? `Reminder: the deadline is near`
+        ? `Reminder: the deadline is near${r.channel === "email" ? `. ${who} was emailed` : ""}`
         : r.stage === "overdue"
-          ? "The deadline passed. The reviewer was reminded"
+          ? `The deadline passed. ${r.channel === "email" ? `${who} was emailed` : "The reviewer was reminded"}`
           : "Still waiting after the deadline. Every manager was told";
   return (
     <li className="relative flex list-none gap-4">

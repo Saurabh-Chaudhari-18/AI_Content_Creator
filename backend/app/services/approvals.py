@@ -197,3 +197,34 @@ def release_one(db, post: Post, *, workspace_id: UUID, reason: str, overdue: boo
     ), Assignee()))
     notify(db, workspace_id=workspace_id, user_ids=[post.created_by],
            type=NotificationType.ASSIGNMENT_RELEASED, post_id=post.id, message=message)
+
+
+# ── Email (docs/approval_reminders_certificate_plan.md §10) ────────────
+def _queue_approval_emails(db, recipients, *, workspace: Workspace, kind: str, headline: str, post_id: UUID) -> None:
+    from app.services import email as mailer
+
+    for to in recipients:
+        subject, text = mailer.approval_email(to=to, headline=headline, post_id=post_id,
+                                              workspace_name=workspace.name)
+        mailer.queue(db, kind=kind, to=to, subject=subject, text=text, workspace_id=workspace.id, post_id=post_id)
+
+
+async def email_users(db, *, workspace: Workspace, user_ids, kind: str, headline: str, post_id: UUID,
+                      exclude: UUID | None = None) -> None:
+    """The email twin of notify(): same people, minus those who switched
+    approval emails off, and only when the plan includes email."""
+    from app.services import email as mailer
+    from app.services.features import get_feature
+
+    if not (await get_feature(db, workspace.id, "email_notifications")).enabled:
+        return
+    recipients = await mailer.user_recipients(db, user_ids, exclude=exclude)
+    _queue_approval_emails(db, recipients, workspace=workspace, kind=kind, headline=headline, post_id=post_id)
+
+
+def email_users_sync(db, *, workspace: Workspace, user_ids, kind: str, headline: str, post_id: UUID) -> None:
+    """Worker version. The caller has already checked the plan feature."""
+    from app.services import email as mailer
+
+    recipients = mailer.user_recipients_sync(db, user_ids)
+    _queue_approval_emails(db, recipients, workspace=workspace, kind=kind, headline=headline, post_id=post_id)

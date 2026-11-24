@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.core.dependencies import client_ip, get_current_user, get_workspace_member, require_role
 from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
@@ -120,6 +121,17 @@ async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Re
         before["certificate_verification_enabled"] = workspace.certificate_verification_enabled
         workspace.certificate_verification_enabled = req.certificate_verification_enabled
         after["certificate_verification_enabled"] = req.certificate_verification_enabled
+    if req.email_client_reminders is not None:
+        # Writing to an agency's clients is the agency's decision, and only
+        # possible when this server can send email and the plan includes it.
+        if req.email_client_reminders:
+            if not settings.email_enabled:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail="Email isn't set up on this server yet, so reminders can't be emailed.")
+            await require_feature(db, workspace_id, "email_notifications")
+        before["email_client_reminders"] = workspace.email_client_reminders
+        workspace.email_client_reminders = req.email_client_reminders
+        after["email_client_reminders"] = req.email_client_reminders
     if after:
         record_audit_event(
             db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,

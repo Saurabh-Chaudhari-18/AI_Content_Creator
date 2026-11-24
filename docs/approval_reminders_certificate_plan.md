@@ -278,3 +278,54 @@ Built as planned, with these differences:
 
 Tests: `backend/tests/integration/test_approval_deadlines.py` (13) and
 `backend/tests/test_approval_deadlines_unit.py` (6).
+
+## 10. Email: automatic reminders and forgot-password (built 2026-11-24)
+
+Decision R1 moved from (a) to (a) + (b): the in-app bell and the one-tap nudge stay, and the system
+can now also send email. Nothing is sent until a mail server is configured, so the running cost
+starts only when the owner approves a provider.
+
+**How it works**
+- Any code that wants an email adds a row to `email_outbox` in its own transaction (migration
+  `0010_email_outbox`). The Beat job `send_queued_emails` (every minute) delivers it, retries up to
+  three times, then gives up. A slow or broken mail server never slows a request.
+- The body is stored encrypted and wiped once the email is sent or given up on (a password-reset
+  email carries a usable link).
+- Provider-neutral: `EMAIL_BACKEND=console | smtp | off` plus the `SMTP_*` settings in `.env`
+  (secrets stay out of the admin panel). `console` writes emails to the log for development and is
+  refused in production. `PRODUCT_NAME` is the name people see in emails.
+- Limits: plan feature `email_notifications` (on in every plan; the super admin can switch it per
+  plan or workspace) and platform setting `max_emails_per_workspace_per_day` (default 200; emails
+  over it are skipped, the bell still works).
+
+**Who gets what**
+
+| Email | To | When |
+|---|---|---|
+| "X asked you to approve…" | The assigned manager | On submit and on reassign |
+| Deadline near / passed / escalated | The same people as the bell | The reminder job's stages |
+| Client reminder | The assigned client contact | Deadline near and passed, only if all of: the workspace switched on "Remind clients by email automatically" (off by default), the contact has an email, has not opted out, and still holds a working link |
+| Reset your password | The account's address | `POST /auth/forgot-password` |
+
+- Each person can switch their own approval emails off (Settings → Email, `users.email_notifications`).
+- A client reminder never repeats the approval link (we only keep its fingerprint). It points to the
+  message that carried it, and replies go to whoever shared the link.
+- Every client reminder ends with a "stop these reminders" link (`/email/stop#<token>`, signed, never
+  stored). It sets `brand_contacts.email_opt_out_at`; only the client can set it, and the agency sees
+  "Asked us to stop reminder emails" on the contact.
+- When a client was emailed, the reminder row's channel is `email`, so the post's history says so.
+
+**Forgot password**
+- "Forgot password?" on the sign-in page → `/forgot-password`. The answer is the same whether or not
+  the address has an account. At most three emails per address per hour, plus the per-IP limit.
+- It reuses the existing one-time setup link and the `/set-password` page. With email off the endpoint
+  answers 503 with a plain explanation.
+
+**Not built yet:** email verification on sign-up, HTML templates with the agency's logo, bounce
+handling, WhatsApp Business API, and admin-panel counts of emails sent (the read-only grants exist).
+
+**Before switching on in production:** choose a provider and a sending domain, set SPF and DKIM for
+it, set `EMAIL_BACKEND=smtp`, and confirm the privacy policy mentions emails sent to clients on an
+agency's behalf (DPDP).
+
+Tests: `backend/tests/integration/test_email.py` (7) and `backend/tests/test_email_unit.py` (4).

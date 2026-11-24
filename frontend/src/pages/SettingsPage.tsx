@@ -36,7 +36,8 @@ const USAGE_LABEL: Record<string, string> = {
 
 export function SettingsPage() {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { user, setEmailNotifications } = useAuth();
+  const [savingEmailPref, setSavingEmailPref] = useState(false);
   const { workspace } = useWorkspace();
   const role = useMyRole();
   const isOwner = role === "owner";
@@ -60,6 +61,7 @@ export function SettingsPage() {
       approval_link_default_minutes?: number;
       approval_due_default_hours?: number;
       certificate_verification_enabled?: boolean;
+      email_client_reminders?: boolean;
     }) => api<Workspace>(`/workspaces/${workspace!.id}`, { method: "PATCH", body }),
     onSuccess: () => {
       toast.success("Saved.");
@@ -272,6 +274,59 @@ export function SettingsPage() {
         <p className="m-0 text-xs text-muted-foreground">
           Something not ticked is either not in your plan or paused for a while on our side. Posts already scheduled still go out.
         </p>
+      </Tile>
+
+      <Tile aria-labelledby="email-h" className="md:col-span-12">
+        <TileTitle id="email-h">Email</TileTitle>
+        {deadlineOptions.data && !deadlineOptions.data.email_enabled && (
+          <p className="m-0 text-[13px] text-muted-foreground">
+            Email isn’t available right now (it’s switched off on this server or not part of your plan), so reminders and notices
+            arrive in the app only.
+          </p>
+        )}
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="flex items-start justify-between gap-4 rounded-[12px] bg-muted px-4 py-3.5">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="email-me" className="font-semibold">
+                Email me about approvals
+              </Label>
+              <span className="text-[13px] text-muted-foreground">
+                When a post is sent to you, when its deadline is near, and when it’s overdue. Goes to {user?.email}. This is your own
+                setting; the bell in the app keeps working either way.
+              </span>
+            </div>
+            <Switch
+              id="email-me"
+              checked={user?.email_notifications ?? true}
+              disabled={savingEmailPref}
+              onCheckedChange={(v) => {
+                setSavingEmailPref(true);
+                setEmailNotifications(v)
+                  .then(() => toast.success(v ? "We’ll email you about approvals." : "No more approval emails for you."))
+                  .catch(onError)
+                  .finally(() => setSavingEmailPref(false));
+              }}
+            />
+          </div>
+          <div className="flex items-start justify-between gap-4 rounded-[12px] bg-muted px-4 py-3.5">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="email-clients" className="font-semibold">
+                Remind clients by email automatically
+              </Label>
+              <span className="text-[13px] text-muted-foreground">
+                A client who hasn’t answered gets an email before the deadline and when it passes, with replies going to whoever
+                shared the link. Only clients with a saved email and a working link. Each email lets them stop the reminders.
+                Owners and managers can change it.
+              </span>
+            </div>
+            <Switch
+              id="email-clients"
+              checked={!!workspace?.email_client_reminders}
+              disabled={!isAdmin || updateWorkspace.isPending || (!deadlineOptions.data?.email_enabled && !workspace?.email_client_reminders)}
+              onCheckedChange={(v) => updateWorkspace.mutate({ email_client_reminders: v })}
+            />
+          </div>
+        </div>
       </Tile>
 
       <Tile aria-labelledby="members-h" className="md:col-span-12">

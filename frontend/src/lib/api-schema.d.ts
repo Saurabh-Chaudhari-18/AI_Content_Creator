@@ -100,6 +100,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forgot Password
+         * @description Email a one-time "set a new password" link. The answer is the same
+         *     whether or not the address has an account, so nobody can use this to
+         *     find out who is a customer. Limited per IP (the dependency) and to a few
+         *     emails per address per hour, so it can't be used to flood an inbox.
+         */
+        post: operations["forgot_password_api_v1_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -150,8 +173,9 @@ export interface paths {
         head?: never;
         /**
          * Update My Preferences
-         * @description Update the caller's own preferences (theme). Only ever touches the
-         *     authenticated user's row — there is no user id in the path to tamper with.
+         * @description Update the caller's own preferences (theme, approval emails). Only ever
+         *     touches the authenticated user's row — there is no user id in the path to
+         *     tamper with.
          */
         patch: operations["update_my_preferences_api_v1_auth_me_patch"];
         trace?: never;
@@ -927,6 +951,23 @@ export interface paths {
         get: operations["verify_api_v1_public_certificates__certificate_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/email/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop Reminders */
+        post: operations["stop_reminders_api_v1_public_email_stop_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2739,6 +2780,11 @@ export interface components {
              */
             forgotten: boolean;
             /**
+             * Email Opted Out
+             * @default false
+             */
+            email_opted_out: boolean;
+            /**
              * Created At
              * Format: date-time
              */
@@ -3005,6 +3051,11 @@ export interface components {
             workspace_default_hours?: number | null;
             /** Platform Default Hours */
             platform_default_hours: number;
+            /**
+             * Email Enabled
+             * @default false
+             */
+            email_enabled: boolean;
         };
         /** FeatureOverride */
         FeatureOverride: {
@@ -3053,6 +3104,14 @@ export interface components {
         ForceLogoutResponse: {
             /** Sessions Ended */
             sessions_ended: number;
+        };
+        /** ForgotPasswordRequest */
+        ForgotPasswordRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
         };
         /** GlobalSwitchIn */
         GlobalSwitchIn: {
@@ -3757,6 +3816,23 @@ export interface components {
          * @enum {string}
          */
         SocialPlatform: "facebook" | "instagram" | "linkedin";
+        /** StopRequest */
+        StopRequest: {
+            /** Token */
+            token: string;
+        };
+        /** StopResponse */
+        StopResponse: {
+            /**
+             * Stopped
+             * @default true
+             */
+            stopped: boolean;
+            /** Agency Name */
+            agency_name: string;
+            /** Brand Name */
+            brand_name: string;
+        };
         /** SubmitResponse */
         SubmitResponse: {
             /**
@@ -3941,10 +4017,12 @@ export interface components {
         };
         /**
          * UserPreferencesUpdate
-         * @description PATCH /auth/me — the caller's own UI preferences. Omit a field to keep it.
+         * @description PATCH /auth/me — the caller's own preferences. Omit a field to keep it.
          */
         UserPreferencesUpdate: {
             theme_preference?: components["schemas"]["ThemePreference"] | null;
+            /** Email Notifications */
+            email_notifications?: boolean | null;
         };
         /** UserResponse */
         UserResponse: {
@@ -3962,6 +4040,11 @@ export interface components {
             /** Is Active */
             is_active: boolean;
             theme_preference: components["schemas"]["ThemePreference"];
+            /**
+             * Email Notifications
+             * @default true
+             */
+            email_notifications: boolean;
             platform_role?: components["schemas"]["PlatformRole"] | null;
             /**
              * Created At
@@ -4064,6 +4147,11 @@ export interface components {
              */
             certificate_verification_enabled: boolean;
             /**
+             * Email Client Reminders
+             * @default false
+             */
+            email_client_reminders: boolean;
+            /**
              * Created At
              * Format: date-time
              */
@@ -4091,6 +4179,8 @@ export interface components {
             approval_due_default_hours?: number | null;
             /** Certificate Verification Enabled */
             certificate_verification_enabled?: boolean | null;
+            /** Email Client Reminders */
+            email_client_reminders?: boolean | null;
         };
     };
     responses: never;
@@ -4217,6 +4307,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forgot_password_api_v1_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
             };
         };
         responses: {
@@ -6090,6 +6213,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicCertificateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_reminders_api_v1_public_email_stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StopResponse"];
                 };
             };
             /** @description Validation Error */

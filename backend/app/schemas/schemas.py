@@ -139,6 +139,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: str
@@ -146,6 +150,8 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str] = None
     is_active: bool
     theme_preference: ThemePreference
+    # "Email me about approvals". In-app notifications are not affected.
+    email_notifications: bool = True
     # Platform staff only (`super_admin`); null for every customer. Lets the
     # web app send staff to the admin console after they sign in.
     platform_role: Optional[PlatformRole] = None
@@ -155,15 +161,16 @@ class UserResponse(BaseModel):
 
 
 class UserPreferencesUpdate(BaseModel):
-    """PATCH /auth/me — the caller's own UI preferences. Omit a field to keep it."""
+    """PATCH /auth/me — the caller's own preferences. Omit a field to keep it."""
     theme_preference: Optional[ThemePreference] = None
+    email_notifications: Optional[bool] = None
 
     model_config = {"extra": "forbid"}
 
-    @field_validator("theme_preference", mode="before")
+    @field_validator("theme_preference", "email_notifications", mode="before")
     @classmethod
-    def no_null(cls, v):
-        return _reject_null(v, "theme_preference")
+    def no_null(cls, v, info):
+        return _reject_null(v, info.field_name)
 
 
 class AuthResponse(BaseModel):
@@ -203,6 +210,8 @@ class WorkspaceUpdate(BaseModel):
     approval_due_default_hours: Optional[int] = Field(None, ge=0)
     # Owner only. Lets anyone holding a certificate number check it at /verify.
     certificate_verification_enabled: Optional[bool] = None
+    # Owner/admin. Email deadline reminders to client contacts automatically.
+    email_client_reminders: Optional[bool] = None
 
     @field_validator("name", mode="before")
     @classmethod
@@ -219,6 +228,7 @@ class WorkspaceResponse(BaseModel):
     approval_link_default_minutes: Optional[int] = None
     approval_due_default_hours: Optional[int] = None
     certificate_verification_enabled: bool = True
+    email_client_reminders: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

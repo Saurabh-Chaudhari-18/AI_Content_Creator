@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.dependencies import (
     APPROVER_ROLES, client_ip, get_brand_access, get_current_user, get_post_access,
     get_post_membership, get_workspace_member,
@@ -46,7 +47,8 @@ router = APIRouter(tags=["Approvals"], dependencies=[Depends(workspace_rate_limi
 def contact_schema(c: BrandContact) -> BrandContactResponse:
     return BrandContactResponse(
         id=c.id, brand_id=c.brand_id, name=c.name, role_label=c.role_label, phone=c.phone,
-        email=c.email, is_active=c.is_active, forgotten=c.forgotten_at is not None, created_at=c.created_at,
+        email=c.email, is_active=c.is_active, forgotten=c.forgotten_at is not None,
+        email_opted_out=c.email_opt_out_at is not None, created_at=c.created_at,
     )
 
 
@@ -166,10 +168,15 @@ async def reassign(post_id: UUID, req: ReviewerChoice, request: Request,
         )
         new_link = _new_link_response(created, contact)
     elif assignee.user_id:
+        asked = f"{user.full_name} asked you to approve {reviewers.post_label(post)}"
         reviewers.notify(db, workspace_id=workspace.id, user_ids=[assignee.user_id],
                          type=NotificationType.ASSIGNED, post_id=post.id, actor_name=user.full_name,
-                         exclude=user.id,
-                         message=f"{user.full_name} asked you to approve {reviewers.post_label(post)}.")
+                         exclude=user.id, message=f"{asked}.")
+        needed = (f" It's needed by {deadlines.format_deadline(post.approval_due_at, post.approval_due_tz)}."
+                  if post.approval_due_at else "")
+        await reviewers.email_users(db, workspace=workspace, user_ids=[assignee.user_id], exclude=user.id,
+                                    kind="approval_assigned", post_id=post.id,
+                                    headline=f"{asked} for {brand.name}.{needed}")
     await db.commit()
     await db.refresh(post)
     return SubmitResponse(**post_schema(post).model_dump(), approval_link=new_link)
@@ -315,6 +322,8 @@ async def deadline_options(workspace_id: UUID, brand_id: Optional[UUID] = Query(
         escalate_after_hours=deadlines.escalate_hours(bounds, brand),
         workspace_default_hours=workspace.approval_due_default_hours,
         platform_default_hours=bounds.default_hours,
+        email_enabled=settings.email_enabled
+        and (await get_feature(db, workspace_id, "email_notifications")).enabled,
     )
 
 

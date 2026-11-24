@@ -101,6 +101,24 @@ class Settings(BaseSettings):
     SENTRY_ENVIRONMENT: str = ""  # empty = ENVIRONMENT
     SENTRY_TRACES_SAMPLE_RATE: float = 0.0  # performance tracing; errors are always sent
 
+    # --- Outgoing email (docs/approval_reminders_certificate_plan.md §10) ---
+    # "console" writes each email to the log (development); "smtp" sends it
+    # through any provider's SMTP relay (SES, Resend, Brevo, Postmark…);
+    # "off" sends nothing and the app says so where email would be offered.
+    # "memory" keeps them in a list for the tests.
+    EMAIL_BACKEND: str = "console"   # console | smtp | off | memory
+    EMAIL_FROM_ADDRESS: str = ""     # e.g. notifications@yourdomain.in (required for smtp)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_STARTTLS: bool = True       # port 587; set false and SMTP_SSL true for 465
+    SMTP_SSL: bool = False
+    SMTP_TIMEOUT_SECONDS: int = 15
+    # The name customers and their clients see in emails. One place, because
+    # the product is being renamed.
+    PRODUCT_NAME: str = "OmniPost"
+
     # --- Media storage ---
     # "local" serves from ./uploads for development. "s3" is REQUIRED for real
     # Instagram/Facebook photo publishing (Meta fetches media by public URL).
@@ -143,6 +161,13 @@ class Settings(BaseSettings):
                 raise ValueError("DEBUG must be false in production.")
             if not self.COOKIE_SECURE:
                 raise ValueError("COOKIE_SECURE must be true in production (HTTPS-only refresh cookie).")
+            if self.EMAIL_BACKEND not in ("smtp", "off"):
+                # "console" would write password-reset links into the logs.
+                raise ValueError("EMAIL_BACKEND must be smtp or off in production.")
+        if self.EMAIL_BACKEND not in ("console", "smtp", "off", "memory"):
+            raise ValueError("EMAIL_BACKEND must be one of: console, smtp, off, memory.")
+        if self.EMAIL_BACKEND == "smtp" and not (self.SMTP_HOST and self.EMAIL_FROM_ADDRESS):
+            raise ValueError("EMAIL_BACKEND=smtp needs SMTP_HOST and EMAIL_FROM_ADDRESS.")
         return self
 
     @property
@@ -154,6 +179,11 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @property
+    def email_enabled(self) -> bool:
+        """Can this server send email at all? (Plans and people can still say no.)"""
+        return self.EMAIL_BACKEND != "off"
 
 
 @lru_cache

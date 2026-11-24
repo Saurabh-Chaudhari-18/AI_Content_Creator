@@ -136,6 +136,8 @@ class BrandContactResponse(BaseModel):
     email: Optional[str] = None
     is_active: bool
     forgotten: bool = False
+    # The client pressed "stop these reminders" in an email. Only they can.
+    email_opted_out: bool = False
     created_at: datetime
 
 
@@ -273,6 +275,8 @@ class DeadlineOptionsResponse(BaseModel):
     escalate_after_hours: int     # for this brand
     workspace_default_hours: Optional[int] = None   # NULL = following the platform default
     platform_default_hours: int
+    # This server can send email AND the plan includes it. When false, reminders are in-app only.
+    email_enabled: bool = False
 
 
 class ReminderCreate(BaseModel):
