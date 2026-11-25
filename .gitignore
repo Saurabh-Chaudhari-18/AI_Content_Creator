@@ -44,3 +44,8 @@ docs/ai-tokens-and-credits-per-user-limits.pdf
 docs/*-video-script.md
 research_notes/AI token limits per user/
 scripts/video/
+
+# Playwright browser tests: run output
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
