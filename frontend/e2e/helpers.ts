@@ -1,4 +1,9 @@
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+import { expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+
+import { E2E_DIR, PYTHON } from "./paths";
 
 export type Account = { email: string; password: string; token: string; workspaceId: string };
 
@@ -39,12 +44,58 @@ export async function open(page: Page, path: string) {
   }
 }
 
-export async function signIn(page: Page, a: Account) {
+export async function signIn(page: Page, a: { email: string; password: string }, landsOn: RegExp = /Your Studio/) {
   await open(page, "/login");
   await page.getByLabel("Email").fill(a.email);
   await page.getByLabel("Password", { exact: true }).fill(a.password);
+  const landed = page.getByRole("heading", { name: landsOn }).first();
+  const refused = page.getByRole("alert");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: /Your Studio/ })).toBeVisible();
+  // Safari's engine sometimes drops a click while the page is still settling:
+  // if neither the next screen nor an error appears, press the button again.
+  try {
+    await expect(landed.or(refused).first()).toBeVisible({ timeout: 15_000 });
+  } catch {
+    if (await page.getByRole("button", { name: "Sign in" }).isEnabled()) {
+      await page.getByRole("button", { name: "Sign in" }).click();
+    }
+  }
+  await expect(landed).toBeVisible();
+  // Let the first screen finish loading: leaving it mid-request makes Safari
+  // report the cancelled request as a script error.
+  await page.waitForLoadState("networkidle");
+}
+
+/** The newest queued email of one kind, read from the test database (no mail provider needed). */
+export function readEmail(to: string, kind: string): string {
+  return execFileSync(PYTHON, [path.join(E2E_DIR, "read_email.py"), to, kind], { encoding: "utf-8" });
+}
+
+/** The first link in an email that matches a pattern. */
+export function linkIn(text: string, pattern: RegExp): string {
+  const found = text.match(pattern);
+  expect(found, `no link matching ${pattern} in the email`).not.toBeNull();
+  return found![0];
+}
+
+/** Fill the staff console's change slip (its reason is required) and confirm.
+ * Returns the slip, still open when it shows a result (a setup link). */
+export async function confirmSlip(page: Page, confirm: string, fields: Record<string, string> = {}): Promise<Locator> {
+  const slip = page.locator("dialog[open]");
+  await expect(slip).toBeVisible();
+  for (const [label, value] of Object.entries(fields)) await slip.getByLabel(label, { exact: true }).fill(value);
+  await slip.getByLabel("Reason", { exact: true }).fill("Browser test");
+  await slip.getByRole("button", { name: confirm, exact: true }).click();
+  return slip;
+}
+
+/** After a change the slip either closes by itself or shows "Done"; end up closed. */
+export async function finishSlip(page: Page) {
+  const slips = page.locator("dialog[open]");
+  const done = slips.getByRole("button", { name: "Done", exact: true });
+  await expect.poll(async () => (await slips.count()) === 0 || (await done.isVisible())).toBe(true);
+  if (await slips.count()) await done.click();
+  await expect(slips).toHaveCount(0);
 }
 
 /** Uncaught script errors break a screen; collect them so a test can fail on them. */

@@ -11,17 +11,14 @@
  * Needs PostgreSQL and Redis running (docker compose up -d postgres redis).
  */
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { defineConfig, devices } from "@playwright/test";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
+import { E2E_DIR, PYTHON } from "./e2e/paths";
+
 const CI = !!process.env.CI;
 const WEB_PORT = 5199;
 const API_PORT = 8010;
-const PYTHON =
-  process.env.E2E_PYTHON ??
-  path.resolve(HERE, "../backend/.venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -53,7 +50,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `"${PYTHON}" "${path.resolve(HERE, "e2e/start_api.py")}"`,
+      command: `"${PYTHON}" "${path.resolve(E2E_DIR, "start_api.py")}"`,
       url: `http://127.0.0.1:${API_PORT}/api/v1/health`,
       env: { E2E_API_PORT: String(API_PORT) },
       reuseExistingServer: !CI,
