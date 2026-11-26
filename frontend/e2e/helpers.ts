@@ -83,7 +83,12 @@ export function linkIn(text: string, pattern: RegExp): string {
 export async function confirmSlip(page: Page, confirm: string, fields: Record<string, string> = {}): Promise<Locator> {
   const slip = page.locator("dialog[open]");
   await expect(slip).toBeVisible();
-  for (const [label, value] of Object.entries(fields)) await slip.getByLabel(label, { exact: true }).fill(value);
+  for (const [label, value] of Object.entries(fields)) {
+    const field = slip.getByLabel(label, { exact: true });
+    // Dropdowns take the visible option text; everything else is typed.
+    if ((await field.evaluate((e) => e.tagName)) === "SELECT") await field.selectOption({ label: value });
+    else await field.fill(value);
+  }
   await slip.getByLabel("Reason", { exact: true }).fill("Browser test");
   await slip.getByRole("button", { name: confirm, exact: true }).click();
   return slip;
@@ -101,7 +106,13 @@ export async function finishSlip(page: Page) {
 /** Uncaught script errors break a screen; collect them so a test can fail on them. */
 export function watchErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => {
+    // Safari's engine reports a request to our own API that a page change
+    // cancelled as "...due to access control checks". That is the browser
+    // dropping an unfinished request, not an error in the app.
+    if (/\/api\/v1\/\S* due to access control checks/.test(e.message)) return;
+    errors.push(e.message);
+  });
   return errors;
 }
 

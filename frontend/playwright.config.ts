@@ -30,7 +30,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
-  workers: 2,
+  // One browser at a time locally: a laptop running Docker, the API, the dev
+  // server and two heavy browsers at once runs out of memory and times out.
+  workers: CI ? 2 : 1,
   reporter: CI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
