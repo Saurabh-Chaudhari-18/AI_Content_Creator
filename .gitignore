@@ -31,3 +31,21 @@ Thumbs.db
 # Production deploy: secrets and database dumps stay on the server
 deploy/.env
 deploy/backups/
+
+# Private business documents stay on this PC only: the GitHub repo is public.
+# (Owner and client material, reports for the owner call, costs, demo videos.)
+docs/owner-requests/
+docs/client-report-2/
+docs/videos/
+docs/daily-reports/
+docs/ai-domain-name-options.pdf
+docs/domain-name-options-and-prices.pdf
+docs/ai-tokens-and-credits-per-user-limits.pdf
+docs/*-video-script.md
+research_notes/AI token limits per user/
+scripts/video/
+
+# Playwright browser tests: run output
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/

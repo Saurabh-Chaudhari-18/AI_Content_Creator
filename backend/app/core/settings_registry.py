@@ -87,6 +87,36 @@ SETTINGS: tuple[SettingDef, ...] = (
         "Client links created by one workspace in a day that raise a 'link volume spike' alert.",
         minimum=10, maximum=10000,
     ),
+    # ── Approval deadlines (0009) ─────────────────────────────────────
+    # Read together through app.services.approval_deadlines.due_bounds,
+    # which keeps min <= default <= max whatever order they were saved in.
+    SettingDef(
+        "approval_due_min_hours", "integer", 1,
+        "Shortest approval deadline a post may be given, in hours.",
+        minimum=1, maximum=168,
+    ),
+    SettingDef(
+        "approval_due_max_hours", "integer", 336,
+        "Longest approval deadline a post may be given, in hours (336 = 14 days).",
+        minimum=24, maximum=2160,
+    ),
+    SettingDef(
+        "approval_due_default_hours", "integer", 48,
+        "Approval deadline when neither the brand nor the workspace has set one, in hours.",
+        minimum=1, maximum=2160,
+    ),
+    SettingDef(
+        "max_emails_per_workspace_per_day", "integer", 200,
+        "The most emails one workspace may send in 24 hours (reminders and notifications). "
+        "Emails over the cap are skipped; in-app notifications still arrive.",
+        minimum=10, maximum=10000,
+    ),
+    SettingDef(
+        "approval_escalate_default_hours", "integer", 24,
+        "How long after the deadline an unanswered post is escalated to all managers, "
+        "when the brand has not set its own delay, in hours.",
+        minimum=1, maximum=720,
+    ),
 )
 
 SETTINGS_BY_KEY: dict[str, SettingDef] = {s.key: s for s in SETTINGS}

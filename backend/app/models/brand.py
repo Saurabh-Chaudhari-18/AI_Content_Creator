@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -20,6 +20,10 @@ class Brand(Base):
     logo_url = Column(String(500), nullable=True)
     brand_guidelines = Column(JSONB, nullable=False, default=dict)  # palette, typography, banned terms
     is_active = Column(Boolean, nullable=False, server_default="true")
+    # Approval deadlines (0009). NULL = the workspace default.
+    approval_due_hours = Column(Integer, nullable=True)
+    approval_escalate_after_hours = Column(Integer, nullable=True)
+    approval_release_when_overdue = Column(Boolean, nullable=False, server_default="false", default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

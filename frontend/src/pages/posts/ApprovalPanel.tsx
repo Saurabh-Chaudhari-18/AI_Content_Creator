@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileCheck, ShieldCheck, Stamp, Undo2, Users } from "lucide-react";
+import { BellRing, FileCheck, ShieldCheck, Stamp, Undo2, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, ApiError, type Post } from "@/lib/api";
-import { formatDateTime, ROLE_LABEL } from "@/lib/format";
+import { deadlineLabel, useReminders, type Reminder } from "@/lib/approvals";
+import { formatDateTime } from "@/lib/format";
 import { keys, useMembers, type ApprovalLog } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +65,9 @@ function Entry({ log, who, currentHash }: { log: ApprovalLog; who: string; curre
             {log.rejection_reason}
           </blockquote>
         )}
+        {log.action === "submitted" && log.due_at && (
+          <p className="m-0 mt-1 text-xs text-muted-foreground">Needed by {deadlineLabel(log.due_at)}</p>
+        )}
         {hash && log.action !== "rejected" && !isNote && (
           <p
             className={cn(
@@ -81,17 +85,49 @@ function Entry({ log, who, currentHash }: { log: ApprovalLog; who: string; curre
   );
 }
 
+const CHANNEL_TEXT: Record<string, string> = { whatsapp: "on WhatsApp", email: "by email", copy: "(message copied)" };
+
+/** A deadline reminder: automatic (the system) or a person's nudge. */
+function ReminderEntry({ r }: { r: Reminder }) {
+  const who = r.recipient_name ?? "the reviewer";
+  const text =
+    r.stage === "manual_nudge"
+      ? `${r.created_by_name ?? "Someone"} reminded ${who} ${CHANNEL_TEXT[r.channel] ?? ""}`.trim()
+      : r.stage === "due_soon"
+        ? `Reminder: the deadline is near${r.channel === "email" ? `. ${who} was emailed` : ""}`
+        : r.stage === "overdue"
+          ? `The deadline passed. ${r.channel === "email" ? `${who} was emailed` : "The reviewer was reminded"}`
+          : "Still waiting after the deadline. Every manager was told";
+  return (
+    <li className="relative flex list-none gap-4">
+      <span
+        className={cn(
+          "relative z-10 grid size-6 flex-none place-items-center rounded-full border",
+          r.stage === "escalated" || r.stage === "overdue" ? "border-danger-border bg-danger-soft text-danger" : "border-dashed bg-surface-subtle text-muted-foreground",
+        )}
+      >
+        <BellRing className="size-3" aria-hidden="true" />
+      </span>
+      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
+        <p className="m-0 text-sm text-muted-foreground">{text}</p>
+        <time dateTime={r.created_at} className="flex-none font-mono text-xs text-muted-foreground">
+          {formatDateTime(r.created_at)}
+        </time>
+      </div>
+    </li>
+  );
+}
+
 /** Who approved what, when — with the seal of the exact content that was reviewed. */
 export function ApprovalRecord({
   post,
-  brandName,
-  imageUrl,
 }: {
   post: Post;
-  brandName: string;
+  brandName?: string;
   imageUrl?: string;
 }) {
   const history = usePostHistory(post.id);
+  const reminders = useReminders(post.id);
   const members = useMembers();
   const [certOpen, setCertOpen] = useState(false);
 
@@ -105,7 +141,6 @@ export function ApprovalRecord({
 
   const logs = history.data ?? []; // newest first
   const lastApproval = logs.find((h) => h.action === "approved");
-  const lastSubmit = logs.find((h) => h.action === "submitted");
   const sealed = !!lastApproval?.content_hash_at_action && APPROVAL_HOLDS.includes(post.status);
   const waiting = post.status === "pending_approval" && !!post.content_hash;
 
@@ -118,12 +153,16 @@ export function ApprovalRecord({
     if (log.approval_link_id) return `${log.actor_name ?? "The client"} (client, via link)`;
     return log.actor_name ?? "System";
   };
-  const withRole = (log: ApprovalLog | undefined) => {
-    if (!log) return "—";
-    if (!log.user_id) return nameOf(log);
-    const r = member(log.user_id)?.role;
-    return `${nameOf(log)}${r ? `, ${ROLE_LABEL[r] ?? r}` : ""}`;
-  };
+  // One timeline: approval history and reminders, oldest first.
+  type Item = { at: string; order: number; node: React.ReactNode };
+  const items: Item[] = [
+    ...logs.map((log) => ({
+      at: log.created_at,
+      order: ACTION_ORDER[log.action] ?? 3,
+      node: <Entry key={log.id} log={log} who={nameOf(log)} currentHash={post.content_hash} />,
+    })),
+    ...(reminders.data ?? []).map((r) => ({ at: r.created_at, order: 1, node: <ReminderEntry key={r.id} r={r} /> })),
+  ].sort((a, b) => a.at.localeCompare(b.at) || a.order - b.order);
 
   return (
     <section aria-labelledby="record-h" className="relative rounded-[var(--radius-tile)] border bg-card">
@@ -147,11 +186,7 @@ export function ApprovalRecord({
 
       <ol className="relative m-0 flex flex-col gap-5 p-5">
         <span aria-hidden="true" className="absolute top-8 bottom-8 left-[32px] w-px bg-border" />
-        {[...logs]
-          .sort((a, b) => a.created_at.localeCompare(b.created_at) || (ACTION_ORDER[a.action] ?? 3) - (ACTION_ORDER[b.action] ?? 3))
-          .map((log) => (
-          <Entry key={log.id} log={log} who={nameOf(log)} currentHash={post.content_hash} />
-        ))}
+        {items.map((i) => i.node)}
         {post.status === "pending_approval" && (
           <li className="relative flex list-none items-center gap-4">
             <span aria-hidden="true" className="relative z-10 grid size-6 flex-none place-items-center rounded-full border border-dashed bg-card">
@@ -169,22 +204,7 @@ export function ApprovalRecord({
           <Button variant="outline" size="sm" onClick={() => setCertOpen(true)}>
             <Stamp aria-hidden="true" /> View approval certificate
           </Button>
-          <ApprovalCertificate
-            open={certOpen}
-            onOpenChange={setCertOpen}
-            data={{
-              brandName,
-              postTitle: post.title || "Untitled post",
-              version: post.version_number,
-              caption: post.caption,
-              hashtags: post.hashtags,
-              imageUrl,
-              submittedBy: withRole(lastSubmit),
-              approvedBy: withRole(lastApproval),
-              approvedAt: lastApproval.created_at,
-              hash: lastApproval.content_hash_at_action!,
-            }}
-          />
+          <ApprovalCertificate open={certOpen} onOpenChange={setCertOpen} postId={post.id} />
         </div>
       )}
     </section>

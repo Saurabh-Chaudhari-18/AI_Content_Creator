@@ -15,7 +15,7 @@ import { useWorkspace } from "@/lib/workspace";
 
 import { ApprovalActions, ApprovalRecord } from "./ApprovalPanel";
 import { CHAR_LIMIT, limitState, PlatformMark, PlatformPreview } from "./parts";
-import { ReviewPanel } from "./ReviewerDialogs";
+import { DueChip, ReviewPanel } from "./ReviewerDialogs";
 
 type Shown = { caption: string; hashtags: string[]; cta: string | null | undefined };
 
@@ -117,6 +117,7 @@ export function ReviewStudio({
                   Planned {formatDateTime(post.scheduled_at)}
                 </span>
               )}
+              <DueChip post={post} className="h-8 px-3 text-sm" />
             </div>
 
             <div className="border-t pt-6">

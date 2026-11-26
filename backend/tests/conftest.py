@@ -10,6 +10,8 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-characters-long
 os.environ.setdefault("FERNET_KEY", Fernet.generate_key().decode())
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_content_test")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
+# Emails are kept in app.services.email.SENT instead of being sent.
+os.environ.setdefault("EMAIL_BACKEND", "memory")
 os.environ.setdefault("META_APP_ID", "test-app-id")
 os.environ.setdefault("META_APP_SECRET", "test-app-secret")
 # Integration tests register many users from one client IP.

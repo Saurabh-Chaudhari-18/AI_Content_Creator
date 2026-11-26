@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.core.dependencies import client_ip, get_current_user, get_workspace_member, require_role
 from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
@@ -18,6 +19,7 @@ from app.schemas.schemas import (
     AddMemberRequest, MemberResponse, MessageResponse, UsageSummaryResponse,
     WorkspaceCreate, WorkspaceFeature, WorkspaceFeaturesResponse, WorkspaceResponse, WorkspaceUpdate,
 )
+from app.services import approval_deadlines as deadlines
 from app.services.approval_links import describe_minutes, expiry_bounds
 from app.services.audit import record_audit_event
 from app.services import accounts
@@ -104,6 +106,32 @@ async def update_workspace(workspace_id: UUID, req: WorkspaceUpdate, request: Re
         before["approval_link_default_minutes"] = workspace.approval_link_default_minutes
         workspace.approval_link_default_minutes = minutes
         after["approval_link_default_minutes"] = minutes
+    if req.approval_due_default_hours is not None:
+        # Default approval deadline, inside the platform range. 0 = platform default.
+        hours = req.approval_due_default_hours or None
+        if hours is not None:
+            await require_feature(db, workspace_id, "approval_reminders")
+            deadlines.check_hours_in_range(await deadlines.due_bounds(db), hours)
+        before["approval_due_default_hours"] = workspace.approval_due_default_hours
+        workspace.approval_due_default_hours = hours
+        after["approval_due_default_hours"] = hours
+    if req.certificate_verification_enabled is not None:
+        # Who may check this agency's certificates is the owner's call.
+        require_role(member, WorkspaceRole.OWNER)
+        before["certificate_verification_enabled"] = workspace.certificate_verification_enabled
+        workspace.certificate_verification_enabled = req.certificate_verification_enabled
+        after["certificate_verification_enabled"] = req.certificate_verification_enabled
+    if req.email_client_reminders is not None:
+        # Writing to an agency's clients is the agency's decision, and only
+        # possible when this server can send email and the plan includes it.
+        if req.email_client_reminders:
+            if not settings.email_enabled:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail="Email isn't set up on this server yet, so reminders can't be emailed.")
+            await require_feature(db, workspace_id, "email_notifications")
+        before["email_client_reminders"] = workspace.email_client_reminders
+        workspace.email_client_reminders = req.email_client_reminders
+        after["email_client_reminders"] = req.email_client_reminders
     if after:
         record_audit_event(
             db, action=AuditAction.UPDATE, entity_type="Workspace", entity_id=workspace.id,

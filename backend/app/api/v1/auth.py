@@ -26,13 +26,17 @@ from app.core.security import (
     verify_password_async,
 )
 from app.db.session import get_db
-from app.models import AuditAction, RefreshToken, User, UserSetupToken
+from app.core.rate_limit import _hit as rate_hit
+from app.models import AuditAction, RefreshToken, SetupTokenPurpose, User, UserSetupToken
 from app.schemas.schemas import (
-    AccessTokenResponse, AuthResponse, LoginRequest, MessageResponse,
+    AccessTokenResponse, AuthResponse, ForgotPasswordRequest, LoginRequest, MessageResponse,
     RegisterRequest, SetPasswordRequest, UserPreferencesUpdate, UserResponse,
 )
+from app.services import accounts
+from app.services import email as mailer
 from app.services.audit import record_audit_event
 from app.services.accounts import create_workspace, hash_setup_token
+from app.services.platform_settings import get_setting
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -176,6 +180,44 @@ async def set_password(req: SetPasswordRequest, request: Request, db: AsyncSessi
     return MessageResponse(message="Password saved. You can sign in now.")
 
 
+FORGOT_SENT = "If that email has an account, we've sent a link to reset the password. It may take a minute."
+
+
+@router.post("/forgot-password", response_model=MessageResponse, dependencies=[Depends(auth_rate_limit)])
+async def forgot_password(req: ForgotPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Email a one-time "set a new password" link. The answer is the same
+    whether or not the address has an account, so nobody can use this to
+    find out who is a customer. Limited per IP (the dependency) and to a few
+    emails per address per hour, so it can't be used to flood an inbox."""
+    if not settings.email_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Password reset by email isn't set up yet. Ask your workspace owner or our support team.",
+        )
+    email = req.email.lower()
+    try:
+        allowed, _retry = await rate_hit(f"forgot:{email}", 3, 3600)
+    except Exception:  # noqa: BLE001 — Redis down: the per-IP limit still applies
+        allowed = True
+    user = await db.scalar(select(User).where(User.email == email))
+    if allowed and user is not None and user.is_active:
+        link, _expires = await accounts.issue_setup_link(
+            db, user_id=user.id, purpose=SetupTokenPurpose.PASSWORD_RESET, created_by_user_id=None)
+        to = mailer.Recipient(user.email, user.full_name)
+        subject, text = mailer.password_reset_email(to=to, link=link,
+                                                    hours=await get_setting(db, "setup_link_hours"))
+        mailer.queue(db, kind="password_reset", to=to, subject=subject, text=text)
+        record_audit_event(
+            db, action=AuditAction.SETUP_LINK, entity_type="User", entity_id=user.id,
+            workspace_id=None, user_id=user.id, user_email=user.email, user_name=user.full_name,
+            changes={"after": {"purpose": "password_reset", "requested_by": "the user, by email"}},
+            ip_address=client_ip(request),
+        )
+        await db.commit()
+        mailer.kick()
+    return MessageResponse(message=FORGOT_SENT)
+
+
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh_access_token(request: Request, response: Response,
                                db: AsyncSession = Depends(get_db)):
@@ -253,13 +295,17 @@ async def update_my_preferences(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update the caller's own preferences (theme). Only ever touches the
-    authenticated user's row — there is no user id in the path to tamper with."""
+    """Update the caller's own preferences (theme, approval emails). Only ever
+    touches the authenticated user's row — there is no user id in the path to
+    tamper with."""
+    def plain(value):
+        return getattr(value, "value", value)
+
     changes = data.model_dump(exclude_unset=True)
-    before = {k: getattr(current_user, k).value for k in changes}
+    before = {k: plain(getattr(current_user, k)) for k in changes}
     for field, value in changes.items():
         setattr(current_user, field, value)
-    after = {k: v.value for k, v in changes.items()}
+    after = {k: plain(v) for k, v in changes.items()}
     if before != after:
         record_audit_event(
             db, action=AuditAction.UPDATE, entity_type="User", entity_id=current_user.id,

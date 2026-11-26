@@ -139,6 +139,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: str
@@ -146,6 +150,8 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str] = None
     is_active: bool
     theme_preference: ThemePreference
+    # "Email me about approvals". In-app notifications are not affected.
+    email_notifications: bool = True
     # Platform staff only (`super_admin`); null for every customer. Lets the
     # web app send staff to the admin console after they sign in.
     platform_role: Optional[PlatformRole] = None
@@ -155,15 +161,16 @@ class UserResponse(BaseModel):
 
 
 class UserPreferencesUpdate(BaseModel):
-    """PATCH /auth/me — the caller's own UI preferences. Omit a field to keep it."""
+    """PATCH /auth/me — the caller's own preferences. Omit a field to keep it."""
     theme_preference: Optional[ThemePreference] = None
+    email_notifications: Optional[bool] = None
 
     model_config = {"extra": "forbid"}
 
-    @field_validator("theme_preference", mode="before")
+    @field_validator("theme_preference", "email_notifications", mode="before")
     @classmethod
-    def no_null(cls, v):
-        return _reject_null(v, "theme_preference")
+    def no_null(cls, v, info):
+        return _reject_null(v, info.field_name)
 
 
 class AuthResponse(BaseModel):
@@ -198,6 +205,13 @@ class WorkspaceUpdate(BaseModel):
     # Owner/admin. Default lifetime of client approval links, in minutes;
     # must sit inside the platform range. Send 0 to follow the platform default.
     approval_link_default_minutes: Optional[int] = Field(None, ge=0)
+    # Owner/admin. Default approval deadline in hours (inside the platform
+    # range). Send 0 to follow the platform default.
+    approval_due_default_hours: Optional[int] = Field(None, ge=0)
+    # Owner only. Lets anyone holding a certificate number check it at /verify.
+    certificate_verification_enabled: Optional[bool] = None
+    # Owner/admin. Email deadline reminders to client contacts automatically.
+    email_client_reminders: Optional[bool] = None
 
     @field_validator("name", mode="before")
     @classmethod
@@ -212,6 +226,9 @@ class WorkspaceResponse(BaseModel):
     owner_id: UUID
     allow_self_approval: bool = True
     approval_link_default_minutes: Optional[int] = None
+    approval_due_default_hours: Optional[int] = None
+    certificate_verification_enabled: bool = True
+    email_client_reminders: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -264,8 +281,12 @@ class BrandUpdate(BaseModel):
     language: Optional[str] = Field(None, min_length=2, max_length=10)
     logo_url: Optional[str] = Field(None, max_length=URL_MAX)
     brand_guidelines: Optional[dict] = None
+    # Approval rules (owner/admin). 0 = follow the workspace default.
+    approval_due_hours: Optional[int] = Field(None, ge=0)
+    approval_escalate_after_hours: Optional[int] = Field(None, ge=0, le=720)
+    approval_release_when_overdue: Optional[bool] = None
 
-    @field_validator("name", "language", "brand_guidelines", mode="before")
+    @field_validator("name", "language", "brand_guidelines", "approval_release_when_overdue", mode="before")
     @classmethod
     def no_null(cls, v, info):
         return _reject_null(v, info.field_name)
@@ -292,6 +313,9 @@ class BrandResponse(BaseModel):
     logo_url: Optional[str] = None
     brand_guidelines: Optional[dict] = None
     is_active: bool
+    approval_due_hours: Optional[int] = None
+    approval_escalate_after_hours: Optional[int] = None
+    approval_release_when_overdue: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -372,6 +396,9 @@ class PostResponse(BaseModel):
     assigned_approver_id: Optional[UUID] = None
     assigned_contact_id: Optional[UUID] = None
     assigned_name: Optional[str] = None
+    # "Needed by" of the current (or latest) review round; shown while pending.
+    approval_due_at: Optional[datetime] = None
+    approval_due_tz: Optional[str] = None
 
 
 class PostListResponse(BaseModel):
@@ -379,6 +406,17 @@ class PostListResponse(BaseModel):
     total: int
     page: int
     limit: int
+
+
+class HomeResponse(BaseModel):
+    """Everything Home shows about posts, in one request."""
+    counts: dict[str, int]              # posts per status, plus "overdue"
+    recent: list[PostResponse]          # the 100 most recently changed
+    pending_approval: list[PostResponse]
+    approved: list[PostResponse]
+    failed: list[PostResponse]
+    partially_published: list[PostResponse]
+    scheduled: list[PostResponse]       # up to 50, soonest first
 
 
 class RejectRequest(BaseModel):
@@ -406,6 +444,7 @@ class ApprovalLogResponse(BaseModel):
     assigned_contact_id: Optional[UUID] = None
     assigned_name: Optional[str] = None
     acted_by_assignee: Optional[bool] = None
+    due_at: Optional[datetime] = None       # submitted rows: that round's deadline
     created_at: datetime
 
     model_config = {"from_attributes": True}

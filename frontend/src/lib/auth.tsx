@@ -16,6 +16,8 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   /** Apply a theme now and save it to the account, so it comes back on the next login. */
   setThemePreference: (theme: Theme) => void;
+  /** "Email me about approvals": saved to the account. */
+  setEmailNotifications: (on: boolean) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -106,9 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setTheme],
   );
 
+  const setEmailNotifications = useCallback(async (on: boolean) => {
+    const updated = await authApi.updateMe({ email_notifications: on });
+    setUser((u) => (u ? { ...u, email_notifications: updated.email_notifications } : u));
+  }, []);
+
   const value = useMemo(
-    () => ({ status, user, login, register, logout, setThemePreference }),
-    [status, user, login, register, logout, setThemePreference],
+    () => ({ status, user, login, register, logout, setThemePreference, setEmailNotifications }),
+    [status, user, login, register, logout, setThemePreference, setEmailNotifications],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

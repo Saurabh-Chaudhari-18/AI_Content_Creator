@@ -5,6 +5,7 @@ from app.models.enums import (
     AlertStatus,
     ApprovalAction,
     ApprovalLinkDecision,
+    EmailStatus,
     NotificationType,
     AuditAction,
     FeatureValueType,
@@ -13,6 +14,8 @@ from app.models.enums import (
     OperationType,
     PlatformRole,
     PostStatus,
+    ReminderChannel,
+    ReminderStage,
     SetupTokenPurpose,
     SocialPlatform,
     TemplateCategory,
@@ -30,7 +33,9 @@ from app.models.platform import (
     AdminAlert, Feature, Plan, PlanFeature, PlatformSetting, UsageDaily,
     UserSetupToken, WorkspaceFeatureOverride,
 )
-from app.models.approval import ApprovalLink, BrandContact, Notification
+from app.models.approval import (
+    ApprovalCertificate, ApprovalLink, ApprovalReminder, BrandContact, EmailOutbox, Notification,
+)
 
 __all__ = [
     "ApprovalAction", "AuditAction", "JobStatus", "MediaType", "OperationType",
@@ -43,4 +48,6 @@ __all__ = [
     "Plan", "Feature", "PlanFeature", "WorkspaceFeatureOverride", "PlatformSetting",
     "UserSetupToken", "UsageDaily", "AdminAlert",
     "ApprovalLinkDecision", "NotificationType", "ApprovalLink", "BrandContact", "Notification",
+    "ApprovalReminder", "ApprovalCertificate", "ReminderStage", "ReminderChannel",
+    "EmailOutbox", "EmailStatus",
 ]

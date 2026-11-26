@@ -257,6 +257,17 @@ class AdminUserUpdate(Reasoned):
     full_name: Optional[str] = Field(None, min_length=1, max_length=NAME_MAX)
     is_active: Optional[bool] = None
 
+    @field_validator("full_name")
+    @classmethod
+    def name_not_blank(cls, v: Optional[str]) -> Optional[str]:
+        # Like creating a login: a name of only spaces would be saved as "".
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("Full name cannot be empty")
+        return v
+
     @model_validator(mode="after")
     def something_to_change(self):
         if self.full_name is None and self.is_active is None:

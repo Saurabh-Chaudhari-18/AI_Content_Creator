@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "@/lib/auth";
+import { PRODUCT_NAME } from "@/lib/product";
 
 import { useAdmin, useOverview, type UsageReport } from "./api";
 import { SlipProvider } from "./ChangeSlip";
@@ -73,14 +74,14 @@ export function AdminShell() {
       <a className="skip" href="#admin-main">Skip to content</a>
       <div className={menuOpen ? "app is-menu-open" : "app"} onClick={(e) => { if (menuOpen && !(e.target as HTMLElement).closest(".side, .menu-btn")) setMenuOpen(false); }}>
         <aside className="side" id="admin-side" aria-label="Staff console">
-          <Link className="brand" to="/admin" aria-label="OmniPost staff console, overview">
+          <Link className="brand" to="/admin" aria-label={`${PRODUCT_NAME} staff console, overview`}>
             <span className="brand__mark" aria-hidden="true">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8.5 8.5a4.5 4.5 0 1 0 0 7c1.8-1.4 5.2-5.6 7-7a4.5 4.5 0 1 1 0 7c-1.8-1.4-5.2-5.6-7-7z" />
               </svg>
             </span>
             <span className="brand__text">
-              <b>OmniPost</b>
+              <b>{PRODUCT_NAME}</b>
               <span>Staff console</span>
             </span>
           </Link>

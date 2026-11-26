@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
-    admin, approvals, auth, brands, calendar, health, media, posts, public_approval,
+    admin, approvals, auth, brands, calendar, certificates, health, media, posts, public_approval, public_email,
     social_accounts, templates, webhooks, workspaces,
 )
 
@@ -13,6 +13,9 @@ api_v1_router.include_router(brands.router)
 api_v1_router.include_router(posts.router)
 api_v1_router.include_router(approvals.router)
 api_v1_router.include_router(public_approval.router)
+api_v1_router.include_router(certificates.router)
+api_v1_router.include_router(certificates.public_router)
+api_v1_router.include_router(public_email.router)
 api_v1_router.include_router(calendar.router)
 api_v1_router.include_router(social_accounts.router)
 api_v1_router.include_router(media.router)

@@ -71,6 +71,21 @@ async def resolve_features_bulk(
     db, workspace_ids: list[UUID], keys: tuple[str, ...] | None = None,
 ) -> dict[UUID, dict[str, FeatureValue]]:
     """resolve_features for many workspaces in one query (admin reports)."""
+    wanted, stmt = _bulk_statement(workspace_ids, keys)
+    rows = (await db.execute(stmt)).all() if workspace_ids else []
+    return _reduce(workspace_ids, wanted, rows)
+
+
+def resolve_features_bulk_sync(
+    db, workspace_ids: list[UUID], keys: tuple[str, ...] | None = None,
+) -> dict[UUID, dict[str, FeatureValue]]:
+    """The same answer on a plain (worker) session."""
+    wanted, stmt = _bulk_statement(workspace_ids, keys)
+    rows = db.execute(stmt).all() if workspace_ids else []
+    return _reduce(workspace_ids, wanted, rows)
+
+
+def _bulk_statement(workspace_ids: list[UUID], keys: tuple[str, ...] | None):
     wanted = keys or tuple(FEATURES_BY_KEY)
     for key in wanted:
         if key not in FEATURES_BY_KEY:  # a typo in code must never read as "off"
@@ -92,11 +107,12 @@ async def resolve_features_bulk(
                                   or_(override.expires_at.is_(None), override.expires_at > func.now())))
         .where(Feature.is_active.is_(True), Feature.key.in_(wanted))
     )
+    return wanted, stmt
+
+
+def _reduce(workspace_ids, wanted, rows) -> dict[UUID, dict[str, FeatureValue]]:
     # Not in the database = off.
     resolved = {ws_id: {key: _off(key) for key in wanted} for ws_id in workspace_ids}
-    if not workspace_ids:
-        return resolved
-    rows = (await db.execute(stmt)).all()
     for ws_id, key, global_enabled, plan_enabled, plan_limit, override_id, o_enabled, o_limit in rows:
         is_limit = FEATURES_BY_KEY[key].value_type == FeatureValueType.LIMIT
         if not global_enabled:

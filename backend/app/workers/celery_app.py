@@ -16,6 +16,7 @@ celery_app = Celery(
         "app.workers.tasks.cleanup",
         "app.workers.tasks.approvals",
         "app.workers.tasks.monitoring",
+        "app.workers.tasks.email",
     ],
 )
 
@@ -63,6 +64,20 @@ celery_app.conf.update(
         "scan-approval-link-abuse": {
             "task": "app.workers.tasks.approvals.scan_approval_link_abuse",
             "schedule": 15 * 60.0,
+        },
+        # Approval deadlines (docs/approval_reminders_certificate_plan.md §2.5)
+        "send-approval-reminders": {
+            "task": "app.workers.tasks.approvals.send_approval_reminders",
+            "schedule": 5 * 60.0,
+        },
+        # Outgoing email (docs/approval_reminders_certificate_plan.md §10)
+        "send-queued-emails": {
+            "task": "app.workers.tasks.email.send_queued_emails",
+            "schedule": 60.0,
+        },
+        "cleanup-email-outbox": {
+            "task": "app.workers.tasks.email.cleanup_email_outbox",
+            "schedule": 24 * 3600.0,
         },
         "cleanup-notifications": {
             "task": "app.workers.tasks.approvals.cleanup_notifications",

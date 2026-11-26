@@ -4,7 +4,7 @@ links (agency side) and in-app notifications.
 Plan: docs/client_approval_link_plan.md §4.3. The public, no-login client
 endpoints live in public_approval.py.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
 
@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.dependencies import (
     APPROVER_ROLES, client_ip, get_brand_access, get_current_user, get_post_access,
     get_post_membership, get_workspace_member,
@@ -19,23 +20,25 @@ from app.core.dependencies import (
 from app.core.rate_limit import workspace_rate_limit
 from app.db.session import get_db
 from app.models import (
-    ApprovalAction, ApprovalLink, ApprovalLog, AuditAction, Brand, BrandContact, Notification,
-    NotificationType, Post, PostStatus, User, Workspace, WorkspaceMember,
+    ApprovalAction, ApprovalLink, ApprovalLog, ApprovalReminder, AuditAction, Brand, BrandContact,
+    Notification, NotificationType, Post, PostStatus, ReminderChannel, ReminderStage, User, Workspace,
+    WorkspaceMember,
 )
 from app.schemas.approvals import (
-    ApprovalLinkCreate, ApprovalLinkResponse, ApproversResponse, BrandContactCreate,
+    ApprovalLinkCreate, ApprovalLinkResponse, ApproversResponse, BrandContactCreate, DeadlineOptionsResponse,
     BrandContactResponse, BrandContactUpdate, ContactOption, LinkOptionsResponse, ManagerOption,
-    NewLinkResponse, NotificationListResponse, NotificationResponse, ReviewerChoice,
-    SubmitResponse, SuggestedReviewer, UnreadCountResponse,
+    NewLinkResponse, NotificationListResponse, NotificationResponse, ReminderCreate, ReminderResponse,
+    ReviewerChoice, SubmitResponse, SuggestedReviewer, UnreadCountResponse,
 )
 from app.schemas.schemas import MessageResponse
+from app.services import approval_deadlines as deadlines
 from app.services import approvals as reviewers
 from app.services.approval_links import (
     allowed_maximum, allowed_presets, create_link, expiry_bounds, link_status, utcnow,
     workspace_default,
 )
 from app.services.audit import record_audit_event
-from app.services.features import enforce_limit, get_feature
+from app.services.features import enforce_limit, get_feature, require_feature
 
 router = APIRouter(tags=["Approvals"], dependencies=[Depends(workspace_rate_limit)])
 
@@ -44,7 +47,8 @@ router = APIRouter(tags=["Approvals"], dependencies=[Depends(workspace_rate_limi
 def contact_schema(c: BrandContact) -> BrandContactResponse:
     return BrandContactResponse(
         id=c.id, brand_id=c.brand_id, name=c.name, role_label=c.role_label, phone=c.phone,
-        email=c.email, is_active=c.is_active, forgotten=c.forgotten_at is not None, created_at=c.created_at,
+        email=c.email, is_active=c.is_active, forgotten=c.forgotten_at is not None,
+        email_opted_out=c.email_opt_out_at is not None, created_at=c.created_at,
     )
 
 
@@ -164,10 +168,15 @@ async def reassign(post_id: UUID, req: ReviewerChoice, request: Request,
         )
         new_link = _new_link_response(created, contact)
     elif assignee.user_id:
+        asked = f"{user.full_name} asked you to approve {reviewers.post_label(post)}"
         reviewers.notify(db, workspace_id=workspace.id, user_ids=[assignee.user_id],
                          type=NotificationType.ASSIGNED, post_id=post.id, actor_name=user.full_name,
-                         exclude=user.id,
-                         message=f"{user.full_name} asked you to approve {reviewers.post_label(post)}.")
+                         exclude=user.id, message=f"{asked}.")
+        needed = (f" It's needed by {deadlines.format_deadline(post.approval_due_at, post.approval_due_tz)}."
+                  if post.approval_due_at else "")
+        await reviewers.email_users(db, workspace=workspace, user_ids=[assignee.user_id], exclude=user.id,
+                                    kind="approval_assigned", post_id=post.id,
+                                    headline=f"{asked} for {brand.name}.{needed}")
     await db.commit()
     await db.refresh(post)
     return SubmitResponse(**post_schema(post).model_dump(), approval_link=new_link)
@@ -291,6 +300,31 @@ async def remove_contact(brand_id: UUID, contact_id: UUID, request: Request,
     )
     await db.commit()
     return MessageResponse(message="Contact removed." + (" Their phone and email were erased." if forget else ""))
+
+
+# ── Deadlines (docs/approval_reminders_certificate_plan.md §2) ─────────
+@router.get("/workspaces/{workspace_id}/approval-deadline-options", response_model=DeadlineOptionsResponse)
+async def deadline_options(workspace_id: UUID, brand_id: Optional[UUID] = Query(None),
+                           db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """What the "Needed by" picker and the deadline settings may offer."""
+    await get_workspace_member(workspace_id, db, user)
+    workspace = await db.get(Workspace, workspace_id)
+    brand = None
+    if brand_id is not None:
+        brand = await get_brand_access(brand_id, db, user)
+        if brand.workspace_id != workspace_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Brand not found.")
+    bounds = await deadlines.due_bounds(db)
+    return DeadlineOptionsResponse(
+        enabled=(await get_feature(db, workspace_id, "approval_reminders")).enabled,
+        default_hours=deadlines.default_hours(bounds, workspace, brand),
+        min_hours=bounds.min_hours, max_hours=bounds.max_hours,
+        escalate_after_hours=deadlines.escalate_hours(bounds, brand),
+        workspace_default_hours=workspace.approval_due_default_hours,
+        platform_default_hours=bounds.default_hours,
+        email_enabled=settings.email_enabled
+        and (await get_feature(db, workspace_id, "email_notifications")).enabled,
+    )
 
 
 # ── Links (agency side) ────────────────────────────────────────────────
@@ -462,3 +496,76 @@ async def mark_all_read(workspace_id: UUID, db: AsyncSession = Depends(get_db),
                      .values(read_at=datetime.now(timezone.utc)))
     await db.commit()
     return UnreadCountResponse(unread=0)
+
+
+# ── Approval deadlines: reminders (docs/approval_reminders_certificate_plan.md §2) ──
+# Two taps on WhatsApp and email within this window are one reminder, not two.
+NUDGE_DEDUPE = 10  # minutes
+
+
+def _reminder_schema(r: ApprovalReminder, name: Optional[str]) -> ReminderResponse:
+    return ReminderResponse(id=r.id, stage=r.stage.value, channel=r.channel.value,
+                            recipient_name=r.recipient_name, created_by=r.created_by,
+                            created_by_name=name, submission_log_id=r.submission_log_id,
+                            created_at=r.created_at)
+
+
+@router.get("/posts/{post_id}/reminders", response_model=List[ReminderResponse])
+async def list_reminders(post_id: UUID, db: AsyncSession = Depends(get_db),
+                         user: User = Depends(get_current_user)):
+    """Every reminder for the post, all review rounds, newest first."""
+    await get_post_access(post_id, db, user)
+    rows = (await db.execute(
+        select(ApprovalReminder, User.full_name)
+        .outerjoin(User, User.id == ApprovalReminder.created_by)
+        .where(ApprovalReminder.post_id == post_id)
+        .order_by(ApprovalReminder.created_at.desc())
+    )).all()
+    return [_reminder_schema(r, name) for r, name in rows]
+
+
+@router.post("/posts/{post_id}/reminders", response_model=ReminderResponse,
+             status_code=status.HTTP_201_CREATED)
+async def record_reminder(post_id: UUID, req: ReminderCreate, db: AsyncSession = Depends(get_db),
+                          user: User = Depends(get_current_user)):
+    """Record that someone nudged the reviewer from their own WhatsApp or
+    email. Managers, the author, or whoever shared one of the post's links."""
+    post = await get_post_access(post_id, db, user)
+    member = await get_post_membership(post, db, user)
+    await require_feature(db, member.workspace_id, "approval_reminders")
+    if post.status != PostStatus.PENDING_APPROVAL:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            f"Only posts waiting for approval can be chased. Current status: {post.status.value}")
+    shared = await db.scalar(select(func.count(ApprovalLink.id)).where(
+        ApprovalLink.post_id == post.id, ApprovalLink.created_by == user.id))
+    if member.role not in APPROVER_ROLES and post.created_by != user.id and not shared:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Only the author, a manager or whoever shared the link can send reminders.")
+    submission_id = await db.scalar(
+        select(ApprovalLog.id)
+        .where(ApprovalLog.post_id == post.id, ApprovalLog.action == ApprovalAction.SUBMITTED)
+        .order_by(ApprovalLog.created_at.desc()).limit(1)
+    )
+    if submission_id is None:  # pragma: no cover — a pending post always has one
+        raise HTTPException(status.HTTP_409_CONFLICT, "This post has no submission to chase.")
+
+    since = utcnow() - timedelta(minutes=NUDGE_DEDUPE)
+    recent = await db.scalar(
+        select(ApprovalReminder)
+        .where(ApprovalReminder.submission_log_id == submission_id,
+               ApprovalReminder.stage == ReminderStage.MANUAL_NUDGE,
+               ApprovalReminder.created_by == user.id, ApprovalReminder.created_at >= since)
+        .order_by(ApprovalReminder.created_at.desc()).limit(1)
+    )
+    if recent is not None:
+        return _reminder_schema(recent, user.full_name)
+
+    reminder = ApprovalReminder(
+        post_id=post.id, workspace_id=member.workspace_id, submission_log_id=submission_id,
+        stage=ReminderStage.MANUAL_NUDGE, channel=ReminderChannel(req.channel),
+        recipient_name=post.assigned_name, created_by=user.id,
+    )
+    db.add(reminder)
+    await db.commit()
+    await db.refresh(reminder)
+    return _reminder_schema(reminder, user.full_name)

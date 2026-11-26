@@ -5,7 +5,7 @@
  * Plan: docs/client_approval_link_plan.md §5.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Link2, Mail, MessageCircle, RotateCw, Send, UserRound, Users, X } from "lucide-react";
+import { BellRing, Check, Copy, Link2, Mail, MessageCircle, RotateCw, Send, UserRound, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -17,8 +17,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api, ApiError, type Post } from "@/lib/api";
 import {
   approvalKeys,
+  browserZone,
   deadlineLabel,
+  deadlineKeys,
   describeMinutes,
+  duePresets,
+  dueState,
+  reminderMailto,
+  reminderMessage,
+  useDeadlineOptions,
   LINK_STATUS,
   mailtoHref,
   shareMessage,
@@ -75,6 +82,86 @@ function ExpirySelect({ value, onChange }: { value: number | undefined; onChange
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+// ── "Needed by" (approval deadline) ────────────────────────────────────
+/** Local "YYYY-MM-DDTHH:mm" for a datetime-local input. */
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export type DueChoice = { key: string; custom: string };
+
+/** The deadline the choice stands for, or null for "the default" (the API applies it). */
+function resolveDue(choice: DueChoice, presets: { key: string; at: Date }[]): Date | null {
+  if (choice.key === "default") return null;
+  if (choice.key === "custom") return choice.custom ? new Date(choice.custom) : null;
+  return presets.find((p) => p.key === choice.key)?.at ?? null;
+}
+
+function NeededBySelect({
+  brandId,
+  choice,
+  onChange,
+  forClient,
+  linkMinutes,
+}: {
+  brandId: string;
+  choice: DueChoice;
+  onChange: (c: DueChoice) => void;
+  forClient: boolean;
+  linkMinutes?: number;
+}) {
+  const options = useDeadlineOptions(brandId);
+  const linkOptions = useLinkOptions();
+  const data = options.data;
+  // Recomputed per render: "Today, 6 pm" must not go stale while the dialog is open.
+  const presets = data ? duePresets(data) : [];
+  if (!data?.enabled) return null;
+
+  const due = resolveDue(choice, presets) ?? new Date(Date.now() + data.default_hours * 3_600_000);
+  const minutes = linkMinutes ?? linkOptions.data?.default_minutes;
+  const linkEnds = forClient && minutes !== undefined ? Date.now() + minutes * 60_000 : null;
+  const now = new Date();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor="needed-by">Needed by</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={choice.key} onValueChange={(key) => onChange({ ...choice, key })}>
+          <SelectTrigger id="needed-by" className="w-full sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {presets.map((p) => (
+              <SelectItem key={p.key} value={p.key}>
+                {p.label}
+              </SelectItem>
+            ))}
+            <SelectItem value="custom">Pick a date and time…</SelectItem>
+          </SelectContent>
+        </Select>
+        {choice.key === "custom" && (
+          <Input
+            type="datetime-local"
+            aria-label="Deadline date and time"
+            className="w-full sm:w-auto"
+            min={toLocalInput(new Date(now.getTime() + data.min_hours * 3_600_000))}
+            max={toLocalInput(new Date(now.getTime() + data.max_hours * 3_600_000))}
+            value={choice.custom}
+            onChange={(e) => onChange({ ...choice, custom: e.target.value })}
+          />
+        )}
+      </div>
+      <p className="m-0 text-xs text-muted-foreground">
+        By <span className="text-foreground">{deadlineLabel(due.toISOString())}</span>. We remind the reviewer before it, and tell every manager if it
+        passes.
+      </p>
+      {linkEnds !== null && linkEnds < due.getTime() && (
+        <p className="m-0 text-xs text-warning">The client’s link expires before this deadline. Choose a longer link or an earlier deadline.</p>
+      )}
     </div>
   );
 }
@@ -236,15 +323,21 @@ export function ReviewerDialog({
   const refresh = useRefreshPost(post.id);
   const [pick, setPick] = useState<ReviewerPick | null>(null);
   const [minutes, setMinutes] = useState<number | undefined>(undefined);
+  const [due, setDue] = useState<DueChoice>({ key: "default", custom: "" });
   const [link, setLink] = useState<NewLink | null>(null);
+  const deadlineOptions = useDeadlineOptions(post.brand_id);
 
   useEffect(() => {
     if (!open) {
       setPick(null);
       setMinutes(undefined);
+      setDue({ key: "default", custom: "" });
       setLink(null);
     }
   }, [open]);
+
+  const dueAt = mode === "submit" && deadlineOptions.data?.enabled ? resolveDue(due, duePresets(deadlineOptions.data)) : null;
+  const customMissing = mode === "submit" && due.key === "custom" && !due.custom;
 
   const send = useMutation({
     mutationFn: () => {
@@ -252,6 +345,7 @@ export function ReviewerDialog({
         assign_to_user_id: pick?.kind === "manager" ? pick.id : null,
         assign_to_contact_id: pick?.kind === "contact" ? pick.id : null,
         expires_in_minutes: pick?.kind === "contact" ? minutes ?? null : null,
+        ...(mode === "submit" ? { due_at: dueAt ? dueAt.toISOString() : null, due_tz: browserZone() ?? null } : {}),
       };
       return mode === "submit"
         ? api<SubmitResult>(`/posts/${post.id}/submit`, { method: "POST", body })
@@ -303,11 +397,14 @@ export function ReviewerDialog({
             </DialogHeader>
             <ReviewerPicker postId={post.id} pick={pick} onPick={setPick} />
             {pick?.kind === "contact" && <ExpirySelect value={minutes} onChange={setMinutes} />}
+            {mode === "submit" && (
+              <NeededBySelect brandId={post.brand_id} choice={due} onChange={setDue} forClient={pick?.kind === "contact"} linkMinutes={minutes} />
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button className="btn-depth" disabled={!pick || send.isPending} onClick={() => send.mutate()}>
+              <Button className="btn-depth" disabled={!pick || customMissing || send.isPending} onClick={() => send.mutate()}>
                 <Send aria-hidden="true" />
                 {send.isPending
                   ? "Sending…"
@@ -445,6 +542,114 @@ export function ShareWithClientDialog({
   );
 }
 
+// ── Deadline chip and reminders ────────────────────────────────────────
+/** "Due in 5 h" / "Overdue by 2 days" — pending posts only. */
+export function DueChip({ post, className }: { post: Post; className?: string }) {
+  if (post.status !== "pending_approval" || !post.approval_due_at) return null;
+  const s = dueState(post.approval_due_at);
+  return (
+    <span
+      title={`Needed by ${deadlineLabel(post.approval_due_at)}`}
+      className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap", TONE_CLASS[s.tone], className)}
+    >
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", TONE_DOT[s.tone])} />
+      {s.label}
+    </span>
+  );
+}
+
+/** Nudge a client from your own WhatsApp or email; we record that it was sent. */
+function SendReminderDialog({
+  post,
+  brandName,
+  links,
+  open,
+  onOpenChange,
+}: {
+  post: Post;
+  brandName: string;
+  links: ApprovalLinkRow[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const approvers = useApprovers(post.id, open);
+  const contact = approvers.data?.contacts.find((c) => c.contact_id === post.assigned_contact_id);
+  const name = post.assigned_name ?? contact?.name ?? "there";
+  const theirs = links.filter((l) => l.contact_id === post.assigned_contact_id);
+  const live = theirs.find((l) => l.status === "not_opened" || l.status === "opened");
+  const text = reminderMessage({
+    name,
+    postTitle: post.title || "Untitled post",
+    brandName,
+    dueAt: post.approval_due_at,
+    sentAt: live?.created_at,
+  });
+  const linkEndsFirst = live && post.approval_due_at && new Date(live.expires_at) < new Date(post.approval_due_at);
+
+  const record = useMutation({
+    mutationFn: (channel: "whatsapp" | "email" | "copy") =>
+      api(`/posts/${post.id}/reminders`, { method: "POST", body: { channel } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: deadlineKeys.reminders(post.id) });
+      toast.success(`Reminder to ${name} recorded on the post.`);
+    },
+    onError: (e) => toast.error(errorText(e)),
+  });
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      record.mutate("copy");
+    } catch {
+      toast.error("Couldn’t copy. Select the text and copy it yourself.");
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Remind {name}</DialogTitle>
+          <DialogDescription>It goes from your own WhatsApp or email. We note on the post that you sent it.</DialogDescription>
+        </DialogHeader>
+        {!live ? (
+          <p className="m-0 rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
+            {name} has no working link right now. Use <span className="font-medium">Resend</span> under Client links to send a fresh one.
+          </p>
+        ) : (
+          <>
+            <p className="m-0 rounded-lg border bg-surface-subtle px-3 py-2.5 text-sm whitespace-pre-line">{text}</p>
+            {linkEndsFirst && (
+              <p className="m-0 text-xs text-warning">Their link expires before the deadline. You may want to resend it with a longer life.</p>
+            )}
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Button asChild className="btn-depth">
+                <a href={whatsappHref(text, contact?.phone)} target="_blank" rel="noopener noreferrer" onClick={() => record.mutate("whatsapp")}>
+                  <MessageCircle aria-hidden="true" /> WhatsApp
+                </a>
+              </Button>
+              <Button asChild variant="outline">
+                <a href={reminderMailto(text, brandName, contact?.email)} onClick={() => record.mutate("email")}>
+                  <Mail aria-hidden="true" /> Email
+                </a>
+              </Button>
+              <Button variant="outline" onClick={copy}>
+                <Copy aria-hidden="true" /> Copy text
+              </Button>
+            </div>
+          </>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Done
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Client links panel (pending posts) ─────────────────────────────────
 function LinkStatusChip({ status }: { status: string }) {
   const s = LINK_STATUS[status] ?? { label: status, tone: "neutral" as const };
@@ -507,6 +712,7 @@ export function ReviewPanel({ post, brandName, canManage }: { post: Post; brandN
   const qc = useQueryClient();
   const [reassignOpen, setReassignOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [remindOpen, setRemindOpen] = useState(false);
   const [resent, setResent] = useState<NewLink | null>(null);
 
   // A client may answer while this screen is open: refresh the post with the links.
@@ -538,9 +744,20 @@ export function ReviewPanel({ post, brandName, canManage }: { post: Post; brandN
               )}
             </p>
           )}
+          {pending && post.approval_due_at && (
+            <p className="m-0 mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              Needed by <span className="text-foreground">{deadlineLabel(post.approval_due_at)}</span>
+              <DueChip post={post} />
+            </p>
+          )}
         </div>
         {pending && canManage && (
           <div className="flex flex-wrap gap-2">
+            {post.assigned_contact_id && post.approval_due_at && (
+              <Button size="sm" variant="outline" onClick={() => setRemindOpen(true)}>
+                <BellRing aria-hidden="true" /> Send reminder
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setReassignOpen(true)}>
               Change reviewer
             </Button>
@@ -562,6 +779,7 @@ export function ReviewPanel({ post, brandName, canManage }: { post: Post; brandN
       )}
       <ReviewerDialog post={post} brandName={brandName} mode="reassign" open={reassignOpen} onOpenChange={setReassignOpen} />
       <ShareWithClientDialog post={post} brandName={brandName} open={shareOpen} onOpenChange={setShareOpen} />
+      <SendReminderDialog post={post} brandName={brandName} links={rows} open={remindOpen} onOpenChange={setRemindOpen} />
       <Dialog open={!!resent} onOpenChange={(o) => !o && setResent(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>

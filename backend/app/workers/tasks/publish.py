@@ -32,8 +32,8 @@ from app.core.exceptions import PermanentPublishError, RetryablePublishError, Un
 from app.core.security import post_content_hash, resolve_platform_content
 from app.db.session import worker_session
 from app.models import (
-    ApprovalAction, ApprovalLog, AuditAction, JobStatus, OperationType,
-    Post, PostStatus, PublishJob, SocialAccount, UsageLog, Workspace, WorkspaceStatus,
+    ApprovalAction, ApprovalLog, AuditAction, Brand, JobStatus, NotificationType, OperationType,
+    Post, PostStatus, PublishJob, SocialAccount, UsageLog, Workspace, WorkspaceMember, WorkspaceStatus,
 )
 from app.services.audit import record_audit_event
 from app.services.encryption import decrypt_token
@@ -115,6 +115,54 @@ def dispatch_due_jobs():
     return {"dispatched": dispatched}
 
 
+_PLATFORM_NAME = {"facebook": "Facebook", "instagram": "Instagram", "linkedin": "LinkedIn"}
+
+
+def _tell_about_failure(db, post: Post, jobs: list) -> None:
+    """Never fail silently: when a post newly ends up failed or partly
+    published, tell its author and the workspace's managers, in the bell and
+    (when the plan has email) by email. Same transaction as the status."""
+    from app.core.dependencies import APPROVER_ROLES
+    from app.services import approvals as reviewers
+    from app.services.features import resolve_features_bulk_sync
+
+    brand = db.get(Brand, post.brand_id)
+    workspace = db.get(Workspace, brand.workspace_id) if brand else None
+    if workspace is None:
+        return
+    accounts = {a.id: a for a in db.execute(
+        select(SocialAccount).where(SocialAccount.id.in_([j.social_account_id for j in jobs]))
+    ).scalars().all()}
+
+    def where(job) -> str:
+        account = accounts.get(job.social_account_id)
+        if account is None:
+            return "an account"
+        return f"{_PLATFORM_NAME.get(account.platform.value, account.platform.value)} ({account.account_name})"
+
+    failed = [j for j in jobs if j.status == JobStatus.FAILED]
+    unsure = [j for j in jobs if j.status == JobStatus.NEEDS_REVIEW]
+    label = reviewers.post_label(post)
+    parts = []
+    if failed:
+        parts.append(f"didn't go out on {', '.join(where(j) for j in failed)}")
+    if unsure:
+        parts.append(f"may or may not have gone out on {', '.join(where(j) for j in unsure)} "
+                     "(check the page before retrying)")
+    lead = "partly published: it " if post.status == PostStatus.PARTIALLY_PUBLISHED else ""
+    message = f"{label} {lead}{' and '.join(parts)}. Open it to see why and retry."
+
+    managers = db.execute(select(WorkspaceMember.user_id).where(
+        WorkspaceMember.workspace_id == workspace.id, WorkspaceMember.role.in_(APPROVER_ROLES))).scalars().all()
+    recipients = [post.created_by, *managers]
+    reviewers.notify(db, workspace_id=workspace.id, user_ids=recipients, type=NotificationType.PUBLISH_FAILED,
+                     post_id=post.id, message=message)
+    if resolve_features_bulk_sync(db, [workspace.id], ("email_notifications",))[workspace.id][
+            "email_notifications"].enabled:
+        reviewers.email_users_sync(db, workspace=workspace, user_ids=recipients, kind="publish_failed",
+                                   headline=message, post_id=post.id)
+
+
 def _finalize_post(db, post_id) -> None:
     """Derive the post's aggregate status from ALL of its jobs, under a row
     lock — the single place that writes post.status for publish outcomes."""
@@ -123,6 +171,7 @@ def _finalize_post(db, post_id) -> None:
     ).scalar_one_or_none()
     if post is None:
         return
+    before = post.status
     if post.status not in (PostStatus.SCHEDULED, PostStatus.PUBLISHING,
                            PostStatus.PUBLISHED, PostStatus.PARTIALLY_PUBLISHED, PostStatus.FAILED):
         return  # the post was edited/reset meanwhile — its state machine wins
@@ -150,6 +199,10 @@ def _finalize_post(db, post_id) -> None:
         ) else PostStatus.PARTIALLY_PUBLISHED
     else:
         post.status = PostStatus.FAILED
+
+    # Once per outcome: a later job of the same run settling again changes nothing.
+    if post.status in (PostStatus.FAILED, PostStatus.PARTIALLY_PUBLISHED) and post.status != before:
+        _tell_about_failure(db, post, jobs)
 
 
 def _fail_job(db, job: PublishJob, message: str, status: JobStatus = JobStatus.FAILED) -> None:

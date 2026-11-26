@@ -31,18 +31,20 @@ from app.models import (
     Post, PostStatus, PublishJob, SocialAccount, UsageLog, User, Workspace,
 )
 from app.schemas.schemas import (
-    AccountValidation, ApprovalLogResponse, JobResponse, MessageResponse, PostCreate,
+    AccountValidation, ApprovalLogResponse, HomeResponse, JobResponse, MessageResponse, PostCreate,
     PostListResponse, PostMediaResponse, PostResponse, PostUpdate,
     PublishNowRequest, RejectRequest, RetryRequest, ScheduleRequest, ScheduleResponse,
     ValidateRequest, ValidateResponse,
 )
 from app.schemas.approvals import NewLinkResponse, ReviewerChoice, SubmitResponse
+from app.services import approval_deadlines as deadlines
 from app.services import approvals as reviewers
+from app.services import certificates
 from app.services.approval_links import create_link
 from app.services.audit import record_audit_event
 from app.services.features import (
-    PLATFORM_FEATURE, assert_enabled, enforce_limit, feature_disabled_error, require_feature,
-    resolve_features,
+    PLATFORM_FEATURE, assert_enabled, enforce_limit, feature_disabled_error, get_feature,
+    require_feature, resolve_features,
 )
 from app.services.publishing.factory import get_adapter
 from app.services.storage import delete_unreferenced_files, get_storage
@@ -96,6 +98,7 @@ def post_schema(post: Post) -> PostResponse:
         updated_at=post.updated_at, media=[media_schema(m) for m in post.media],
         assigned_approver_id=post.assigned_approver_id, assigned_contact_id=post.assigned_contact_id,
         assigned_name=post.assigned_name,
+        approval_due_at=post.approval_due_at, approval_due_tz=post.approval_due_tz,
     )
 
 
@@ -152,6 +155,7 @@ async def list_workspace_posts(
     brand_id: Optional[UUID] = Query(None),
     assigned_to: Optional[str] = Query(None, pattern="^me$",
                                        description="`me`: posts waiting for MY approval"),
+    overdue: bool = Query(False, description="Only posts waiting for approval past their deadline"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -173,6 +177,10 @@ async def list_workspace_posts(
         mine = (Post.assigned_approver_id == user.id, Post.status == PostStatus.PENDING_APPROVAL)
         base = base.where(*mine)
         count_q = count_q.where(*mine)
+    if overdue:
+        late = (Post.status == PostStatus.PENDING_APPROVAL, Post.approval_due_at < func.now())
+        base = base.where(*late)
+        count_q = count_q.where(*late)
 
     total = (await db.execute(count_q)).scalar() or 0
     result = await db.execute(
@@ -181,6 +189,49 @@ async def list_workspace_posts(
     )
     return PostListResponse(items=[post_schema(p) for p in result.scalars().all()],
                             total=total, page=page, limit=limit)
+
+
+@router.get("/workspaces/{workspace_id}/home", response_model=HomeResponse)
+async def workspace_home(
+    workspace_id: UUID,
+    brand_id: Optional[UUID] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Home's post cards in one round trip (it used to make seven requests).
+    Same tenancy as the list above: membership in the PATH workspace; a
+    brand_id from another workspace simply matches nothing."""
+    await get_workspace_member(workspace_id, db, user)
+    scope = [Brand.workspace_id == workspace_id]
+    if brand_id:
+        scope.append(Post.brand_id == brand_id)
+
+    def posts(*where, order=Post.updated_at.desc(), limit: int = 5):
+        return (select(Post).join(Brand, Brand.id == Post.brand_id).where(*scope, *where)
+                .options(selectinload(Post.media)).order_by(order).limit(limit))
+
+    counts = {status.value: count for status, count in (await db.execute(
+        select(Post.status, func.count(Post.id)).join(Brand, Brand.id == Post.brand_id)
+        .where(*scope).group_by(Post.status)
+    )).all()}
+    counts["overdue"] = await db.scalar(
+        select(func.count(Post.id)).join(Brand, Brand.id == Post.brand_id)
+        .where(*scope, Post.status == PostStatus.PENDING_APPROVAL, Post.approval_due_at < func.now())
+    ) or 0
+
+    async def listed(stmt) -> list[PostResponse]:
+        return [post_schema(p) for p in (await db.scalars(stmt)).all()]
+
+    return HomeResponse(
+        counts=counts,
+        recent=await listed(posts(limit=100)),
+        pending_approval=await listed(posts(Post.status == PostStatus.PENDING_APPROVAL)),
+        approved=await listed(posts(Post.status == PostStatus.APPROVED)),
+        failed=await listed(posts(Post.status == PostStatus.FAILED)),
+        partially_published=await listed(posts(Post.status == PostStatus.PARTIALLY_PUBLISHED)),
+        scheduled=await listed(posts(Post.status == PostStatus.SCHEDULED,
+                                     order=Post.scheduled_at.asc().nulls_last(), limit=50)),
+    )
 
 
 @router.post("/brands/{brand_id}/posts", response_model=PostResponse,
@@ -339,19 +390,31 @@ async def submit_for_approval(post_id: UUID, request: Request,
         db, post=post, brand=brand, workspace=workspace,
         user_id=req.assign_to_user_id, contact_id=req.assign_to_contact_id,
     )
+    # "Needed by": only when the plan has deadlines. A deadline sent while the
+    # feature is off is refused, so the UI and the plan can't disagree silently.
+    due_at = None
+    if (await get_feature(db, workspace.id, "approval_reminders")).enabled:
+        due_at = deadlines.choose_due_at(await deadlines.due_bounds(db), workspace, brand,
+                                         req.due_at, datetime.now(timezone.utc))
+    elif req.due_at is not None:
+        raise feature_disabled_error(await get_feature(db, workspace.id, "approval_reminders"))
 
     post.status = PostStatus.PENDING_APPROVAL
     post.content_hash = current_hash(post)
+    post.approval_due_at = due_at
+    post.approval_due_tz = deadlines.valid_zone(req.due_tz) if due_at else None
     reviewers.set_assignee(post, assignee)
     db.add(reviewers.snapshot(ApprovalLog(post_id=post.id, user_id=user.id,
                                           action=ApprovalAction.SUBMITTED,
-                                          content_hash_at_action=post.content_hash), assignee))
+                                          content_hash_at_action=post.content_hash,
+                                          due_at=due_at), assignee))
 
     record_audit_event(
         db, action=AuditAction.SUBMIT, entity_type="Post", entity_id=post.id,
         workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,
         user_name=user.full_name, ip_address=client_ip(request),
-        changes={"after": {"assigned_to": assignee.name or reviewers.ANY_MANAGER}},
+        changes={"after": {"assigned_to": assignee.name or reviewers.ANY_MANAGER,
+                           "due_at": due_at.isoformat() if due_at else None}},
     )
     new_link = None
     if contact is not None:
@@ -366,10 +429,14 @@ async def submit_for_approval(post_id: UUID, request: Request,
             expires_at=created.link.expires_at, expiry_minutes=created.link.expiry_minutes,
         )
     elif assignee.user_id:
+        asked = f"{user.full_name} asked you to approve {reviewers.post_label(post)}"
         reviewers.notify(db, workspace_id=member.workspace_id, user_ids=[assignee.user_id],
                          type=NotificationType.ASSIGNED, post_id=post.id, actor_name=user.full_name,
-                         exclude=user.id,
-                         message=f"{user.full_name} asked you to approve {reviewers.post_label(post)}.")
+                         exclude=user.id, message=f"{asked}.")
+        needed = f" It's needed by {deadlines.format_deadline(due_at, post.approval_due_tz)}." if due_at else ""
+        await reviewers.email_users(db, workspace=workspace, user_ids=[assignee.user_id], exclude=user.id,
+                                    kind="approval_assigned", post_id=post.id,
+                                    headline=f"{asked} for {brand.name}.{needed}")
     await db.commit()
     await db.refresh(post)
     return SubmitResponse(**post_schema(post).model_dump(), approval_link=new_link)
@@ -457,6 +524,9 @@ async def approve_post(post_id: UUID, request: Request,
                                          content_hash_at_action=post.content_hash), assignee)
     log.acted_by_assignee = by_assignee
     db.add(log)
+    await db.flush()   # the certificate needs the row's id and time
+    await certificates.issue(db, post=post, brand=await db.get(Brand, post.brand_id),
+                             workspace=await db.get(Workspace, member.workspace_id), approval=log)
     record_audit_event(
         db, action=AuditAction.APPROVE, entity_type="Post", entity_id=post.id,
         workspace_id=member.workspace_id, user_id=user.id, user_email=user.email,

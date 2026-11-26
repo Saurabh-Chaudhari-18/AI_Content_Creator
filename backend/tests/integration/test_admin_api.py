@@ -317,6 +317,27 @@ def test_deactivate_and_force_logout(api, admin, db_exec):
     assert r.status_code == 400
 
 
+def test_rename_a_login(api, admin, db_exec):
+    customer = register(api, "Old Name")
+    user_url = f"{ADMIN}/users/{customer.user_id}"
+
+    r = api.patch(user_url, json={"full_name": "  New Name  ", **WHY}, headers=admin.headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["full_name"] == "New Name"
+    assert api.get("/api/v1/auth/me", headers=customer.headers).json()["full_name"] == "New Name"
+    # Recorded with the staff member's reason.
+    row = db_exec("SELECT changes, reason FROM audit_events WHERE entity_id = :id AND action = 'UPDATE' "
+                  "ORDER BY created_at DESC LIMIT 1", id=customer.user_id).one()
+    assert row.changes == {"before": {"full_name": "Old Name"}, "after": {"full_name": "New Name"}}
+    assert row.reason == "integration test"
+
+    # A reason is required, an empty name is refused, and customers can't do it.
+    assert api.patch(user_url, json={"full_name": "No Reason"}, headers=admin.headers).status_code == 422
+    assert api.patch(user_url, json={"full_name": "   ", **WHY}, headers=admin.headers).status_code == 422
+    assert api.patch(user_url, json={"full_name": "Hacked", **WHY}, headers=customer.headers).status_code in (403, 404)
+    assert api.get("/api/v1/auth/me", headers=customer.headers).json()["full_name"] == "New Name"
+
+
 def test_users_list_never_exposes_secrets(api, admin):
     customer = register(api)
     found = api.get(f"{ADMIN}/users", params={"search": customer.email}, headers=admin.headers).json()

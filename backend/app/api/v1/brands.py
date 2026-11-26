@@ -16,7 +16,8 @@ from app.db.session import get_db
 from app.models import ApprovalLink, AuditAction, Brand, Post, User, WorkspaceRole
 from app.schemas.schemas import BrandCreate, BrandLogoResponse, BrandResponse, BrandUpdate, MessageResponse
 from app.services.audit import record_audit_event
-from app.services.features import enforce_limit
+from app.services import approval_deadlines as deadlines
+from app.services.features import enforce_limit, require_feature
 from app.services.storage import get_storage
 
 router = APIRouter(tags=["Brands"], dependencies=[Depends(workspace_rate_limit)])
@@ -84,6 +85,17 @@ async def update_brand(brand_id: UUID, req: BrandUpdate, request: Request,
     brand = await get_brand_access(brand_id, db, user)
 
     changed = req.model_dump(exclude_unset=True)
+    approval_rules = {"approval_due_hours", "approval_escalate_after_hours", "approval_release_when_overdue"}
+    if approval_rules & changed.keys():
+        # Who reviews and how fast is governance: owners and managers only.
+        member = await get_workspace_member(brand.workspace_id, db, user)
+        require_role(member, WorkspaceRole.OWNER, WorkspaceRole.ADMIN)
+        await require_feature(db, brand.workspace_id, "approval_reminders")
+        for key in ("approval_due_hours", "approval_escalate_after_hours"):
+            if key in changed:
+                changed[key] = changed[key] or None      # 0 = follow the workspace default
+        if changed.get("approval_due_hours"):
+            deadlines.check_hours_in_range(await deadlines.due_bounds(db), changed["approval_due_hours"])
     if "brand_guidelines" in changed:
         # The client's keys replace the client's keys; the server's own
         # "_" keys (the logo's storage key) are kept, never dropped.

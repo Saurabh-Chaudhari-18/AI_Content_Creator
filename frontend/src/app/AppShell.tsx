@@ -41,6 +41,7 @@ import { platformEnabled, useAccounts, useFeatures, useMyRole, useWorkspacePosts
 import { useTheme, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { ALL_BRANDS, useWorkspace } from "@/lib/workspace";
+import { PRODUCT_INITIAL, PRODUCT_NAME } from "@/lib/product";
 
 import { NotificationBell } from "./NotificationBell";
 
@@ -227,10 +228,10 @@ function BrandMenu({ side, compact = false, wide = false }: { side: "right" | "b
 /** The workspace mark; it switches workspace when there is more than one. */
 function WorkspaceMark({ side }: { side: "right" | "bottom" }) {
   const { workspace, workspaces } = useWorkspace();
-  const name = workspace?.name ?? "OmniPost";
+  const name = workspace?.name ?? PRODUCT_NAME;
   const mark = (
     <span className="grid size-9 place-items-center rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground">
-      {initials(workspace?.name).slice(0, 1) || "O"}
+      {initials(workspace?.name).slice(0, 1) || PRODUCT_INITIAL}
     </span>
   );
   if (workspaces.length <= 1) {
@@ -277,14 +278,14 @@ function SidebarWorkspace() {
         <InfinityIcon className="size-5" strokeWidth={2} aria-hidden="true" />
       </span>
       <span className="flex min-w-0 flex-col text-left leading-tight">
-        <span className="font-display text-[21px] font-semibold text-foreground">OmniPost</span>
+        <span className="font-display text-[21px] font-semibold text-foreground">{PRODUCT_NAME}</span>
         <span className="truncate text-xs text-muted-foreground">{workspace?.name ?? " "}</span>
       </span>
     </span>
   );
   if (workspaces.length <= 1) {
     return (
-      <Link to="/" aria-label="OmniPost home" className={cn("flex rounded-xl px-1 py-1 no-underline", focusRing)}>
+      <Link to="/" aria-label={`${PRODUCT_NAME} home`} className={cn("flex rounded-xl px-1 py-1 no-underline", focusRing)}>
         {body}
       </Link>
     );

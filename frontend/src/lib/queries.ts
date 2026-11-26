@@ -27,15 +27,28 @@ export const keys = {
 };
 
 /** Workspace-wide posts (optionally one status), honouring the brand filter. */
-export function useWorkspacePosts(opts: { status?: Post["status"]; limit?: number; page?: number } = {}) {
+export function useWorkspacePosts(opts: { status?: Post["status"]; overdue?: boolean; limit?: number; page?: number } = {}) {
   const { workspace, brandId } = useWorkspace();
-  const { status, limit = 20, page = 1 } = opts;
+  const { status, overdue = false, limit = 20, page = 1 } = opts;
   return useQuery({
-    queryKey: [...keys.wsPosts(workspace?.id), brandId, status ?? "all", limit, page],
+    queryKey: [...keys.wsPosts(workspace?.id), brandId, status ?? "all", overdue, limit, page],
     queryFn: () =>
       api<PostList>(`/workspaces/${workspace!.id}/posts`, {
-        query: { status, limit, page, brand_id: brandId === ALL_BRANDS ? undefined : brandId },
+        query: { status, overdue: overdue || undefined, limit, page, brand_id: brandId === ALL_BRANDS ? undefined : brandId },
       }),
+    enabled: !!workspace,
+  });
+}
+
+export type Home = Schemas["HomeResponse"];
+
+/** Home's post cards in one request, honouring the brand filter. */
+export function useHome() {
+  const { workspace, brandId } = useWorkspace();
+  return useQuery({
+    queryKey: [...keys.wsPosts(workspace?.id), brandId, "home"],
+    queryFn: () =>
+      api<Home>(`/workspaces/${workspace!.id}/home`, { query: { brand_id: brandId === ALL_BRANDS ? undefined : brandId } }),
     enabled: !!workspace,
   });
 }
