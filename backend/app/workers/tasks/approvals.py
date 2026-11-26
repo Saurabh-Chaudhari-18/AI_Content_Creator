@@ -272,7 +272,8 @@ def _email_client(db, *, post: Post, brand: Brand, workspace: Workspace, stage: 
     contact = db.get(BrandContact, post.assigned_contact_id)
     if not mailer.contact_can_be_emailed(contact):
         return False
-    link = next((l for l in _open_links(db, post) if l.contact_id == contact.id and l.expires_at > now), None)
+    link = next((open_link for open_link in _open_links(db, post)
+                 if open_link.contact_id == contact.id and open_link.expires_at > now), None)
     if link is None:
         return False
     sender = db.get(User, link.created_by)
